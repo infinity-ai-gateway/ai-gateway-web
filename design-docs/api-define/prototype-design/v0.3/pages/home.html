@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/home.css" />
+  <link rel="stylesheet" href="../assets/font/iconfont.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/prototype.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: 'product.home', breadcrumb: '首页', basePath: '../' });
+  root.innerHTML = '<h3 style="margin:0;">系统管理员 admin，欢迎您！</h3>';
+});
+</script>
+</body>
+</html>

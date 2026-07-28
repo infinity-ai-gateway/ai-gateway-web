@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/ai-rule.css" />
+  <link rel="stylesheet" href="../assets/font/iconfont.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/prototype.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: 'AdvanceRouteRule.list', basePath: '../' });
+  root.innerHTML =
+    '<div class="routes">' +
+      IvuUI.btn('提交并生效', 'primary', 'small', 'submit', 'id="btn-route-submit"') +
+      '<div>' +
+        IvuUI.btn('添加规则', 'primary', 'small', '', 'id="btn-route-add"') +
+        '<div id="route-table" class="forwardRule"></div>' +
+      '</div>' +
+    '</div>' +
+    drawerRoute();
+
+  var state = {
+    rows: cloneRows(MockData.forwardRules),
+    filteredRows: [],
+    search: { expression: '', cluster_name: '', description: '' },
+    pageSize: 20,
+    currentPage: 1,
+    drawerMode: 'add',
+    editIndex: -1
+  };
+
+  function cloneRows(list) {
+    return (list || []).map(function (item) {
+      return {
+        name: item.name || '',
+        expression: item.expression || '',
+        cluster_name: item.cluster_name || '',
+        description: item.description || ''
+      };
+    });
+  }
+
+  function clusterOptions() {
+    return (MockData.clusters || []).map(function (c) { return c.name; });
+  }
+
+  function filterRows() {
+    state.filteredRows = state.rows.filter(function (row) {
+      return Object.keys(state.search).every(function (key) {
+        var keyword = String(state.search[key] || '').trim().toUpperCase();
+        if (!keyword) return true;
+        return String(row[key] || '').toUpperCase().indexOf(keyword) !== -1;
+      });
+    });
+  }
+
+  function getPageRows() {
+    var start = (state.currentPage - 1) * state.pageSize;
+    return state.filteredRows.slice(start, start + state.pageSize);
+  }
+
+  function findRowIndex(row) {
+    if (!row) return -1;
+    return state.rows.findIndex(function (item) {
+      return item === row || (
+        item.expression === row.expression &&
+        item.cluster_name === row.cluster_name &&
+        item.description === row.description
+      );
+    });
+  }
+
+  function getRowFromFilteredIndex(index) {
+    var filteredRow = state.filteredRows[index];
+    if (!filteredRow) return null;
+    var rowIndex = findRowIndex(filteredRow);
+    return rowIndex >= 0 ? state.rows[rowIndex] : filteredRow;
+  }
+
+  function renderTable() {
+    filterRows();
+    var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+    if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+    document.getElementById('route-table').innerHTML = IvuUI.pageTable({
+      tableId: 'route-page-table',
+      columns: [
+        { title: '表达式', key: 'expression', searchable: true, searchPlaceholder: '请输入表达式查询' },
+        { title: '目标集群', key: 'cluster_name', searchable: true, searchPlaceholder: '请输入目标集群' },
+        { title: '描述', key: 'description', searchable: true, searchPlaceholder: '请输入描述查询' },
+        {
+          title: '操作',
+          key: 'action',
+          render: function (row, rowIndex) {
+            var pageStart = (state.currentPage - 1) * state.pageSize;
+            var globalIndex = pageStart + rowIndex;
+            return IvuUI.btn('编辑', 'primary', 'small', '', 'data-route-edit="' + globalIndex + '"') + ' ' +
+              IvuUI.btn('删除', 'error', 'small', '', 'data-route-delete="' + globalIndex + '"');
+          }
+        }
+      ],
+      rows: getPageRows(),
+      total: state.filteredRows.length,
+      pageSize: state.pageSize,
+      currentPage: state.currentPage,
+      searchValues: state.search
+    });
+
+    bindTableEvents();
+  }
+
+  function bindTableEvents() {
+    var tableRoot = document.getElementById('route-page-table');
+    if (!tableRoot) return;
+
+    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+      state.search[key] = value;
+      state.currentPage = 1;
+      renderTable();
+    });
+
+    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+      item.onclick = function () {
+        state.currentPage = parseInt(item.getAttribute('data-page'), 10);
+        renderTable();
+      };
+    });
+
+    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+    if (sizeSelect) {
+      sizeSelect.onchange = function () {
+        state.pageSize = parseInt(sizeSelect.value, 10);
+        state.currentPage = 1;
+        renderTable();
+      };
+    }
+
+    var prevBtn = tableRoot.querySelector('.proto-page-prev');
+    if (prevBtn) {
+      prevBtn.onclick = function () {
+        if (state.currentPage > 1) {
+          state.currentPage -= 1;
+          renderTable();
+        }
+      };
+    }
+
+    var nextBtn = tableRoot.querySelector('.proto-page-next');
+    if (nextBtn) {
+      nextBtn.onclick = function () {
+        var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+        if (state.currentPage < totalPages) {
+          state.currentPage += 1;
+          renderTable();
+        }
+      };
+    }
+
+    tableRoot.querySelectorAll('[data-route-edit]').forEach(function (btn) {
+      btn.onclick = function () {
+        openDrawer('edit', parseInt(btn.getAttribute('data-route-edit'), 10));
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-route-delete]').forEach(function (btn) {
+      btn.onclick = function () {
+        var index = parseInt(btn.getAttribute('data-route-delete'), 10);
+        var row = state.filteredRows[index];
+        if (!row) return;
+        Prototype.confirm({
+          title: '提示',
+          content: '确认删除该规则？',
+          onOk: function () {
+            var rowIndex = findRowIndex(row);
+            if (rowIndex >= 0) state.rows.splice(rowIndex, 1);
+            renderTable();
+            Prototype.toast('删除成功!');
+          },
+          onCancel: function () {
+            Prototype.toast('取消删除', 'info');
+          }
+        });
+      };
+    });
+  }
+
+  function setDrawerTitle(mode) {
+    var titleEl = document.querySelector('#drawer-route .ivu-drawer-header-inner');
+    if (titleEl) titleEl.textContent = mode === 'add' ? '添加规则' : '编辑规则';
+  }
+
+  function fillDrawerForm(row) {
+    document.getElementById('route-expression').value = row ? row.expression : '';
+    document.getElementById('route-cluster').value = row ? row.cluster_name : (clusterOptions()[0] || '');
+    document.getElementById('route-description').value = row ? row.description : '';
+    var errEl = document.querySelector('#drawer-route .proto-expression-error');
+    if (errEl) {
+      errEl.textContent = '';
+      errEl.classList.add('proto-hidden-inline');
+    }
+  }
+
+  function openDrawer(mode, filteredIndex) {
+    state.drawerMode = mode;
+    var row = null;
+    if (mode === 'edit' && typeof filteredIndex === 'number') {
+      row = getRowFromFilteredIndex(filteredIndex);
+      state.editIndex = findRowIndex(row);
+    } else {
+      state.editIndex = -1;
+    }
+    setDrawerTitle(mode);
+    fillDrawerForm(mode === 'edit' ? row : null);
+    Prototype.openDrawer('drawer-route');
+    IvuUI.initExpressionEditor('#drawer-route .proto-expression-editor');
+  }
+
+  document.getElementById('btn-route-add').addEventListener('click', function () {
+    openDrawer('add');
+  });
+
+  document.getElementById('btn-route-submit').addEventListener('click', function () {
+    Prototype.toast('提交并生效成功！');
+  });
+
+  document.getElementById('btn-route-save').addEventListener('click', function () {
+    var data = {
+      expression: document.getElementById('route-expression').value.trim(),
+      cluster_name: document.getElementById('route-cluster').value,
+      description: document.getElementById('route-description').value.trim()
+    };
+    if (!data.expression) {
+      Prototype.toast('请输入表达式', 'error');
+      return;
+    }
+    if (!data.cluster_name) {
+      Prototype.toast('目标集群不能为空', 'error');
+      return;
+    }
+    if (state.drawerMode === 'add') {
+      state.rows.unshift(data);
+    } else if (state.editIndex >= 0) {
+      state.rows[state.editIndex] = data;
+    }
+    Prototype.closeDrawer('drawer-route');
+    renderTable();
+    Prototype.toast(state.drawerMode === 'add' ? '添加成功！' : '保存成功！');
+  });
+
+  document.getElementById('btn-route-reset').addEventListener('click', function () {
+    fillDrawerForm(state.drawerMode === 'edit' ? state.rows[state.editIndex] : null);
+  });
+
+  Prototype.bindDrawerClose();
+  renderTable();
+});
+
+function drawerRoute() {
+  var clusterOpts = (MockData.clusters || []).map(function (c) { return c.name; });
+  var body =
+    '<div class="forward-rule-upsert">' +
+      '<form class="ivu-form ivu-form-label-top">' +
+        IvuUI.formTopItem('表达式', IvuUI.expressionEditor('route-expression'), true) +
+        IvuUI.formTopItem('目标集群', IvuUI.clusterSelect('route-cluster', clusterOpts, clusterOpts[0] || ''), true) +
+        IvuUI.formTopItem('描述',
+          '<div class="ivu-input-wrapper ivu-input-type-text">' +
+            '<input type="text" id="route-description" class="ivu-input" />' +
+          '</div>') +
+      '</form>' +
+    '</div>';
+  var footer =
+    '<div class="com-btn-box drawer-footer route-drawer-footer">' +
+      IvuUI.btn('本地保存', 'primary', 'small', '', 'id="btn-route-save"') + ' ' +
+      IvuUI.btn('重置', 'default', 'small', 'reset-btn', 'id="btn-route-reset"') +
+    '</div>';
+  return IvuUI.drawer('drawer-route', '添加规则', body, footer, '60%');
+}
+</script>
+</body>
+</html>
