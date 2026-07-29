@@ -387,7 +387,7 @@ export default {
     tipValueNonnegativeInteger: 'Value should be >=0',
     tipsValueMax: 'Input value too big',
     tipClusterNameRule:
-      'Cluster Name can includes characters, numbers, dash, dot, $, +, ~',
+      'Cluster Name can only include letters, numbers, dash, dot, underline and length greater than 1',
     tipNameRule:
       'Name can includes characters, numbers, dash, underline, dot, and length between 1 and 255',
     tipEppMountedOnlyOnePool:

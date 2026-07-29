@@ -383,7 +383,7 @@ export default {
     tipValueNonnegativeInteger: '值必须是非负整数',
     tipsValueMax: '输入值过大',
     tipClusterNameRule:
-      '集群名称只能包含字母、数字以及-杠、.点、$符、+加号、~波浪线且长度大于1',
+      '集群名称只能包含字母、数字以及短横线-、点.、下划线_，且长度大于1',
     tipNameRule:
       '名称只能包含字母、数字以及短横线-、下划线、点，且长度大于1小于255',
     tipEppMountedOnlyOnePool: '已挂载EPP类型实例池时，不可再挂载其他实例池',

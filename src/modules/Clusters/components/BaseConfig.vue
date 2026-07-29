@@ -124,7 +124,7 @@
     </Form>
 </template>
 <script>
-import { BaseClustersNameRegCheck, NumRegCheck } from '@/utils/const';
+import { ClustersNameRegCheck, NumRegCheck } from '@/utils/const';
 import { cloneDeep } from 'lodash';
 export default {
     name: 'BaseConfig',
@@ -198,7 +198,7 @@ export default {
                 );
                 return;
             }
-            if (!BaseClustersNameRegCheck(value)) {
+            if (!ClustersNameRegCheck(value)) {
                 callback(new Error(this.$t('cluster.tipClusterNameRule')));
                 return;
             }
