@@ -273,7 +273,7 @@
                   >
                     <InputNumber
                       v-model="rule.max_tokens"
-                      :min="1"
+                      :min="0"
                       :max="INT64_MAX"
                       :precision="0"
                       :formatter="formatNumberInput"
@@ -375,7 +375,7 @@
                   >
                     <InputNumber
                       v-model="rule.max_requests"
-                      :min="1"
+                      :min="0"
                       :max="INT64_MAX"
                       :precision="0"
                       :formatter="formatNumberInput"
@@ -461,7 +461,7 @@ import { getModelGroupsFromServices } from '@/utils/model';
 
 const INT64_MAX = 9223372036854775807;
 const INT_MAX = 2147483647;
-const DESCRIPTION_MAX_LENGTH = 512;
+const DESCRIPTION_MAX_LENGTH = 511;
 
 export default {
   props: {
@@ -567,7 +567,7 @@ export default {
       callback();
     };
 
-    // Validate rate limit policy (at least one rule required)
+    // Validate rate limit policy (at least one rule required; no duplicate combinations)
     const validateRateLimitPolicy = (rule, value, callback) => {
       if (that.formData.rate_limit_policy.enabled === 'true') {
         const tpm = that.formData.rate_limit_policy.rules.tpm || [];
@@ -584,6 +584,20 @@ export default {
           );
         if (!hasTpmRules && !hasRpmRules && !hasEffectiveMaxConcurrency) {
           callback(new Error(this.$t('apiKey.rateLimitRuleRequired')));
+          return;
+        }
+
+        const tpmKeys = tpm.map(r => `${r.model || ''}|${r.window_minutes || 0}|${r.max_tokens || 0}|${r.step_minutes || 0}`);
+        const uniqueTpmKeys = [...new Set(tpmKeys)];
+        if (tpmKeys.length !== uniqueTpmKeys.length) {
+          callback(new Error(this.$t('apiKey.tpmCombinationDuplicate')));
+          return;
+        }
+
+        const rpmKeys = rpm.map(r => `${r.model || ''}|${r.window_minutes || 0}|${r.max_requests || 0}`);
+        const uniqueRpmKeys = [...new Set(rpmKeys)];
+        if (rpmKeys.length !== uniqueRpmKeys.length) {
+          callback(new Error(this.$t('apiKey.rpmCombinationDuplicate')));
           return;
         }
       }
@@ -852,14 +866,19 @@ export default {
 
     fetchModelServices() {
       this.$request({
-        url: this.$urlFormat('global-models'),
+        url: 'clusters',
         method: 'get',
         openapi: true
       })
         .then((data) => {
           if (data.status === 200) {
-            const services = data.data.Data.services || [];
-            this.modelServices = services;
+            const clusters = data.data.Data || [];
+            this.modelServices = clusters
+              .filter(cluster => cluster.llm_config && cluster.llm_config.models && cluster.llm_config.models.length > 0)
+              .map(cluster => ({
+                cluster_name: cluster.name,
+                models: cluster.llm_config.models
+              }));
             // After model list loads, if in edit mode, reformat model fields to ensure proper display
             if (!this.isAdd && this.formData && this.formData.id) {
               this.normalizeModelsField();
@@ -1070,7 +1089,7 @@ export default {
         callback(new Error(this.$t('apiKey.maxTokensRequired', { index })));
         return;
       }
-      if (!Number.isFinite(value) || value < 1) {
+      if (!Number.isFinite(value) || value < 0) {
         callback(new Error(this.$t('apiKey.maxTokensInvalid', { index })));
         return;
       }
@@ -1129,7 +1148,7 @@ export default {
         callback(new Error(this.$t('apiKey.maxRequestsRequired', { index })));
         return;
       }
-      if (!Number.isFinite(value) || value < 1) {
+      if (!Number.isFinite(value) || value < 0) {
         callback(new Error(this.$t('apiKey.maxRequestsInvalid', { index })));
         return;
       }
@@ -1145,15 +1164,20 @@ export default {
         callback();
         return;
       }
-      if (value === null || value === undefined || String(value).trim() === '') {
+      const trimmed = String(value || '').trim();
+      if (trimmed === '') {
         const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
         callback(new Error(this.$t('apiKey.ruleNameRequired', { index })));
         return;
       }
+      if (trimmed.length < 1 || trimmed.length > 128) {
+        callback(new Error(this.$t('apiKey.ruleNameLengthError')));
+        return;
+      }
       const tpm = this.formData.rate_limit_policy.rules.tpm || [];
-      const count = tpm.filter((r) => r.name === value.trim()).length;
+      const count = tpm.filter((r) => r.name === trimmed).length;
       if (count > 1) {
-        callback(new Error(this.$t('apiKey.ruleNameDuplicate', { name: value.trim() })));
+        callback(new Error(this.$t('apiKey.ruleNameDuplicate', { name: trimmed })));
         return;
       }
       callback();
@@ -1164,15 +1188,20 @@ export default {
         callback();
         return;
       }
-      if (value === null || value === undefined || String(value).trim() === '') {
+      const trimmed = String(value || '').trim();
+      if (trimmed === '') {
         const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
         callback(new Error(this.$t('apiKey.ruleNameRequired', { index })));
         return;
       }
+      if (trimmed.length < 1 || trimmed.length > 128) {
+        callback(new Error(this.$t('apiKey.ruleNameLengthError')));
+        return;
+      }
       const rpm = this.formData.rate_limit_policy.rules.rpm || [];
-      const count = rpm.filter((r) => r.name === value.trim()).length;
+      const count = rpm.filter((r) => r.name === trimmed).length;
       if (count > 1) {
-        callback(new Error(this.$t('apiKey.ruleNameDuplicate', { name: value.trim() })));
+        callback(new Error(this.$t('apiKey.ruleNameDuplicate', { name: trimmed })));
         return;
       }
       callback();

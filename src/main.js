@@ -50,7 +50,7 @@ Vue.use(requestPlugin);
 Vue.prototype.$urlFormat = urlFormat;
 Vue.prototype.$BFEProductLineId = 1;
 Vue.prototype.$store = store;
-Vue.prototype.Version = '_VERSION_';
+Vue.prototype.Version = '0.0.5@20260731180530';
 
 Vue.use(VueClipboard);
 

@@ -88,20 +88,10 @@ export default [
         component: (r) =>
           require.ensure(
             [],
-            () => r(require('../modules/Routes')),
-            'router.list',
+            () => r(require('../modules/RouteTable')),
+            'route-table',
           ),
-        path: 'router',
-        name: 'DefaultRouteRule.list',
-      },
-      {
-        component: (r) =>
-          require.ensure(
-            [],
-            () => r(require('../modules/Routes')),
-            'ai-rule',
-          ),
-        path: 'ai-rule',
+        path: 'route-tables',
         name: 'AdvanceRouteRule.list',
       },
       {

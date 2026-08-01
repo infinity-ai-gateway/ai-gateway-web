@@ -18,7 +18,7 @@
         <FormItem
             v-if="formData.timeouts"
             :label="$t('cluster.timeoutReadClientAgain')"
-            rop="timeouts.timeout_read_client_again"
+            prop="timeouts.timeout_read_client_again"
         >
             <InputNumber
                 v-model="formData.timeouts['timeout_read_client_again']"
@@ -67,11 +67,11 @@
         </FormItem>
         <FormItem
             v-if="formData.retries"
-            :label="$t('cluster.maxRetryInSubcluster')"
-            prop="retries.max_retry_in_subcluster"
+            :label="$t('cluster.maxRetryInCluster')"
+            prop="retries.max_retry_in_cluster"
         >
             <InputNumber
-                v-model="formData.retries['max_retry_in_subcluster']"
+                v-model="formData.retries['max_retry_in_cluster']"
                 style="width: 100%;"
             ></InputNumber>
         </FormItem>
@@ -116,8 +116,23 @@ export default {
 
     data() {
         const timeoutValidate = (rule, value, callback) => {
-            if (value === null) {
-                callback(new Error(this.$t('com.tipNotEmpty')));
+            if (value === null || value === undefined || value === '') {
+                callback();
+                return;
+            }
+            if (!NumRegCheck(value) || value <= 0) {
+                callback(new Error(this.$t('cluster.timeoutValueMustGreaterThanZero')));
+                return;
+            }
+            if (value > 99999999) {
+                callback(new Error(this.$t('cluster.tipsValueMax')));
+                return;
+            }
+            callback();
+        };
+        const retryValidate = (rule, value, callback) => {
+            if (value === null || value === undefined || value === '') {
+                callback();
                 return;
             }
             if (!NumRegCheck(value) || value < 0) {
@@ -135,44 +150,44 @@ export default {
             ruleValidate: {
                 'timeouts.timeout_read_client_again': [
                     {
-                        required: true,
+                        required: false,
                         trigger: '',
                         validator: timeoutValidate
                     }
                 ],
                 'timeouts.timeout_readbody_client': [
                     {
-                        required: true,
+                        required: false,
                         trigger: 'change',
                         validator: timeoutValidate
                     }
                 ],
                 'timeouts.timeout_conn_serv': [
                     {
-                        required: true,
+                        required: false,
                         trigger: 'change',
                         validator: timeoutValidate
                     }
                 ],
                 'timeouts.timeout_response_header': [
                     {
-                        required: true,
+                        required: false,
                         trigger: 'change',
                         validator: timeoutValidate
                     }
                 ],
                 'timeouts.timeout_write_client': [
                     {
-                        required: true,
+                        required: false,
                         trigger: 'change',
                         validator: timeoutValidate
                     }
                 ],
-                'retries.max_retry_in_subcluster': [
+                'retries.max_retry_in_cluster': [
                     {
-                        required: true,
+                        required: false,
                         trigger: 'change',
-                        validator: timeoutValidate
+                        validator: retryValidate
                     }
                 ]
             }

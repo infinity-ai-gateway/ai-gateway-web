@@ -25,6 +25,10 @@ window.MockData = {
           tpm: [{ name: 'tpm-default', model: '*', window_minutes: 1, max_tokens: 100000, step_minutes: 1 }],
           rpm: [{ name: 'rpm-default', model: '*', window_minutes: 1, max_requests: 1000 }]
         }
+      },
+      route_rules: {
+        enabled: false,
+        rules: []
       }
     },
     {
@@ -37,7 +41,22 @@ window.MockData = {
       create_time: 1704844800,
       update_time: 1735689600,
       quota_plan: { unlimited: true, quota: 0, balance: { used: 0 }, unit: 'total_token', reset_period: 'never', pass_when_no_enough_quota: false },
-      rate_limit_policy: { enabled: false, rules: { max_concurrency: -1, tpm: [], rpm: [] } }
+      rate_limit_policy: { enabled: false, rules: { max_concurrency: -1, tpm: [], rpm: [] } },
+      route_rules: {
+        enabled: true,
+        rules: [
+          {
+            name: 'algo-default',
+            Cond: 'default_t()',
+            targets: [
+              { ClusterName: 'cluster-algo', Model: '', Weight: 100 }
+            ],
+            fallbacks: [
+              { ClusterName: 'cluster-algo-fallback', Model: '' }
+            ]
+          }
+        ]
+      }
     },
     {
       id: 3,
@@ -59,6 +78,10 @@ window.MockData = {
       rate_limit_policy: {
         enabled: true,
         rules: { max_concurrency: 100, tpm: [], rpm: [] }
+      },
+      route_rules: {
+        enabled: false,
+        rules: []
       }
     }
   ],
@@ -95,6 +118,19 @@ window.MockData = {
           tpm: [{ name: 'tpm-gpt4', model: 'gpt-4o', window_minutes: 1, max_tokens: 100000, step_minutes: 1 }],
           rpm: [{ name: 'rpm-default', model: '*', window_minutes: 1, max_requests: 1000 }]
         }
+      },
+      route_rules: {
+        enabled: true,
+        rules: [
+          {
+            name: 'apikey-default',
+            Cond: 'default_t()',
+            targets: [
+              { ClusterName: 'cluster_apikey', Model: '', Weight: 100 }
+            ],
+            fallbacks: []
+          }
+        ]
       }
     },
     {
@@ -107,13 +143,39 @@ window.MockData = {
       models: ['gpt-4o'],
       entity: { id: 'e3', name: '测试组', type: 'team' },
       quota_plan: { unlimited: true, quota: 0, balance: { used: 0 }, unit: 'total_token', reset_period: 'never' },
-      rate_limit_policy: { enabled: false, rules: { max_concurrency: -1, tpm: [], rpm: [] } }
+      rate_limit_policy: { enabled: false, rules: { max_concurrency: -1, tpm: [], rpm: [] } },
+      route_rules: {
+        enabled: false,
+        rules: []
+      }
     }
   ],
   clusters: [
     { name: 'test', description: '' },
     { name: 'cluster-test1', description: '测试更新' }
   ],
+  routeTables: [
+    { type: 'global', owner: 'global', enabled: true },
+    { type: 'entity', owner: 1, enabled: false },
+    { type: 'entity', owner: 2, enabled: true },
+    { type: 'api_key', owner: 'ak-001', enabled: true },
+    { type: 'api_key', owner: 'ak-002', enabled: false }
+  ],
+  globalRouteRules: {
+    enabled: true,
+    rules: [
+      {
+        name: 'global-default',
+        Cond: 'default_t()',
+        targets: [
+          { ClusterName: 'cluster-test1', Model: '', Weight: 100 }
+        ],
+        fallbacks: [
+          { ClusterName: 'test', Model: '' }
+        ]
+      }
+    ]
+  },
   forwardRules: [
     {
       name: 'vip-user-route',

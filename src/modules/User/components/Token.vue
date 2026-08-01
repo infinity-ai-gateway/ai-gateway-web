@@ -37,7 +37,7 @@
         <Alert show-icon>{{ $t('user.tipInnerUserDel') }}</Alert>
 
         <Drawer v-model="hidden" width="30" :mask-closable="false">
-            <CreateToken v-if="hidden" :productList="productList" @submitData="submitData" />
+            <CreateToken v-if="hidden" @submitData="submitData" />
         </Drawer>
 
         <Drawer
@@ -56,18 +56,8 @@
                     <ul class="clearFloat">
                         <li class="title">Scope:</li>
                         <li class="value">
-                            {{
-                                info.scope === 'System'
-                                    ? $t('user.system')
-                                    : info.scope === 'Product'
-                                    ? $t('user.product')
-                                    : $t('user.support')
-                            }}
+                            {{ info.scope === 'System' ? $t('user.system') : $t('user.support') }}
                         </li>
-                    </ul>
-                    <ul v-show="info.scope === 'Product'" class="clearFloat">
-                        <li class="title">{{ $t('product.name') }}:</li>
-                        <li class="value">{{ info.product_name }}</li>
                     </ul>
                     <ul class="clearFloat">
                         <li class="title">Token:</li>
@@ -90,7 +80,6 @@ export default {
     },
     mounted() {
         this.getTokenList();
-        this.getProductList();
     },
     data() {
         const that = this;
@@ -158,7 +147,6 @@ export default {
             ],
             loading: false,
             hidden: false,
-            productList: [],
             info: {},
             detailsDrawerVisible: false
         };
@@ -175,18 +163,6 @@ export default {
                     if (data.status === 200) {
                         this.info = data.data.Data;
                         this.detailsDrawerVisible = true;
-                    }
-                })
-                .finally(() => {});
-        },
-        getProductList() {
-            this.$request({
-                url: 'products',
-                method: 'get'
-            })
-                .then(data => {
-                    if (data.status === 200) {
-                        this.productList = data.data.Data;
                     }
                 })
                 .finally(() => {});

@@ -15,7 +15,7 @@ window.PrototypeNav = [
     text: '路由管理',
     icon: 'ivu-icon ivu-icon-ios-cube',
     children: [
-      { id: 'AdvanceRouteRule.list', i18n: 'AdvanceRouteRuleManage', page: 'route.html', text: '路由规则', icon: 'iconfont icon-zhuanfa' }
+      { id: 'RouteTable.list', i18n: 'RouteTableManage', page: 'route-tables.html', text: '路由表', icon: 'iconfont icon-zhuanfa' }
     ]
   },
   {

@@ -113,7 +113,7 @@ export default {
                 },
                 {
                     title: that.$t('entity.quota'),
-                    key: 'quota_plan',
+                    key: 'quota_plan_used',
                     minWidth: 140,
                     sortable: 'custom',
                     searchable: true,
@@ -324,12 +324,19 @@ export default {
             })
                 .then(res => {
                     if (res.status === 200) {
-                        const data = res.data.Data;
-                        const list = data && data.list || data || [];
-                        this.tableData = list.map(item => ({
-                            ...item,
-                            rate_limit_policy_enabled: !!(item.rate_limit_policy && item.rate_limit_policy.enabled)
-                        }));
+                        const data = res.data.Data || {};
+                        const list = Array.isArray(data.list) ? data.list : [];
+                        this.tableData = list.map(item => {
+                            const quotaPlan = item.quota_plan || {};
+                            const isUnlimited = quotaPlan.unlimited === true || quotaPlan.unlimited === 'true';
+                            return {
+                                ...item,
+                                rate_limit_policy_enabled: !!(item.rate_limit_policy && item.rate_limit_policy.enabled),
+                                quota_plan_used: isUnlimited
+                                    ? -1
+                                    : ((quotaPlan.balance && quotaPlan.balance.used) || 0)
+                            };
+                        });
                     }
                 })
                 .finally(() => {
