@@ -31,7 +31,7 @@
 <template>
     <Form label-position="top" ref="formData" :model="formData" :rules="ruleValidate">
         <FormItem :label="$t('com.nameX', { obj: $t('cluster.name') })" prop="name">
-            <Input v-model="formData.name" :disabled="!isAdd" />
+            <Input v-model="formData.name" :disabled="!isAdd" :maxlength="64" />
         </FormItem>
         <FormItem :label="$t('cluster.clusterDescription')" prop="description">
             <Input v-model="formData.description" />
@@ -54,6 +54,21 @@
         </FormItem>
         <FormItem
             v-if="formData.sticky_sessions"
+            :label="$t('cluster.stickySessionsEnabled')"
+            prop="sticky_sessions.enabled"
+        >
+            <Select
+                v-model="formData.sticky_sessions.enabled"
+                size="small"
+                class="from-item-inp"
+            >
+                <Option v-for="item in boolOptions" :value="item.value" :key="item.value">{{
+                    item.name
+                }}</Option>
+            </Select>
+        </FormItem>
+        <FormItem
+            v-if="formData.sticky_sessions && formData.sticky_sessions.enabled === 'true'"
             :label="$t('cluster.hashStrategy')"
             prop="sticky_sessions.hash_strategy"
         >
@@ -71,6 +86,7 @@
         <FormItem
             v-if="
                 formData.sticky_sessions &&
+                formData.sticky_sessions.enabled === 'true' &&
                 formData.sticky_sessions.hash_strategy !== 'CLIENT_IP_ONLY'
             "
             :label="$t('cluster.hashHeader')"
@@ -79,27 +95,9 @@
             <Input v-model="formData.sticky_sessions.hash_header" />
         </FormItem>
         <FormItem
-            v-if="formData.sticky_sessions"
-            :label="$t('cluster.stickySessions')"
-            prop="sticky_sessions.session_sticky_type"
-        >
-            <Select
-                v-model="formData.sticky_sessions.session_sticky_type"
-                size="small"
-                class="from-item-inp"
-            >
-                <Option
-                    v-for="item in sessionStickyOptions"
-                    :value="item.value"
-                    :key="item.value"
-                    >{{ item.value }}</Option
-                >
-            </Select>
-        </FormItem>
-        <FormItem
             v-if="formData.buffers"
             :label="$t('cluster.reqWriteBufferSize')"
-            prop="connection.req_write_buffer_size"
+            prop="buffers.req_write_buffer_size"
         >
             <InputNumber
                 v-model="formData.buffers.req_write_buffer_size"
@@ -124,7 +122,7 @@
     </Form>
 </template>
 <script>
-import { BaseClustersNameRegCheck, NumRegCheck } from '@/utils/const';
+import { ClustersNameRegCheck, NumRegCheck } from '@/utils/const';
 import { cloneDeep } from 'lodash';
 export default {
     name: 'BaseConfig',
@@ -177,6 +175,21 @@ export default {
         }
     },
     data() {
+        const validateDescription = (rule, value, callback) => {
+            if (!value) {
+                callback();
+                return;
+            }
+            if (value.length > 256) {
+                callback(new Error(this.$t('cluster.descriptionLengthError')));
+                return;
+            }
+            if (/[\x00-\x1F\x7F]/.test(value)) {
+                callback(new Error(this.$t('cluster.descriptionControlCharsError')));
+                return;
+            }
+            callback();
+        };
         const validateName = (rule, value, callback) => {
             if (value === '') {
                 callback(
@@ -198,36 +211,44 @@ export default {
                 );
                 return;
             }
-            if (!BaseClustersNameRegCheck(value)) {
+            if (!ClustersNameRegCheck(value)) {
                 callback(new Error(this.$t('cluster.tipClusterNameRule')));
                 return;
             }
             callback();
         };
         const validateMaxIdleConnPerHost = (rule, value, callback) => {
-            if (value === null) {
-                callback(
-                    new Error(
-                        this.$t('com.tipEnterX', { obj: this.$t('cluster.maxIdleConnPerRs') })
-                    )
-                );
-            } else {
-                if (!NumRegCheck(value)) {
-                    callback(new Error(this.$t('cluster.tipValueNonnegativeInteger')));
-                } else if (value > 99999999) {
-                    callback(new Error(this.$t('cluster.tipsValueMax')));
-                }
+            if (value === null || value === undefined || value === '') {
                 callback();
+                return;
             }
+            if (!NumRegCheck(value)) {
+                callback(new Error(this.$t('cluster.tipValueNonnegativeInteger')));
+                return;
+            }
+            if (value < 0) {
+                callback(new Error(this.$t('cluster.tipValueNonnegativeInteger')));
+                return;
+            }
+            if (value > 99999999) {
+                callback(new Error(this.$t('cluster.tipsValueMax')));
+            }
+            callback();
         };
         const validateReqWriteBufferSize = (rule, value, callback) => {
-            if (value === null) {
-                callback(
-                    new Error(this.$t('com.tipEnterX', { obj: this.$t('cluster.reqWriteBuffer') }))
-                );
-            } else {
+            if (value === null || value === undefined || value === '') {
                 callback();
+                return;
             }
+            if (!NumRegCheck(value) || value <= 0) {
+                callback(new Error(this.$t('cluster.reqWriteBufferSizeMustGreaterThanZero')));
+                return;
+            }
+            if (value > 99999999) {
+                callback(new Error(this.$t('cluster.tipsValueMax')));
+                return;
+            }
+            callback();
         };
         return {
             ruleValidate: {
@@ -236,6 +257,13 @@ export default {
                         required: true,
                         trigger: 'blur',
                         validator: validateName
+                    }
+                ],
+                description: [
+                    {
+                        required: false,
+                        trigger: 'blur',
+                        validator: validateDescription
                     }
                 ],
                 protocol: [
@@ -247,48 +275,40 @@ export default {
                 ],
                 'connection.max_idle_conn_per_rs': [
                     {
-                        required: true,
+                        required: false,
                         trigger: 'blur',
                         validator: validateMaxIdleConnPerHost
                     }
                 ],
+                'sticky_sessions.enabled': [
+                    {
+                        required: false,
+                        trigger: 'change'
+                    }
+                ],
                 'sticky_sessions.hash_strategy': [
                     {
-                        required: true,
-                        trigger: 'change',
-                        message: this.$t('com.tipSelectX', { obj: this.$t('cluster.hashStrategy') })
+                        required: false,
+                        trigger: 'change'
                     }
                 ],
                 'sticky_sessions.hash_header': [
                     {
-                        required: true,
-                        trigger: 'change',
-                        message: this.$t('com.tipSelectX', { obj: this.$t('cluster.hashHeader') })
+                        required: false,
+                        trigger: 'change'
                     }
                 ],
-                'sticky_sessions.session_sticky_type': [
+                'buffers.req_write_buffer_size': [
                     {
-                        required: true,
-                        trigger: 'change',
-                        message: this.$t('com.tipSelectX', {
-                            obj: this.$t('cluster.stickySessions')
-                        })
-                    }
-                ],
-                'connection.req_write_buffer_size': [
-                    {
-                        required: true,
+                        required: false,
                         trigger: 'change',
                         validator: validateReqWriteBufferSize
                     }
                 ],
                 'connection.cancel_on_client_close': [
                     {
-                        required: true,
-                        trigger: 'change',
-                        message: this.$t('com.tipSelectX', {
-                            obj: this.$t('cluster.cancelOnClientClose')
-                        })
+                        required: false,
+                        trigger: 'change'
                     }
                 ]
             },
@@ -304,20 +324,19 @@ export default {
                     req_write_buffer_size: 512
                 },
                 sticky_sessions: {
-                    session_sticky_type: 'INSTANCE',
+                    enabled: 'false',
                     hash_strategy: 'CLIENT_ID_ONLY',
-                    hash_header: 'Cookie:USERID'
+                    hash_header: ''
                 },
                 timeouts: {
-                    timeout_conn_serv: 2000,
-                    timeout_response_header: 60000,
+                    timeout_conn_serv: 50000,
+                    timeout_response_header: 50000,
                     timeout_readbody_client: 30000,
-                    timeout_read_client_again: 60000,
+                    timeout_read_client_again: 30000,
                     timeout_write_client: 60000
                 },
                 retries: {
-                    max_retry_in_subcluster: 2,
-                    max_retry_cross_subcluster: 0
+                    max_retry_in_cluster: 2
                 }
             },
             hashStrategyOptions: [
@@ -329,16 +348,6 @@ export default {
                 },
                 {
                     name: 'CLIENT_ID_PREFERED'
-                }
-            ],
-            sessionStickyOptions: [
-                {
-                    name: this.$t('cluster.instanceSessionPersistence'),
-                    value: 'INSTANCE'
-                },
-                {
-                    name: this.$t('cluster.subClusterSessionPersistence'),
-                    value: 'SUB_CLUSTER'
                 }
             ],
             boolOptions: [
@@ -355,19 +364,16 @@ export default {
     },
     methods: {
         selectHashStrategy() {
-            if (!this.formData.sticky_sessions.hash_header) {
-                this.$set(this.formData.sticky_sessions, 'hash_header', 'Cookie:USERID');
-                this.$set(this.ruleValidate, 'hash_header', {
-                    required: true,
-                    trigger: 'change',
-                    message: this.$t('com.tipEnterX', { obj: this.$t('cluster.hashHeader') })
-                });
+            if (
+                this.formData.sticky_sessions.enabled === 'true'
+                && !this.formData.sticky_sessions.hash_header
+            ) {
+                this.$set(this.formData.sticky_sessions, 'hash_header', '');
             }
         },
         handleSubmit(name) {
             if (this.formData.sticky_sessions.hash_strategy === 'CLIENT_IP_ONLY') {
-                this.$delete(this.formData.sticky_sessions, 'hash_header');
-                this.$delete(this.ruleValidate, 'sticky_sessions.hash_header');
+                this.$set(this.formData.sticky_sessions, 'hash_header', '');
             }
             this.$refs[name].validate(valid => {
                 if (!valid) {

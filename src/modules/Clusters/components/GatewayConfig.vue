@@ -23,12 +23,6 @@
       @submit.native.prevent
     >
       <div>
-        <FormItem :label="$t('gatewayConfig.serviceName')" prop="service_name">
-          <Input v-model="formData.service_name" />
-        </FormItem>
-        <FormItem :label="$t('gatewayConfig.group')" prop="group">
-          <Input v-model="formData.group" />
-        </FormItem>
         <FormItem
           :label="$t('gatewayConfig.modelServiceProvider')"
           prop="provider_type"
@@ -135,16 +129,16 @@
               >
                 <td>
                   <Input
-                    :value="model.key"
-                    @on-change="e => changeMappingKey(index, e.target.value)"
+                    :value="model.source_model"
+                    @on-change="e => changeMappingSource(index, e.target.value)"
                     :placeholder="$t('gatewayConfig.enterOriginalModelName')"
                   />
                 </td>
                 <td>
                   <Select
-                    v-model="model.value"
+                    v-model="model.target_model"
                     :placeholder="$t('gatewayConfig.selectTargetModel')"
-                    @on-change="value => changeMappingValue(index, value)"
+                    @on-change="value => changeMappingTarget(index, value)"
                   >
                     <Option
                       v-for="(item, idx) in formData.models"
@@ -193,8 +187,8 @@
 
 <script>
 import { cloneDeep, isEmpty } from 'lodash';
-import { CommonNameCheck, maskSecretKey } from '@/utils/const';
-import { parseInstancePool } from './InstancePool';
+import { maskSecretKey } from '@/utils/const';
+import { getInstanceEndpointHosts } from './InstancePool';
 export default {
     components: {},
     props: {
@@ -234,47 +228,41 @@ export default {
         }
     },
     data() {
-        const validServiceName = (rule, value, callback) => {
-            if (!value) {
-                callback(new Error(this.$t('gatewayConfig.serviceNameRequired')));
-                return;
-            }
-
-            if (!CommonNameCheck(value)) {
-                callback(new Error(this.$t('com.tipCommonRule')));
-                return;
-            }
-
-            callback();
-        };
-
         const validEndpoint = (rule, value, callback) => {
-            if (!value.schema ) {
+            const endpoint = value || {};
+            const schema = endpoint.schema;
+            const uri = endpoint.uri;
+
+            if (!schema && !uri) {
+                callback();
+                return;
+            }
+            if (!schema) {
                 callback(new Error(this.$t('gatewayConfig.schemaRequired')));
                 return;
             }
-            if (!value.uri) {
+            if (!uri) {
                 callback(new Error(this.$t('gatewayConfig.uriRequired')));
                 return;
             }
 
-            if (!value.uri.startsWith('/')) {
+            if (!uri.startsWith('/')) {
                 callback(new Error(this.$t('gatewayConfig.uriMustStartWithSlash')));
                 return;
             }
 
             const uriPattern = /^[\/a-zA-Z0-9\-_\.~!$&'()*+,;=:@]*$/;
-            if (!uriPattern.test(value.uri)) {
+            if (!uriPattern.test(uri)) {
                 callback(new Error(this.$t('gatewayConfig.uriContainsIllegalChars')));
                 return;
             }
 
-            if (value.uri.includes('//') && value.uri !== '//') {
+            if (uri.includes('//') && uri !== '//') {
                 callback(new Error(this.$t('gatewayConfig.uriCannotConsecutiveSlash')));
                 return;
             }
 
-            if (value.uri.length > 1 && value.uri.endsWith('/')) {
+            if (uri.length > 1 && uri.endsWith('/')) {
                 callback(new Error(this.$t('gatewayConfig.uriCannotEndWithSlash')));
                 return;
             }
@@ -288,7 +276,7 @@ export default {
                 callback();
                 return;
             }
-            if (keyValue.length < 20 || keyValue.length > 200) {
+            if (keyValue.length > 512) {
                 callback(new Error(this.$t('gatewayConfig.formatInvalid')));
                 return;
             }
@@ -304,8 +292,8 @@ export default {
 
             for (let i = 0; i < value.length; i++) {
                 const item = value[i];
-                const key = (item.key || '').trim();
-                const val = (item.value || '').trim();
+                const key = (item.source_model || '').trim();
+                const val = (item.target_model || '').trim();
 
                 if (!key) {
                     callback(new Error(this.$t('gatewayConfig.modelMappingKeyRequired', { line: i + 1 })));
@@ -317,7 +305,7 @@ export default {
                 }
             }
 
-            const keys = value.map(item => item.key).filter(key => key !== '');
+            const keys = value.map(item => item.source_model).filter(key => key !== '');
 
             const uniqueKeys = [...new Set(keys)];
 
@@ -330,23 +318,10 @@ export default {
         };
         return {
             ruleValidate: {
-                service_name: [
-                    {
-                        required: true,
-                        validator: validServiceName
-                    }
-                ],
-                provider_type: [
-                    {
-                        required: true,
-                        message: this.$t('com.tipSelectX', {
-                            obj: this.$t('gatewayConfig.modelServiceProvider')
-                        })
-                    }
-                ],
+                provider_type: [],
                 model_endpoint: [
                     {
-                        required: true,
+                        required: false,
                         validator: validEndpoint
                     }
                 ],
@@ -376,19 +351,17 @@ export default {
             maskedExistingKey: '',
             keyModifiedInSession: false,
             formData: {
-                service_name: '',
-                group: 'default',
                 provider_type: '',
                 model_endpoint: {
-                    schema: 'http',
+                    schema: 'https',
                     uri: '/v1/models',
                     headers: {}
                 },
                 models: [],
                 model_mappings: [
                     {
-                        key: '',
-                        value: ''
+                        source_model: '',
+                        target_model: ''
                     }
                 ],
                 keyInput: ''
@@ -403,14 +376,7 @@ export default {
     watch: {
         instancePoolData: {
             handler(v) {
-                this.ipStr = '';
-                const ipPortList = parseInstancePool(v).map(instance => {
-                    const port = instance.ports && instance.ports.Default != null
-                        ? instance.ports.Default
-                        : 80;
-                    return `${instance.ip}:${port}`;
-                });
-                this.ipStr = [...new Set(ipPortList)].join('\n');
+                this.ipStr = [...new Set(getInstanceEndpointHosts(v))].join('\n');
             },
             immediate: true,
             deep: true
@@ -453,18 +419,16 @@ export default {
     methods: {
         resetLlmForm() {
             this.formData = {
-                service_name: '',
-                group: 'default',
                 model_endpoint: {
-                    schema: '',
+                    schema: 'https',
                     uri: '/v1/models',
                     headers: {}
                 },
                 models: [],
                 model_mappings: [
                     {
-                        key: '',
-                        value: ''
+                        source_model: '',
+                        target_model: ''
                     }
                 ],
                 keyInput: ''
@@ -535,10 +499,12 @@ export default {
         applyLlmConfigData(data) {
             this.formData = cloneDeep(data);
             delete this.formData.key;
+            delete this.formData.service_name;
+            delete this.formData.group;
             this.initHeaders();
             if (!this.formData.model_endpoint) {
                 this.$set(this.formData, 'model_endpoint', {
-                    schema: 'http',
+                    schema: 'https',
                     uri: '/v1/models',
                     headers: {}
                 });
@@ -551,8 +517,8 @@ export default {
             if (!this.formData.model_mappings) {
                 this.$set(this.formData, 'model_mappings', [
                     {
-                        key: '',
-                        value: ''
+                        source_model: '',
+                        target_model: ''
                     }
                 ]);
             }
@@ -683,8 +649,8 @@ export default {
 
         addModelRedirect() {
             this.formData.model_mappings.push({
-                key: '',
-                value: ''
+                source_model: '',
+                target_model: ''
             });
         },
 
@@ -696,18 +662,18 @@ export default {
             });
         },
 
-        changeMappingKey(index, newKey) {
+        changeMappingSource(index, newKey) {
             if (this.formData.model_mappings && this.formData.model_mappings[index]) {
-                this.$set(this.formData.model_mappings[index], 'key', newKey);
+                this.$set(this.formData.model_mappings[index], 'source_model', newKey);
 
                 this.$nextTick(() => {
                     this.$refs.formData.validateField('model_mappings');
                 });
             }
         },
-        changeMappingValue(index, newValue) {
+        changeMappingTarget(index, newValue) {
             if (this.formData.model_mappings && this.formData.model_mappings[index]) {
-                this.$set(this.formData.model_mappings[index], 'value', newValue);
+                this.$set(this.formData.model_mappings[index], 'target_model', newValue);
             }
         },
         queryModels() {
@@ -718,7 +684,7 @@ export default {
             this.modelsList = [];
             this.btnLoading = true;
             this.$request({
-                url: 'models',
+                url: 'tools/get-models-from-provider',
                 method: 'post',
                 data: {
                     schema: this.formData.model_endpoint.schema,
@@ -753,12 +719,15 @@ export default {
         },
         getProviders() {
             this.$request({
-                url: 'model-providers',
+                url: 'model-provider-types',
                 method: 'get',
                 openapi: true
             }).then(data => {
                 if (data.status === 200) {
-                    this.providers = data.data.Data || [];
+                    this.providers = (data.data.Data || []).map(item => ({
+                        id: item,
+                        name: item
+                    }));
                 }
             });
         },
@@ -772,10 +741,17 @@ export default {
                 let tmpData = {};
                 tmpData = cloneDeep(this.formData);
 
+                tmpData.model_endpoint = tmpData.model_endpoint || {};
+                if (!tmpData.model_endpoint.schema) {
+                    tmpData.model_endpoint.schema = 'https';
+                }
+                if (!tmpData.model_endpoint.uri) {
+                    tmpData.model_endpoint.uri = '/v1/models';
+                }
                 tmpData.model_endpoint.headers = this.prepareHeadersForSubmit();
                 if (tmpData.model_mappings && Array.isArray(tmpData.model_mappings)) {
                     tmpData.model_mappings = tmpData.model_mappings.filter(
-                        item => item.key !== '' || item.value !== ''
+                        item => item.source_model !== '' || item.target_model !== ''
                     );
                 }
 
@@ -787,6 +763,11 @@ export default {
                     delete tmpData.key;
                 }
                 delete tmpData.keyInput;
+                delete tmpData.service_name;
+                delete tmpData.group;
+                if (!tmpData.provider_type) {
+                    delete tmpData.provider_type;
+                }
 
                 this.$emit('submitData', {
                     topic: 'llmConfigData',

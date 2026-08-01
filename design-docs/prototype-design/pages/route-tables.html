@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/ai-rule.css" />
+  <link rel="stylesheet" href="../assets/font/iconfont.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/prototype.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: 'RouteTable.list', basePath: '../' });
+  root.innerHTML = '<div id="route-table-list"></div>';
+
+  var TYPE_LABELS = { global: 'Global', entity: 'Entity', api_key: 'API-Key' };
+
+  var state = {
+    rows: cloneRows(MockData.routeTables),
+    filteredRows: [],
+    search: { type: '', ownerDisplay: '', enabled: '' },
+    pageSize: 20,
+    currentPage: 1
+  };
+
+  function cloneRows(list) {
+    return JSON.parse(JSON.stringify(list || []));
+  }
+
+  function getOwnerDisplay(item) {
+    if (item.type === 'global') return 'Global';
+    if (item.type === 'entity') {
+      var entity = (MockData.entities || []).find(function (e) {
+        return String(e.id) === String(item.owner);
+      });
+      return entity ? entity.name : item.owner;
+    }
+    if (item.type === 'api_key') {
+      var key = (MockData.apiKeys || []).find(function (k) {
+        return k.id === item.owner;
+      });
+      return key ? (key.description || key.id) : item.owner;
+    }
+    return item.owner;
+  }
+
+  function findRouteTableIndex(type, owner) {
+    return MockData.routeTables.findIndex(function (item) {
+      return item.type === type && String(item.owner) === String(owner);
+    });
+  }
+
+  function filterRows() {
+    state.filteredRows = state.rows.filter(function (row) {
+      return Object.keys(state.search).every(function (key) {
+        var keyword = String(state.search[key] || '').trim();
+        if (!keyword) return true;
+        if (key === 'type') return String(row.type || '') === keyword;
+        if (key === 'ownerDisplay') return getOwnerDisplay(row).toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
+        if (key === 'enabled') return String(!!row.enabled) === keyword;
+        return true;
+      });
+    });
+  }
+
+  function getPageRows() {
+    var start = (state.currentPage - 1) * state.pageSize;
+    return state.filteredRows.slice(start, start + state.pageSize);
+  }
+
+  function renderTable() {
+    filterRows();
+    var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+    if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+    document.getElementById('route-table-list').innerHTML = IvuUI.pageTable({
+      tableId: 'route-table-page-table',
+      columns: [
+        {
+          title: '路由表类型',
+          key: 'type',
+          minWidth: 120,
+          searchable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择类型',
+          searchFilters: [
+            { label: 'Global', value: 'global' },
+            { label: 'Entity', value: 'entity' },
+            { label: 'API-Key', value: 'api_key' }
+          ],
+          render: function (row) { return TYPE_LABELS[row.type] || row.type; }
+        },
+        { title: '路由表属主', key: 'ownerDisplay', minWidth: 180, searchable: true, searchPlaceholder: '请输入属主查询',
+          render: function (row) { return getOwnerDisplay(row); }
+        },
+        {
+          title: '状态',
+          key: 'enabled',
+          minWidth: 100,
+          searchable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择状态',
+          searchFilters: [
+            { label: '启用', value: 'true' },
+            { label: '停用', value: 'false' }
+          ],
+          render: function (row) {
+            return IvuUI.tag(row.enabled ? '启用' : '停用', row.enabled ? 'success' : 'default');
+          }
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: 260,
+          render: function (row) {
+            var editHref = 'route.html?type=' + encodeURIComponent(row.type) + '&owner=' + encodeURIComponent(row.owner);
+            return IvuUI.btn('查看', 'primary', 'small', '', 'onclick="window.location.href=\'' + editHref + '\'"') + ' ' +
+              IvuUI.btn('启用', 'success', 'small', '', 'data-route-enable="' + row.type + ':' + row.owner + '"' + (row.enabled ? ' disabled' : '')) + ' ' +
+              IvuUI.btn('停用', 'warning', 'small', '', 'data-route-disable="' + row.type + ':' + row.owner + '"' + (row.enabled ? '' : ' disabled'));
+          }
+        }
+      ],
+      rows: getPageRows(),
+      total: state.filteredRows.length,
+      pageSize: state.pageSize,
+      currentPage: state.currentPage,
+      searchValues: state.search
+    });
+
+    bindTableEvents();
+  }
+
+  function bindTableEvents() {
+    var tableRoot = document.getElementById('route-table-page-table');
+    if (!tableRoot) return;
+
+    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+      state.search[key] = value;
+      state.currentPage = 1;
+      renderTable();
+    });
+
+    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+      item.onclick = function () {
+        state.currentPage = parseInt(item.getAttribute('data-page'), 10);
+        renderTable();
+      };
+    });
+
+    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+    if (sizeSelect) {
+      sizeSelect.onchange = function () {
+        state.pageSize = parseInt(sizeSelect.value, 10);
+        state.currentPage = 1;
+        renderTable();
+      };
+    }
+
+    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+      btn.onclick = function () {
+        if (state.currentPage > 1) { state.currentPage -= 1; renderTable(); }
+      };
+    });
+    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
+      btn.onclick = function () {
+        var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+        if (state.currentPage < totalPages) { state.currentPage += 1; renderTable(); }
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-route-enable]').forEach(function (btn) {
+      btn.onclick = function () {
+        var parts = btn.getAttribute('data-route-enable').split(':');
+        setRouteTableEnabled(parts[0], parts.slice(1).join(':'), true);
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-route-disable]').forEach(function (btn) {
+      btn.onclick = function () {
+        var parts = btn.getAttribute('data-route-disable').split(':');
+        setRouteTableEnabled(parts[0], parts.slice(1).join(':'), false);
+      };
+    });
+  }
+
+  function setRouteTableEnabled(type, owner, enabled) {
+    var tableIndex = findRouteTableIndex(type, owner);
+    if (tableIndex < 0) return;
+
+    MockData.routeTables[tableIndex].enabled = enabled;
+
+    if (type === 'global') {
+      MockData.globalRouteRules.enabled = enabled;
+    } else if (type === 'entity') {
+      var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(owner); });
+      if (entity && entity.route_rules) entity.route_rules.enabled = enabled;
+    } else if (type === 'api_key') {
+      var key = (MockData.apiKeys || []).find(function (k) { return k.id === owner; });
+      if (key && key.route_rules) key.route_rules.enabled = enabled;
+    }
+
+    state.rows = cloneRows(MockData.routeTables);
+    renderTable();
+    Prototype.toast('路由表已' + (enabled ? '启用' : '停用'));
+  }
+
+  renderTable();
+});
+</script>
+</body>
+</html>

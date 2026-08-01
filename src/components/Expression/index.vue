@@ -37,9 +37,12 @@
                                 class="vars-expression-name expression-content-example"
                             ></div>
                         </div>
-                        <div @click="onBtnClick(ele)" class="vars-expression-show">
-                            {{ ele.name }}
-                        </div>
+                        <div
+                    @click="onBtnClick(ele)"
+                    :class="['vars-expression-show', { 'readonly': readonly }]"
+                >
+                    {{ ele.name }}
+                </div>
                     </Tooltip>
                 </div>
             </div>
@@ -49,6 +52,7 @@
             type="textarea"
             :rows="6"
             class="expression"
+            :disabled="readonly"
             @on-change="changeExpression"
         />
         <div class="error" v-if="errmsg">{{ errmsg }}</div>
@@ -72,6 +76,10 @@ export default {
         type: {
             type: String,
             default: 'controller'
+        },
+        readonly: {
+            type: Boolean,
+            default: false
         }
     },
     computed: {
@@ -143,6 +151,9 @@ export default {
             });
         },
         onBtnClick(data) {
+            if (this.readonly) {
+                return;
+            }
             this.localExpression += data.expression;
             this.changeExpression();
         }
@@ -183,6 +194,14 @@ export default {
                 line-height: 21px;
                 &:hover {
                     border-color: red;
+                }
+                &.readonly {
+                    cursor: not-allowed;
+                    color: #999;
+                    background: #f5f5f5;
+                    &:hover {
+                        border-color: #eee;
+                    }
                 }
             }
         }

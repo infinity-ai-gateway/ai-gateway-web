@@ -56,8 +56,13 @@
                     type="text"
                     :placeholder="$t('instancePool.domainPlaceholder')"
                     style="max-width: 480px;"
-                    @on-blur="validateDomainField"
                 />
+            </FormItem>
+            <FormItem
+                v-if="formData.instanceMode === 'domain'"
+                :label="$t('instancePool.weight')"
+            >
+                <InputNumber :value="100" disabled style="width: 120px;" />
             </FormItem>
 
             <FormItem
@@ -70,6 +75,7 @@
                         <tr>
                             <th>{{ $t('instancePool.ipAddress') }}</th>
                             <th>{{ $t('instancePool.port') }}</th>
+                            <th>{{ $t('instancePool.weight') }}</th>
                             <th>{{ $t('com.operation') }}</th>
                         </tr>
                         <tr v-for="(item, ind) in formData.instances" :key="ind">
@@ -86,7 +92,7 @@
                                         :placeholder="
                                             $t('com.tipEnterX', { obj: $t('instancePool.ipAddress') })
                                         "
-                                        @on-change="onInstanceIpChange(item, ind)"
+                                        @on-change="validateInstanceRow(ind)"
                                         @on-blur="validateInstanceRow(ind)"
                                     />
                                 </FormItem>
@@ -121,6 +127,24 @@
                                 </div>
                             </td>
                             <td>
+                                <FormItem
+                                    :prop="'instances.' + ind + '.weight'"
+                                    :rules="instanceWeightRules"
+                                    :show-message="false"
+                                    class="table-cell-form-item"
+                                >
+                                    <InputNumber
+                                        v-model="item.weight"
+                                        :max="100"
+                                        :min="0"
+                                        class="poolInput"
+                                        style="width: 80px;"
+                                        @on-change="onInstanceWeightChange(ind)"
+                                        @on-blur="validateInstanceRow(ind)"
+                                    ></InputNumber>
+                                </FormItem>
+                            </td>
+                            <td>
                                 <Button
                                     size="small"
                                     type="error"
@@ -144,23 +168,18 @@
 
 <script>
 import { cloneDeep } from 'lodash';
-import { isIP, isFQDN } from 'validator';
+import { isIP } from 'validator';
+import { isHostname, NumRegCheck } from '@/utils/const';
 
 const DOMAIN_PORT = 443;
+const DOMAIN_WEIGHT = 100;
 
 function createEmptyInstance() {
     return {
-        hostname: '',
         ports: { Default: 80 },
-        tags: { key: 'value' },
         ip: '',
-        weight: 1
+        weight: 100
     };
-}
-
-function isDomainAddress(value) {
-    const addr = String(value || '').trim();
-    return addr && !isIP(addr, 4) && !isIP(addr, 6) && isFQDN(addr);
 }
 
 export function getDomainValidationError(value) {
@@ -168,13 +187,7 @@ export function getDomainValidationError(value) {
     if (!domain) {
         return 'empty';
     }
-    if (isIP(domain, 4) || isIP(domain, 6)) {
-        return 'invalid';
-    }
-    if (/^\d+$/.test(domain)) {
-        return 'invalid';
-    }
-    if (!isFQDN(domain, { require_tld: true, allow_underscores: false })) {
+    if (!isHostname(domain)) {
         return 'invalid';
     }
     return null;
@@ -184,65 +197,12 @@ export function validateDomainName(value) {
     return getDomainValidationError(value) === null;
 }
 
-function getInstanceAddressCandidates(instance) {
-    const item = instance || {};
-    return [
-        item.hostname,
-        item.ip,
-        item.Name,
-        item.Addr,
-        item.Hostname,
-        item.name,
-        item.addr
-    ]
-        .map(value => String(value || '').trim())
-        .filter(Boolean);
-}
-
 export function parseInstancePool(instancePool) {
     if (!instancePool) {
         return [];
     }
     if (Array.isArray(instancePool)) {
         return instancePool.map(item => normalizeInstance(item));
-    }
-    if (typeof instancePool === 'object') {
-        if (Array.isArray(instancePool.instances)) {
-            return instancePool.instances.map(item => normalizeInstance(item));
-        }
-        if (
-            instancePool.Name
-            || instancePool.Addr
-            || instancePool.hostname
-            || instancePool.ip
-            || instancePool.Hostname
-        ) {
-            return [normalizeInstance(instancePool)];
-        }
-    }
-    return [];
-}
-
-function extractRawInstanceList(instancePool) {
-    if (!instancePool) {
-        return [];
-    }
-    if (Array.isArray(instancePool)) {
-        return instancePool;
-    }
-    if (typeof instancePool === 'object') {
-        if (Array.isArray(instancePool.instances)) {
-            return instancePool.instances;
-        }
-        if (
-            instancePool.Name
-            || instancePool.Addr
-            || instancePool.hostname
-            || instancePool.ip
-            || instancePool.Hostname
-        ) {
-            return [instancePool];
-        }
     }
     return [];
 }
@@ -251,18 +211,14 @@ export function getClusterInstancePool(cluster) {
     if (!cluster || typeof cluster !== 'object') {
         return [];
     }
-    if (cluster.instance_pool != null) {
+    if (Array.isArray(cluster.instance_pool)) {
         return cluster.instance_pool;
-    }
-    const subClusters = cluster.sub_clusters;
-    if (Array.isArray(subClusters) && subClusters.length === 1 && subClusters[0].instance_pool != null) {
-        return subClusters[0].instance_pool;
     }
     return [];
 }
 
 export function detectInstanceMode(instances) {
-    const list = instances || [];
+    const list = (instances || []).map(item => normalizeInstance(item));
     if (list.length !== 1) {
         return {
             mode: 'ip',
@@ -270,11 +226,14 @@ export function detectInstanceMode(instances) {
         };
     }
 
-    const domain = getInstanceAddressCandidates(list[0]).find(isDomainAddress);
-    if (domain) {
+    const item = list[0];
+    const hostname = String(item.hostname || '').trim();
+    const ip = String(item.ip || '').trim();
+
+    if (hostname && !ip) {
         return {
             mode: 'domain',
-            domain
+            domain: hostname
         };
     }
 
@@ -286,97 +245,84 @@ export function detectInstanceMode(instances) {
 
 export function normalizeInstance(instance) {
     const item = cloneDeep(instance || {});
-    if (item.Name && !item.hostname) {
-        item.hostname = item.Name;
+    if (!item.ports || typeof item.ports !== 'object' || item.ports.Default == null || item.ports.Default === '') {
+        item.ports = { Default: 80 };
+    } else {
+        item.ports = { Default: parseInt(item.ports.Default, 10) };
     }
-    if (item.Addr && !item.ip) {
-        item.ip = item.Addr;
+    if (item.weight == null || item.weight === '') {
+        item.weight = 100;
+    } else {
+        item.weight = parseInt(item.weight, 10);
     }
-    if (item.Hostname && !item.hostname) {
-        item.hostname = item.Hostname;
-    }
-    const portSource = (item.ports && typeof item.ports === 'object') ? item.ports : item.Ports;
-    if (portSource && typeof portSource === 'object') {
-        item.ports = {
-            Default: portSource.Default != null ? portSource.Default : portSource.default
+    item.hostname = item.hostname != null ? String(item.hostname) : '';
+    item.ip = item.ip != null ? String(item.ip) : '';
+    return item;
+}
+
+export function formatInstanceForApi(instance, mode) {
+    const item = normalizeInstance(instance);
+    const port = parseInt(item.ports.Default, 10);
+    const weight = item.weight != null ? parseInt(item.weight, 10) : 0;
+
+    if (mode === 'domain') {
+        const hostname = String(item.hostname || '').trim();
+        return {
+            hostname,
+            weight,
+            ports: {
+                Default: port
+            }
         };
     }
-    if (item.Port != null && (!item.ports || item.ports.Default == null)) {
-        item.ports = { Default: item.Port };
-    }
-    if (!item.ports || typeof item.ports !== 'object') {
-        item.ports = { Default: 80 };
-    } else if (item.ports.Default == null || item.ports.Default === '') {
-        item.ports.Default = item.ports.default != null ? item.ports.default : 80;
-    }
-    if (item.Weight != null && item.weight == null) {
-        item.weight = item.Weight;
-    }
-    if (!item.tags) {
-        item.tags = { key: 'value' };
-    }
-    if (item.weight == null) {
-        item.weight = 1;
-    }
-    if (item.hostname == null) {
-        item.hostname = '';
-    }
-    if (item.ip == null) {
-        item.ip = '';
-    }
-    return item;
-}
 
-export function applyHostnameFromIp(instance) {
-    const item = normalizeInstance(instance);
     const ip = String(item.ip || '').trim();
-    item.hostname = ip;
-    return item;
-}
-
-export function formatInstanceForApi(instance) {
-    const item = normalizeInstance(instance);
-    const addressCandidates = getInstanceAddressCandidates(item);
-    const domain = addressCandidates.find(isDomainAddress);
-    const ip = String(item.ip || item.Addr || '').trim();
-    const hostname = domain || ip;
-    const port = parseInt(item.ports.Default, 10);
-    const weight = item.weight != null ? parseInt(item.weight, 10) : 1;
-
     return {
-        Name: hostname,
-        Addr: ip,
-        hostname,
         ip,
-        Port: port,
-        weight: weight,
-        Weight: weight,
+        weight,
         ports: {
             Default: port
-        },
-        Ports: {
-            Default: port
-        },
-        tags: item.tags || { key: 'value' }
+        }
     };
 }
 
 export function formatInstancePoolForApi(instances) {
-    return (instances || []).map(item => formatInstanceForApi(item));
+    const list = instances || [];
+    const { mode } = detectInstanceMode(list);
+    return list.map(item => formatInstanceForApi(item, mode));
+}
+
+export function getInstanceEndpointHosts(instances) {
+    const list = parseInstancePool(instances);
+    const { mode } = detectInstanceMode(list);
+    return list.map(instance => {
+        const port = instance.ports && instance.ports.Default != null
+            ? instance.ports.Default
+            : 80;
+        if (mode === 'domain') {
+            const host = String(instance.hostname || '').trim();
+            return `${host}:${port}`;
+        }
+        return `${instance.ip}:${port}`;
+    }).filter(Boolean);
 }
 
 function buildDomainInstance(domain) {
     const value = String(domain || '').trim();
-    return normalizeInstance({
-        Name: value,
-        Addr: value,
+    return {
         hostname: value,
-        ip: value,
-        Port: DOMAIN_PORT,
         ports: { Default: DOMAIN_PORT },
-        tags: { key: 'value' },
-        weight: 1
-    });
+        weight: DOMAIN_WEIGHT
+    };
+}
+
+function toIpFormInstance(instance) {
+    const item = normalizeInstance(instance);
+    return {
+        ip: String(item.ip || '').trim(),
+        ports: cloneDeep(item.ports),
+        weight: item.weight != null ? parseInt(item.weight, 10) : 100
+    };
 }
 
 export default {
@@ -411,8 +357,12 @@ export default {
             if (this.isApplyingPoolData || newVal === oldVal) {
                 return;
             }
+            if (this.$refs.formData) {
+                this.$refs.formData.clearValidate && this.$refs.formData.clearValidate();
+            }
             if (newVal === 'domain') {
                 this.formData.instances = [];
+                this.formData.domainName = '';
                 this.deleteAble = false;
                 return;
             }
@@ -488,6 +438,22 @@ export default {
                     trigger: 'blur'
                 }
             ];
+        },
+        instanceWeightRules() {
+            return [
+                {
+                    validator: (rule, value, callback) => {
+                        this.validateInstanceWeight(rule, value, callback);
+                    },
+                    trigger: 'change'
+                },
+                {
+                    validator: (rule, value, callback) => {
+                        this.validateInstanceWeight(rule, value, callback);
+                    },
+                    trigger: 'blur'
+                }
+            ];
         }
     },
 
@@ -507,11 +473,8 @@ export default {
     methods: {
         applyInstancePoolData(data) {
             this.isApplyingPoolData = true;
-            const rawInstances = extractRawInstanceList(data);
             const instances = parseInstancePool(data);
-            const { mode, domain } = detectInstanceMode(
-                rawInstances.length ? rawInstances : instances
-            );
+            const { mode, domain } = detectInstanceMode(instances);
             if (mode === 'domain') {
                 this.formData.instanceMode = 'domain';
                 this.formData.domainName = domain;
@@ -521,7 +484,7 @@ export default {
                 this.formData.instanceMode = 'ip';
                 this.formData.domainName = '';
                 if (instances.length > 0) {
-                    this.formData.instances = instances.map(item => applyHostnameFromIp(item));
+                    this.formData.instances = instances.map(item => toIpFormInstance(item));
                 } else {
                     this.formData.instances = [createEmptyInstance()];
                 }
@@ -541,19 +504,16 @@ export default {
         },
         handleAdd() {
             this.deleteAble = true;
-            this.formData.instances.push(createEmptyInstance());
+            this.formData.instances.push({
+                ip: '',
+                ports: { Default: 80 },
+                weight: 0
+            });
             this.validateInstancesField();
         },
         getInstanceFieldIndex(fieldPath) {
             const match = String(fieldPath || '').match(/^instances\.(\d+)\./);
             return match ? parseInt(match[1], 10) : -1;
-        },
-        syncInstanceHostname(item) {
-            applyHostnameFromIp(item);
-        },
-        onInstanceIpChange(item, index) {
-            this.syncInstanceHostname(item);
-            this.validateInstanceRow(index);
         },
         onInstancePortChange(item, key, index) {
             this.$nextTick(() => {
@@ -563,10 +523,14 @@ export default {
                 this.validateInstanceRow(index);
             });
         },
-        validateDomainField() {
-            if (this.$refs.formData) {
-                this.$refs.formData.validateField('domainName');
-            }
+        onInstanceWeightChange(index) {
+            this.$nextTick(() => {
+                const item = this.formData.instances[index];
+                if (item && item.weight !== null) {
+                    this.$set(item, 'weight', parseInt(item.weight, 10));
+                }
+                this.validateInstanceRow(index);
+            });
         },
         validateInstancesField() {
             if (!this.$refs.formData || this.formData.instanceMode !== 'ip') {
@@ -577,18 +541,39 @@ export default {
                 return;
             }
 
-            const props = [];
-            this.formData.instances.forEach((_, index) => {
-                props.push(`instances.${index}.ip`, `instances.${index}.ports.Default`);
-            });
+            this.$nextTick(() => {
+                const form = this.$refs.formData;
+                if (!form || this.formData.instanceMode !== 'ip') {
+                    return;
+                }
 
-            let pending = props.length;
-            props.forEach(prop => {
-                this.$refs.formData.validateField(prop, () => {
-                    pending -= 1;
-                    if (pending === 0) {
-                        this.updateInstanceErrorMessage();
-                    }
+                const registeredProps = new Set((form.fields || []).map(field => field.prop));
+                const props = [];
+                this.formData.instances.forEach((_, index) => {
+                    [
+                        `instances.${index}.ip`,
+                        `instances.${index}.ports.Default`,
+                        `instances.${index}.weight`
+                    ].forEach(prop => {
+                        if (registeredProps.has(prop)) {
+                            props.push(prop);
+                        }
+                    });
+                });
+
+                if (!props.length) {
+                    this.updateInstanceErrorMessage();
+                    return;
+                }
+
+                let pending = props.length;
+                props.forEach(prop => {
+                    form.validateField(prop, () => {
+                        pending -= 1;
+                        if (pending === 0) {
+                            this.updateInstanceErrorMessage();
+                        }
+                    });
                 });
             });
         },
@@ -605,6 +590,12 @@ export default {
                 return;
             }
 
+            const sumError = this.getWeightSumError();
+            if (sumError) {
+                this.instanceErrorMessage = sumError;
+                return;
+            }
+
             this.$nextTick(() => {
                 const form = this.$refs.formData;
                 if (!form || !form.fields) {
@@ -617,7 +608,7 @@ export default {
                     if (
                         field.validateState === 'error'
                         && field.validateMessage
-                        && /^instances\.\d+\.(ip|ports\.Default)$/.test(field.prop)
+                        && /^instances\.\d+\.(ip|ports\.Default|weight)$/.test(field.prop)
                     ) {
                         firstError = field.validateMessage;
                         return true;
@@ -644,7 +635,7 @@ export default {
                 return;
             }
 
-            const duplicateError = this.getDuplicateIpPortError(index);
+            const duplicateError = this.getDuplicateIpError(index);
             if (duplicateError) {
                 callback(new Error(duplicateError));
                 return;
@@ -652,44 +643,72 @@ export default {
             callback();
         },
         validateInstancePort(rule, value, callback) {
-            const index = this.getInstanceFieldIndex(rule.field);
             if (value == null || value === '' || value < 1 || value > 65535) {
                 callback(new Error(this.$t('instancePool.tipPortRang')));
                 return;
             }
-
-            const duplicateError = this.getDuplicateIpPortError(index);
-            if (duplicateError) {
-                callback(new Error(duplicateError));
+            callback();
+        },
+        validateInstanceWeight(rule, value, callback) {
+            if (value === null || value === undefined || value === '') {
+                callback(new Error(this.$t('instancePool.weightRequired')));
+                return;
+            }
+            if (!NumRegCheck(value) || value < 0 || value > 100) {
+                callback(new Error(this.$t('instancePool.weightRangeError')));
                 return;
             }
             callback();
         },
-        getDuplicateIpPortError(index) {
+        getDuplicateIpError(index) {
             if (index < 0) {
                 return '';
             }
-            const current = normalizeInstance(this.formData.instances[index]);
-            const ip = String(current.ip || '').trim();
-            const port = current.ports && current.ports.Default;
-            if (!ip || port == null || port === '') {
+            const current = this.formData.instances[index];
+            const ip = String((current && current.ip) || '').trim();
+            if (!ip) {
                 return '';
             }
 
-            const ipPort = `${ip}:${port}`;
             const hasDuplicate = this.formData.instances.some((item, itemIndex) => {
                 if (itemIndex === index) {
                     return false;
                 }
-                const other = normalizeInstance(item);
-                const otherIp = String(other.ip || '').trim();
-                const otherPort = other.ports && other.ports.Default;
-                return otherIp && otherPort != null && `${otherIp}:${otherPort}` === ipPort;
+                const otherIp = String(item.ip || '').trim();
+                return otherIp && otherIp === ip;
             });
             if (!hasDuplicate) {
                 return '';
             }
-            return this.$t('instancePool.tipDuplicateIpPort', { ipPort });
+            return this.$t('instancePool.tipDuplicateIp', { ip });
+        },
+        getWeightSumError() {
+            if (this.formData.instanceMode !== 'ip') {
+                return '';
+            }
+            const weights = this.formData.instances.map(item => {
+                const weight = item.weight;
+                return weight == null || weight === '' ? NaN : parseInt(weight, 10);
+            });
+            if (weights.some(weight => Number.isNaN(weight))) {
+                return '';
+            }
+            const sum = weights.reduce((total, weight) => total + weight, 0);
+            if (sum !== 100) {
+                return this.$t('cluster.weightSumError');
+            }
+            if (!weights.some(weight => weight > 0)) {
+                return this.$t('instancePool.tipAtLeastOnePositiveWeight');
+            }
+            return '';
+        },
+        validateIpModePool() {
+            const sumError = this.getWeightSumError();
+            if (sumError) {
+                this.instanceErrorMessage = sumError;
+                return false;
+            }
+            return true;
         },
         emitSubmitData(instances) {
             this.$emit('submitData', {
@@ -711,9 +730,10 @@ export default {
                     this.emitSubmitData([buildDomainInstance(domain)]);
                     return;
                 }
-                this.emitSubmitData(
-                    cloneDeep(this.formData.instances).map(item => applyHostnameFromIp(item))
-                );
+                if (!this.validateIpModePool()) {
+                    return;
+                }
+                this.emitSubmitData(cloneDeep(this.formData.instances));
             });
         }
     }

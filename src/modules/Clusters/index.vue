@@ -69,9 +69,9 @@
 </template>
 <script>
 import pageTable from '@/components/table/pageTable';
-import Upsert from './components';
+import Upsert, { formatStickySessionsForEdit } from './components';
 import Review from './components/Review';
-import { getClusterInstancePool, parseInstancePool } from './components/InstancePool';
+import { getClusterInstancePool } from './components/InstancePool';
 import { cloneDeep } from 'lodash';
 export default {
     name: 'Clusters',
@@ -239,11 +239,13 @@ export default {
                 buffers: tmpData.basic.buffers,
                 retries: tmpData.basic.retries,
                 timeouts: tmpData.basic.timeouts,
-                sticky_sessions: tmpData.sticky_sessions
+                sticky_sessions: formatStickySessionsForEdit(tmpData.sticky_sessions)
             };
-            this.baseConfigData.connection.cancel_on_client_close =
-                tmpData.basic.connection.cancel_on_client_close + '';
-            this.passiveHealthData = tmpData.passive_health_check;
+            if (this.baseConfigData.connection) {
+                this.baseConfigData.connection.cancel_on_client_close =
+                    String(this.baseConfigData.connection.cancel_on_client_close);
+            }
+            this.passiveHealthData = tmpData.passive_health_check || {};
             this.llmConfigData = tmpData.llm_config;
             this.originalLlmConfigKey = (tmpData.llm_config && tmpData.llm_config.key) || '';
             this.originalLlmConfigHeaders = cloneDeep(
