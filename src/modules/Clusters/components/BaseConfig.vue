@@ -315,7 +315,7 @@ export default {
             formData: {
                 name: '',
                 description: '',
-                protocol: 'http',
+                protocol: 'https',
                 connection: {
                     max_idle_conn_per_rs: 0,
                     cancel_on_client_close: 'false'

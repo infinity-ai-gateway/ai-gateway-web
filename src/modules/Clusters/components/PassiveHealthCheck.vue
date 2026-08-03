@@ -1,4 +1,19 @@
 /**
+* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+/**
 * Copyright (c) 2021 The BFE Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +39,7 @@
             </FormItem>
             <FormItem :label="$t('cluster.healthCheckHost')" prop="host">
                 <Input v-model="formData['host']" placeholder="example.com" />
+                <p class="form-tip">{{ $t('cluster.healthCheckHostTip') }}</p>
             </FormItem>
             <FormItem :label="$t('cluster.healthCheckUri')" prop="uri">
                 <Input v-model="formData['uri']" placeholder="/" />
@@ -225,6 +241,13 @@ export default {
 .health-check {
     .from-item-inp {
         width: 100%;
+    }
+
+    .form-tip {
+        margin-top: 4px;
+        color: #808695;
+        font-size: 12px;
+        line-height: 1.5;
     }
 }
 </style>

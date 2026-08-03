@@ -387,6 +387,7 @@ export default {
       'Failure Threshold (Triggers instance unavailable and initiate passive healthcheck)',
     faultThreshold: 'Failure Threshold',
     healthCheckHost: 'Host',
+    healthCheckHostTip: 'Uses the first instance address in the pool when left empty',
     healthCheckUri: 'Uri',
     healthCheckStatuscode: 'Expected Status Code',
     healthCheckStatuscodeRangeError: 'Status code must be 0 or between 100 and 599',
@@ -515,7 +516,7 @@ export default {
     selectModels: 'Please select models',
     subnetTip:
       'Multiple subnets separated by newlines, default is * for no restriction',
-    descriptionLengthError: 'Description cannot exceed 511 characters',
+    descriptionLengthError: 'Description cannot exceed 512 characters',
     quotaRequired: 'Please fill in quota total',
     quotaRangeError: 'Quota cannot be negative',
     quotaMaxError: 'Quota total exceeds the allowed range',
@@ -524,6 +525,7 @@ export default {
     ruleNameLengthError: 'Rule name cannot exceed 128 characters',
     windowMinutesInvalid:
       'Time window at index {index} must be between 1-360 minutes',
+    windowMinutesRequired: 'Time window at index {index} cannot be empty',
     maxTokensInvalid: 'Max tokens at index {index} must be greater than or equal to 0',
     maxTokensRequired: 'Please enter max tokens for rule #{index}',
     maxTokensMaxError: 'Max tokens at index {index} exceeds the allowed range',
@@ -669,6 +671,7 @@ export default {
     tpmRuleNameDuplicate: 'TPM rule name {name} is duplicated',
     tpmWindowMinutesInvalid:
       'Time window for TPM rule #{index} must be between 1-360 minutes',
+    tpmWindowMinutesRequired: 'Time window for TPM rule #{index} cannot be empty',
     tpmMaxTokensRequired: 'Please enter max tokens for TPM rule #{index}',
     tpmMaxTokensInvalid: 'Max tokens for TPM rule #{index} must be greater than or equal to 0',
     maxTokensMaxError: 'Max tokens for TPM rule #{index} exceeds the allowed range',
@@ -684,6 +687,7 @@ export default {
     rpmCombinationDuplicate: 'Duplicate RPM rule combination (model, time window, max requests)',
     rpmWindowMinutesInvalid:
       'Time window for RPM rule #{index} must be between 1-360 minutes',
+    rpmWindowMinutesRequired: 'Time window for RPM rule #{index} cannot be empty',
     rpmMaxRequestsRequired: 'Please enter max requests for RPM rule #{index}',
     rpmMaxRequestsInvalid: 'Max requests for RPM rule #{index} must be greater than or equal to 0',
     maxRequestsMaxError: 'Max requests for RPM rule #{index} exceeds the allowed range',

@@ -135,7 +135,7 @@ import Review from './Review';
 import GatewayConfig from './GatewayConfig.vue';
 
 const BASIC_DEFAULTS = {
-    protocol: 'http',
+    protocol: 'https',
     connection: {
         max_idle_conn_per_rs: 0,
         cancel_on_client_close: false

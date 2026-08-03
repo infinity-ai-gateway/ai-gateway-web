@@ -62,7 +62,7 @@ function stepInstance() {
     var err = item.error ? ' ivu-input-error' : '';
     var errMsg = item.error ? '<div class="ivu-form-item-error-tip">请输入IP地址</div>' : '';
     return '<tr><td><div class="ivu-input-wrapper"><input class="ivu-input' + err + '" value="' + item.ip + '" placeholder="请输入IP地址" />' + errMsg + '</div></td>' +
-      '<td>Default：<div class="ivu-input-wrapper" style="width:100px;display:inline-block;"><input class="ivu-input" value="' + item.port + '" /></div></td>' +
+      '<td><div class="ivu-input-wrapper" style="width:100px;display:inline-block;"><input class="ivu-input" value="' + item.port + '" /></div></td>' +
       '<td>' + IvuUI.btn('删除', 'error', 'small') + '</td></tr>';
   }).join('');
   return IvuUI.card('实例配置',

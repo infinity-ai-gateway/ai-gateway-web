@@ -130,7 +130,8 @@ export default {
     rateLimitTipIntro: '启用限流后，需至少配置一项有效规则：',
     rateLimitTipRule: '添加 TPM/RPM 规则',
     rateLimitTipConcurrency: '最大并发设为「封禁」或「限制并发数」',
-    rateLimitTipNoLimitNote: '「不限制」不设并发上限，不能单独生效，须同时配置 TPM/RPM 规则',
+    rateLimitTipNoLimitNote:
+      '「不限制」不设并发上限，不能单独生效，须同时配置 TPM/RPM 规则',
     tipMustStartWithX: '{obj}必须以 / 开头',
     tipCommonRule:
       '以字母或数字开头，允许数字、大小写字母、下划线、中划线组合且长度大于1',
@@ -191,7 +192,8 @@ export default {
     domain: '服务商域名',
     domainRequired: '请输入服务商域名',
     domainPlaceholder: '请输入服务商域名，例如 example.com',
-    invalidDomain: '请输入正确的服务商域名或IP地址格式，例如 example.com 或 192.168.1.1',
+    invalidDomain:
+      '请输入正确的服务商域名或IP地址格式，例如 example.com 或 192.168.1.1',
 
     tipWeightRang: '实例权重错误, 范围0～100',
     weightRequired: '请输入实例权重',
@@ -242,12 +244,15 @@ export default {
     tipDisassociate: '是否确认解除{obj}关联？',
     tipDisassociateSucc: '解除关联成功！',
     tipAssociationSucc: '关联成功',
-    tipNameRule: '用户名长度1-64字符，仅允许数字、大小写字母、点、下划线、中划线，且不能以点、下划线、中划线开头或结尾；保留用户名不可用',
+    tipNameRule:
+      '用户名长度1-64字符，仅允许数字、大小写字母、点、下划线、中划线，且不能以点、下划线、中划线开头或结尾；保留用户名不可用',
     tipConfirmPasswordRule: '请再次确认密码',
-    tipPasswordRule: '密码长度8-128字符，不能包含空格，且不能与用户名相同或为其逆序',
+    tipPasswordRule:
+      '密码长度8-128字符，不能包含空格，且不能与用户名相同或为其逆序',
     tipConfirmError: '两次密码输入不一致，请重新输入',
     tipPasswordModified: '当前用户密码已修改请重新登录',
-    tipTokenNameRule: 'Token名称长度1-64字符，仅允许数字、大小写字母、点、下划线、中划线，且不能以点、下划线、中划线开头或结尾；保留名称不可用',
+    tipTokenNameRule:
+      'Token名称长度1-64字符，仅允许数字、大小写字母、点、下划线、中划线，且不能以点、下划线、中划线开头或结尾；保留名称不可用',
     tipUserDel: '当前用户已被删除请重新登录',
     tipUserDisassociateSucc: '当前用户关联产品线已解除，请重新登录',
   },
@@ -327,7 +332,8 @@ export default {
     tipExplain: '转发规则按顺序匹配，命中后转发至目标集群。',
     tipAdvanceExplain: '高级规则通过表达式匹配请求，支持拖动表格调整生效顺序。',
     tipDel: '确认删除该规则？',
-    tipUnsavedLeave: '当前规则变更尚未提交并生效，离开页面后修改将丢失，是否确认离开？',
+    tipUnsavedLeave:
+      '当前规则变更尚未提交并生效，离开页面后修改将丢失，是否确认离开？',
     hostName: '域名',
     path: '路径',
     tipAdvanceMate: '匹配高级规则',
@@ -384,6 +390,7 @@ export default {
     healthCheckFailnum: '故障阈值（触发设置实例为不可用，启动被动健康检查）',
     faultThreshold: '故障阈值',
     healthCheckHost: '健康检查Host',
+    healthCheckHostTip: '留空时使用实例池首个实例的地址',
     healthCheckUri: '健康检查Uri',
     healthCheckStatuscode: '健康检查期望的状态码',
     healthCheckStatuscodeRangeError: '状态码必须是0或100-599之间的整数',
@@ -518,7 +525,7 @@ export default {
     maxRulesTip: '最多添加3条规则',
     selectModels: '请选择模型',
     subnetTip: '多个网段用换行分隔，默认为*表示不限制',
-    descriptionLengthError: '描述不能超过511个字符',
+    descriptionLengthError: '描述不能超过512个字符',
     quotaRequired: '请填写配额总量',
     quotaRangeError: '配额不能为负数',
     quotaMaxError: '配额总量超出允许范围',
@@ -526,17 +533,20 @@ export default {
     ruleNameDuplicate: '规则名称"{name}"重复',
     ruleNameLengthError: '规则名称长度不能超过128字符',
     windowMinutesInvalid: '第{index}条规则时间窗口范围为1-360分钟',
+    windowMinutesRequired: '第{index}条规则时间窗口不能为空',
     maxTokensInvalid: '第{index}条规则最大Token数必须大于等于0',
-    maxTokensRequired: '第{index}条规则请输入最大Token数',
+    maxTokensRequired: '第{index}条规则最大Token数不能为空',
     maxTokensMaxError: '第{index}条规则最大Token数超出允许范围',
     maxRequestsInvalid: '第{index}条规则最大请求数必须大于等于0',
-    maxRequestsRequired: '第{index}条规则请输入最大请求数',
+    maxRequestsRequired: '第{index}条规则最大请求数不能为空',
     maxRequestsMaxError: '第{index}条规则最大请求数超出允许范围',
     stepMinutesInvalid: '第{index}条规则滑动步长不能大于时间窗口',
     stepMinutesRange: '第{index}条规则滑动步长范围为1-360分钟',
-    stepMinutesRequired: '第{index}条规则请输入滑动步长',
-    tpmCombinationDuplicate: '存在相同的TPM规则组合（模型、时间窗口、最大Token数、滑动步长）',
-    rpmCombinationDuplicate: '存在相同的RPM规则组合（模型、时间窗口、最大请求数）',
+    stepMinutesRequired: '第{index}条规则滑动步长不能为空',
+    tpmCombinationDuplicate:
+      '存在相同的TPM规则组合（模型、时间窗口、最大Token数、滑动步长）',
+    rpmCombinationDuplicate:
+      '存在相同的RPM规则组合（模型、时间窗口、最大请求数）',
     rateLimitRuleRequired:
       '请添加 TPM/RPM 规则，或将最大并发设为「封禁」/「限制并发数」',
     keyId: 'Key ID',
@@ -631,7 +641,8 @@ export default {
     confirmDeleteEntity: '是否删除Entity {name}？',
     enterTypeName: '请输入类型名',
     typeNamePlaceholder: '例如：dep',
-    typeNameRule: '1-32字符，仅含小写字母、数字、下划线、连字符，且不能以下划线或连字符开头或结尾',
+    typeNameRule:
+      '1-32字符，仅含小写字母、数字、下划线、连字符，且不能以下划线或连字符开头或结尾',
     typeNameFormatError: '类型名格式不正确，不能以下划线或连字符开头或结尾',
     enterDescription: '请输入描述',
     descriptionPlaceholder: '例如：一级部门',
@@ -663,19 +674,23 @@ export default {
     tpmRuleNameRequired: '第{index}条TPM规则请输入规则名称',
     tpmRuleNameDuplicate: 'TPM规则名称 {name} 重复',
     tpmWindowMinutesInvalid: '第{index}条TPM规则时间窗口范围为1-360分钟',
-    tpmMaxTokensRequired: '第{index}条TPM规则请输入最大Token数',
+    tpmWindowMinutesRequired: '第{index}条TPM规则时间窗口不能为空',
+    tpmMaxTokensRequired: '第{index}条TPM规则最大Token数不能为空',
     tpmMaxTokensInvalid: '第{index}条TPM规则最大Token数必须大于等于0',
     maxTokensMaxError: '第{index}条TPM规则最大Token数超出允许范围',
     tpmStepMinutesInvalid: '第{index}条TPM规则滑动步长不能超过时间窗口',
     tpmStepMinutesRange: '第{index}条TPM规则滑动步长范围为1-360分钟',
-    tpmStepMinutesRequired: '第{index}条TPM规则请输入滑动步长',
+    tpmStepMinutesRequired: '第{index}条TPM规则滑动步长不能为空',
     rpmRuleNameRequired: '第{index}条RPM规则请输入规则名称',
     rpmRuleNameDuplicate: 'RPM规则名称 {name} 重复',
     ruleNameLengthError: '规则名称长度不能超过128字符',
-    tpmCombinationDuplicate: '存在相同的TPM规则组合（模型、时间窗口、最大Token数、滑动步长）',
-    rpmCombinationDuplicate: '存在相同的RPM规则组合（模型、时间窗口、最大请求数）',
+    tpmCombinationDuplicate:
+      '存在相同的TPM规则组合（模型、时间窗口、最大Token数、滑动步长）',
+    rpmCombinationDuplicate:
+      '存在相同的RPM规则组合（模型、时间窗口、最大请求数）',
     rpmWindowMinutesInvalid: '第{index}条RPM规则时间窗口范围为1-360分钟',
-    rpmMaxRequestsRequired: '第{index}条RPM规则请输入最大请求数',
+    rpmWindowMinutesRequired: '第{index}条RPM规则时间窗口不能为空',
+    rpmMaxRequestsRequired: '第{index}条RPM规则最大请求数不能为空',
     rpmMaxRequestsInvalid: '第{index}条RPM规则最大请求数必须大于等于0',
     maxRequestsMaxError: '第{index}条RPM规则最大请求数超出允许范围',
     rpmStepMinutesInvalid: '第{index}条RPM规则滑动步长不能超过时间窗口',
@@ -780,6 +795,6 @@ export default {
 
     tipCertNameRule: '证书名称不可以包含特殊字符，请重新输入',
     tipSumitCertFile: '是否将证书',
-    tipCofigDefault: '设置为默认'
-}
+    tipCofigDefault: '设置为默认',
+  },
 };

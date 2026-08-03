@@ -8,10 +8,10 @@
     "description": "示例集群",
     "instance_pool": [
         {
-            "hostname": "backend-1",
-            "ip": "10.0.0.1",
+            "name": "backend-1",
+            "addr": "10.0.0.1",
             "weight": 50,
-            "ports": {"Default": 8080}
+            "port": 8080
         }
     ],
     "basic": {
@@ -70,7 +70,7 @@
 |------|------|------|----------|----------|
 | `name` | string | 集群名 | 全局唯一 | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername) |
 | `description` | string | 集群描述信息 | - | 非必填；若传入，长度 0-256 字符；不能包含控制字符 |
-| `instance_pool` | []Instance | 实例列表 | 系统自动据此创建实例池和子集群 | 必填；至少1个元素；同一集群内 `(hostname, ip)` 组合不能重复；至少有一个实例 `weight > 0` |
+| `instance_pool` | []Instance | 实例列表 | 系统自动据此创建实例池和子集群 | 必填；至少1个元素；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0` |
 | `basic` | object | 基本参数 | 见下方 表：连接设置、表：重试设置、表：超时设置 | 非必填；未传时使用 AI 网关场景默认值 |
 | `sticky_sessions` | object | 会话保持 | 见下方 表：会话保持 | 非必填；未传时使用默认值 |
 | `passive_health_check` | object | 被动健康检查 | 见下方 表：被动健康检查 | 非必填；未传时使用默认值 |
@@ -80,10 +80,10 @@
 
 | 字段 | 类型 | 说明 | 可能取值 | 合法性条件 |
 |------|------|------|----------|----------|
-| `hostname` | string | 实例所在主机名 | 无 DNS 时可填写 IP 地址 | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
-| `ip` | string | 实例 IP 地址 | - | 必填；类型为 [IP Address](./00-common.md#2-ip-地址ip-address) |
+| `name` | string | 实例名称 | - | 选填；若传入，长度 1-128 字符；未传入时默认与 `addr` 相同 |
+| `addr` | string | 实例地址 | - | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
 | `weight` | int | 实例权重 | 范围 [0,100] | 必填；取值范围 [0,100]；`0` 表示该实例不接收流量 |
-| `ports` | map[string]int | 实例端口 | 至少包含 `Default` 端口 | 必填；map 至少1个元素，且必须包含 `Default` 端口；每个 key 非空；每个端口值类型为 [Port](./00-common.md#3-网络端口port)；同一实例内端口值不能重复 |
+| `port` | int | 实例端口 | - | 必填；类型为 [Port](./00-common.md#3-网络端口port) |
 
 **表：连接设置**
 
@@ -122,7 +122,7 @@
 | - | -  | - | - | - | - |
 | failnum| int |  进入健康检查的失败次数阈值 | N | 连续转发失败多次后，BFE进入健康检查状态，对下游RS发起探活；**默认值为3** | 非必填；默认值为3；须为 >=0 的整数 |
 | interval| int |  连续健康检查的时间间隔 | N | 单位ms；**默认值为1000** | 非必填；默认值为1000；须为 >=0 的整数 |
-| host| string |  健康检查请求的域名| N | 域名后的部分；为空时使用 `instance_pool` 中第一个实例的 `hostname` | 非必填；为空时使用 `instance_pool` 首个实例的 `hostname` |
+| host| string |  健康检查请求的域名| N | 为空时使用 `instance_pool` 中第一个实例的 `addr` | 非必填；为空时使用 `instance_pool` 首个实例的 `addr` |
 | uri| string |  健康检查请求的URI  | N | **默认值为 `/`** | 非必填；默认值为 `/`；非空；须以 `/` 开头 |
 | statuscode| int |  期望的健康检查返回码 | N | 如果需要忽略返回码，此处可以填0；**默认值为0** | 非必填；默认值为0；须为 `0` 或 `100-599` 的整数 |
 
@@ -157,8 +157,8 @@
 
 - `name` 必填，类型为 [ClusterName](./00-common.md#15-集群名称clustername)，全局唯一。
 - `description` 可选；若传入，长度 0-256 字符，不能包含控制字符。
-- `instance_pool` 必填，至少包含1个实例；同一集群内 `(hostname, ip)` 组合不能重复；至少有一个实例 `weight > 0`。
-- 每个实例的 `hostname` 必填且类型为 [Hostname](./00-common.md#1-主机名hostname)，`ip` 必填且类型为 [IP Address](./00-common.md#2-ip-地址ip-address)，`weight` 取值范围 [0,100]，`ports` 必填且必须包含 `Default` 端口（每个 key 非空，每个端口值类型为 [Port](./00-common.md#3-网络端口port)，同一实例内端口值不能重复）。
+- `instance_pool` 必填，至少包含1个实例；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0`。
+- 每个实例的 `name` 选填，若传入长度须为 1-128 字符，未传入时默认与 `addr` 相同；`addr` 必填且类型为 [Hostname](./00-common.md#1-主机名hostname)；`weight` 取值范围 [0,100]，`port` 必填且类型为 [Port](./00-common.md#3-网络端口port)。
 - `llm_config` 必填，`models` 至少包含1个非空模型名且不能重复；`model_mappings` 中 `source_model` 不能重复。
 - `llm_config.provider_type` 若传入，须为 `/model-provider-types` 中已存在的类型。
 - `basic`、`sticky_sessions`、`passive_health_check` 若未传则使用 AI 网关场景默认值。
@@ -193,14 +193,14 @@
 | - | -  | - | - | - | - |
 | name| string |  集群名 | Y | 集群名必须全局唯一 | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername) |
 | description| string |  集群描述信息| N |  | 非必填；若传入，长度 0-256 字符；不能包含控制字符 |
-| instance_pool| []Instance |  实例列表 | Y | 系统自动据此创建实例池和子集群 | 必填；至少1个元素；同一集群内 `(hostname, ip)` 组合不能重复；至少有一个实例 `weight > 0` |
-| instance_pool[].hostname| string | 实例所在主机名 | Y | 无 DNS 时可填写 IP 地址 | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
-| instance_pool[].ip| string | 实例 IP 地址 | Y | | 必填；类型为 [IP Address](./00-common.md#2-ip-地址ip-address) |
+| instance_pool| []Instance |  实例列表 | Y | 系统自动据此创建实例池和子集群 | 必填；至少1个元素；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0` |
+| instance_pool[].name| string | 实例名称 | N | 未传入时默认与 `addr` 相同 | 选填；若传入，长度 1-128 字符 |
+| instance_pool[].addr| string | 实例地址 | Y | 无 DNS 时可填写 IP 地址 | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
 | instance_pool[].weight| int | 实例权重，范围 [0,100] | Y | | 必填；取值范围 [0,100]；`0` 表示该实例不接收流量 |
-| instance_pool[].ports| map[string]int | 实例端口 | Y | 至少包含 Default 端口 | 必填；map 至少1个元素，且必须包含 `Default` 端口；每个 key 非空；每个端口值类型为 [Port](./00-common.md#3-网络端口port)；同一实例内端口值不能重复 |
-| basic| object |  基本参数| N | AI网关场景默认推荐值：connection.max_idle_conn_per_rs=0、cancel_on_client_close=false；retries.max_retry_in_cluster=2；timeouts.timeout_conn_serv=50000、timeout_response_header=50000、timeout_readbody_client=30000、timeout_read_client_again=30000、timeout_write_client=60000 | 非必填；未传时使用 AI 网关场景默认值；子字段合法性见 1 中各表 |
+| instance_pool[].port| int | 实例端口 | Y | | 必填；类型为 [Port](./00-common.md#3-网络端口port) |
+| basic| object |  基本参数| N | AI网关场景默认推荐值：protocol=https；connection.max_idle_conn_per_rs=0、cancel_on_client_close=false；retries.max_retry_in_cluster=2；buffers.req_write_buffer_size=512；timeouts.timeout_conn_serv=50000、timeout_response_header=50000、timeout_readbody_client=30000、timeout_read_client_again=30000、timeout_write_client=60000 | 非必填；未传时使用 AI 网关场景默认值；子字段合法性见 1 中各表 |
 | sticky_sessions| object |  会话保持| N | AI网关场景默认推荐值：enabled=false；若开启，hash_strategy=CLIENT_ID_ONLY、hash_header为空 | 非必填；未传时使用默认值；子字段合法性见 1 中各表 |
-| passive_health_check| object |  被动健康检查| N | AI网关场景默认推荐值：failnum=3、interval=1000ms、host为空（使用instance_pool首个实例hostname）、uri="/"、statuscode=0 | 非必填；未传时使用默认值；子字段合法性见 1 中各表 |
+| passive_health_check| object |  被动健康检查| N | AI网关场景默认推荐值：failnum=3、interval=1000ms、host为空（使用instance_pool首个实例addr）、uri="/"、statuscode=0 | 非必填；未传时使用默认值；子字段合法性见 1 中各表 |
 | llm_config| object |  AI LLM服务配置| Y | 见 1 数据模型中表：LLM配置 | 必填；`models` 至少1个非空元素且不能重复；子字段合法性见 1 中各表 |
 
 **HTTP BODY参数示例**
@@ -211,20 +211,16 @@
     "description": "示例集群",
     "instance_pool": [
         {
-            "hostname": "backend-1",
-            "ip": "10.0.0.1",
+            "name": "backend-1",
+            "addr": "10.0.0.1",
             "weight": 50,
-            "ports": {
-                "Default": 8080
-            }
+            "port": 8080
         },
         {
-            "hostname": "backend-2",
-            "ip": "10.0.0.2",
+            "name": "backend-2",
+            "addr": "10.0.0.2",
             "weight": 50,
-            "ports": {
-                "Default": 8080
-            }
+            "port": 8080
         }
     ],
     "basic": {
@@ -316,10 +312,10 @@
         "description": "示例集群",
         "instance_pool": [
             {
-                "hostname": "backend-1",
-                "ip": "10.0.0.1",
+                "name": "backend-1",
+                "addr": "10.0.0.1",
                 "weight": 50,
-                "ports": {"Default": 8080}
+                "port": 8080
             }
         ],
         "llm_config": { "...": "..." },
@@ -388,7 +384,7 @@
 | cluster_name | string | 集群名字 | Y | - | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername)；必须引用已存在的集群 |
 
 **输入参数（Body）**
-可修改字段含义同创建接口。若传入 `instance_pool` 字段，系统会自动同步更新对应的实例池。
+可修改字段含义同创建接口。若传入 `instance_pool` 字段，系统会自动同步更新对应的实例池；其中每个实例的 `addr` 必填，`name` 选填（未传入时默认与 `addr` 相同），`port` 必填。
 
 > **注意：** `sub_clusters` 与 `scheduler` 为系统内部自动生成，更新时不支持手动修改，请通过 `instance_pool` 调整实例。
 
@@ -400,12 +396,10 @@
     "description": "更新后的集群描述",
     "instance_pool": [
         {
-            "hostname": "backend-1",
-            "ip": "10.0.0.1",
+            "name": "backend-1",
+            "addr": "10.0.0.1",
             "weight": 100,
-            "ports": {
-                "Default": 8080
-            }
+            "port": 8080
         }
     ],
     "basic": {

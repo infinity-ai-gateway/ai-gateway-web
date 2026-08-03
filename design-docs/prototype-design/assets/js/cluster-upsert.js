@@ -211,7 +211,6 @@ window.ClusterUpsert = (function () {
           '<input type="text" class="ivu-input proto-instance-ip" data-index="' + index + '" value="' + IvuUI.escapeHtml(item.ip) + '" placeholder="请输入IP地址" />' +
         '</div></td>' +
         '<td>' +
-          '<input class="ivu-input poolInput" type="text" value="Default" disabled style="width:80px;" />：' +
           '<div class="ivu-input-number poolInput" style="width:80px;display:inline-block;vertical-align:middle;">' +
             '<input type="number" class="ivu-input-number-input proto-instance-port" data-index="' + index + '" min="1" max="65535" value="' + (item.ports.Default != null ? item.ports.Default : 80) + '" placeholder="端口值" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;" />' +
           '</div>' +

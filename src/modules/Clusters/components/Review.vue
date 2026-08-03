@@ -159,10 +159,6 @@
                     <li class="title">{{ $t('instancePool.domain') }}:</li>
                     <li class="value">{{ providerDomain || '-' }}</li>
                 </ul>
-                <ul v-if="isDomainMode" class="clearFloat">
-                    <li class="title">{{ $t('instancePool.weight') }}:</li>
-                    <li class="value">100</li>
-                </ul>
                 <ul v-else class="clearFloat detail-row detail-row-block instance-ip-list-row">
                     <li class="title">{{ $t('instancePool.list') }}:</li>
                     <li class="value">
@@ -338,15 +334,11 @@ export default {
             return [
                 {
                     title: this.$t('instancePool.ipAddress'),
-                    key: 'ip'
+                    key: 'addr'
                 },
                 {
                     title: this.$t('instancePool.port'),
-                    key: 'port',
-                    render(h, params) {
-                        const ports = params.row.ports || {};
-                        return h('span', ports.Default != null ? String(ports.Default) : '-');
-                    }
+                    key: 'port'
                 },
                 {
                     title: this.$t('instancePool.weight'),

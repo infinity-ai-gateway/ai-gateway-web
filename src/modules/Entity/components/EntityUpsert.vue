@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@
           v-model="formData.name"
           :disabled="!isAdd"
           :placeholder="$t('entity.namePlaceholder')"
-          :maxlength="64"
           show-word-limit
         ></Input>
       </FormItem>
@@ -204,14 +203,17 @@
     <Card :title="$t('entity.rateLimitConfig')" class="form-card">
       <Row :gutter="24">
         <Col span="12">
-          <FormItem>
+          <FormItem prop="rate_limit_policy.enabled">
             <span slot="label" class="rate-limit-label">
               {{ $t('entity.enableRateLimit') }}
               <Tooltip placement="top" transfer max-width="320">
                 <div slot="content" class="rate-limit-tip-content">
                   {{ $t('entity.enableRateLimitTip') }}
                 </div>
-                <Icon type="ios-help-circle-outline" class="rate-limit-help-icon" />
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="rate-limit-help-icon"
+                />
               </Tooltip>
             </span>
             <Select
@@ -246,8 +248,8 @@
               </Col>
               <Col span="4">
                 <FormItem
-                :label="$t('entity.applyModel')"
-                :prop="'rate_limit_policy.rules.tpm.' + index + '.model'"
+                  :label="$t('entity.applyModel')"
+                  :prop="'rate_limit_policy.rules.tpm.' + index + '.model'"
                 >
                   <el-select
                     v-model="rule.model"
@@ -342,7 +344,7 @@
             icon="md-add"
             >{{ $t('entity.addRule') }}</Button
           >
-          </div>
+        </div>
 
         <div class="rules-section">
           <h4 class="rules-title">{{ $t('entity.rpmRules') }}</h4>
@@ -449,9 +451,18 @@
                 style="width: 100%;"
                 @on-change="onMaxConcurrencyModeChange"
               >
-                <Option value="unlimited">{{ $t('entity.maxConcurrencyUnlimited') }}</Option>
-                <Option value="banned">{{ $t('entity.maxConcurrencyBanned') }}</Option>
-                <Option value="limited">{{ $t('entity.maxConcurrencyLimited') }}</Option>
+                <Option
+                  value="unlimited"
+                  >{{ $t('entity.maxConcurrencyUnlimited') }}</Option
+                >
+                <Option
+                  value="banned"
+                  >{{ $t('entity.maxConcurrencyBanned') }}</Option
+                >
+                <Option
+                  value="limited"
+                  >{{ $t('entity.maxConcurrencyLimited') }}</Option
+                >
               </Select>
               <FormItem
                 v-if="maxConcurrencyMode === 'limited'"
@@ -474,7 +485,6 @@
             </FormItem>
           </Col>
         </Row>
-        <FormItem prop="rate_limit_policy.enabled" class="rate-limit-policy-error" />
       </div>
     </Card>
 
@@ -1033,6 +1043,10 @@ export default {
                 return;
             }
             const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
+            if (value === null || value === undefined || value === '') {
+                callback(new Error(this.$t('entity.tpmWindowMinutesRequired', { index })));
+                return;
+            }
             if (!Number.isFinite(value) || value < 1 || value > 360) {
                 callback(new Error(this.$t('entity.tpmWindowMinutesInvalid', { index })));
                 return;
@@ -1093,6 +1107,10 @@ export default {
                 return;
             }
             const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
+            if (value === null || value === undefined || value === '') {
+                callback(new Error(this.$t('entity.rpmWindowMinutesRequired', { index })));
+                return;
+            }
             if (!Number.isFinite(value) || value < 1 || value > 360) {
                 callback(new Error(this.$t('entity.rpmWindowMinutesInvalid', { index })));
                 return;

@@ -59,13 +59,6 @@
                 />
             </FormItem>
             <FormItem
-                v-if="formData.instanceMode === 'domain'"
-                :label="$t('instancePool.weight')"
-            >
-                <InputNumber :value="100" disabled style="width: 120px;" />
-            </FormItem>
-
-            <FormItem
                 v-else
                 :label="$t('instancePool.list')"
                 style="width: 100%;"
@@ -81,13 +74,13 @@
                         <tr v-for="(item, ind) in formData.instances" :key="ind">
                             <td>
                                 <FormItem
-                                    :prop="'instances.' + ind + '.ip'"
-                                    :rules="instanceIpRules"
+                                    :prop="'instances.' + ind + '.addr'"
+                                    :rules="instanceAddrRules"
                                     :show-message="false"
                                     class="table-cell-form-item"
                                 >
                                     <Input
-                                        v-model="item.ip"
+                                        v-model="item.addr"
                                         type="text"
                                         :placeholder="
                                             $t('com.tipEnterX', { obj: $t('instancePool.ipAddress') })
@@ -98,33 +91,23 @@
                                 </FormItem>
                             </td>
                             <td>
-                                <div v-for="(info, index) in item.ports" :key="index">
-                                    <Input
-                                        value="Default"
+                                <FormItem
+                                    :prop="'instances.' + ind + '.port'"
+                                    :rules="instancePortRules"
+                                    :show-message="false"
+                                    class="table-cell-form-item table-cell-form-item-port"
+                                >
+                                    <InputNumber
+                                        v-model="item.port"
+                                        :max="65535"
+                                        :min="1"
                                         class="poolInput"
-                                        type="text"
-                                        :placeholder="$t('instancePool.portName')"
+                                        :placeholder="$t('instancePool.portValue')"
                                         style="width: 80px;"
-                                        disabled
-                                    />：
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.ports.Default'"
-                                        :rules="instancePortRules"
-                                        :show-message="false"
-                                        class="table-cell-form-item table-cell-form-item-port"
-                                    >
-                                        <InputNumber
-                                            v-model="item.ports.Default"
-                                            :max="65535"
-                                            :min="1"
-                                            class="poolInput"
-                                            :placeholder="$t('instancePool.portValue')"
-                                            style="width: 80px;"
-                                            @on-change="onInstancePortChange(item.ports, 'Default', ind)"
-                                            @on-blur="validateInstanceRow(ind)"
-                                        ></InputNumber>
-                                    </FormItem>
-                                </div>
+                                        @on-change="onInstancePortChange(ind)"
+                                        @on-blur="validateInstanceRow(ind)"
+                                    ></InputNumber>
+                                </FormItem>
                             </td>
                             <td>
                                 <FormItem
@@ -176,9 +159,19 @@ const DOMAIN_WEIGHT = 100;
 
 function createEmptyInstance() {
     return {
-        ports: { Default: 80 },
-        ip: '',
+        addr: '',
+        port: 80,
         weight: 100
+    };
+}
+
+function toFormInstance(instance) {
+    const item = instance || {};
+    return {
+        addr: item.addr != null ? String(item.addr) : '',
+        port: item.port != null && item.port !== '' ? parseInt(item.port, 10) : 80,
+        weight: item.weight != null && item.weight !== '' ? parseInt(item.weight, 10) : 100,
+        name: item.name != null ? String(item.name) : ''
     };
 }
 
@@ -202,7 +195,7 @@ export function parseInstancePool(instancePool) {
         return [];
     }
     if (Array.isArray(instancePool)) {
-        return instancePool.map(item => normalizeInstance(item));
+        return instancePool.map(item => toFormInstance(item));
     }
     return [];
 }
@@ -218,7 +211,7 @@ export function getClusterInstancePool(cluster) {
 }
 
 export function detectInstanceMode(instances) {
-    const list = (instances || []).map(item => normalizeInstance(item));
+    const list = (instances || []).map(item => toFormInstance(item));
     if (list.length !== 1) {
         return {
             mode: 'ip',
@@ -226,14 +219,11 @@ export function detectInstanceMode(instances) {
         };
     }
 
-    const item = list[0];
-    const hostname = String(item.hostname || '').trim();
-    const ip = String(item.ip || '').trim();
-
-    if (hostname && !ip) {
+    const addr = String(list[0].addr || '').trim();
+    if (addr && isHostname(addr) && !isIP(addr, 4) && !isIP(addr, 6)) {
         return {
             mode: 'domain',
-            domain: hostname
+            domain: addr
         };
     }
 
@@ -243,85 +233,42 @@ export function detectInstanceMode(instances) {
     };
 }
 
-export function normalizeInstance(instance) {
-    const item = cloneDeep(instance || {});
-    if (!item.ports || typeof item.ports !== 'object' || item.ports.Default == null || item.ports.Default === '') {
-        item.ports = { Default: 80 };
-    } else {
-        item.ports = { Default: parseInt(item.ports.Default, 10) };
-    }
-    if (item.weight == null || item.weight === '') {
-        item.weight = 100;
-    } else {
-        item.weight = parseInt(item.weight, 10);
-    }
-    item.hostname = item.hostname != null ? String(item.hostname) : '';
-    item.ip = item.ip != null ? String(item.ip) : '';
-    return item;
-}
-
-export function formatInstanceForApi(instance, mode) {
-    const item = normalizeInstance(instance);
-    const port = parseInt(item.ports.Default, 10);
-    const weight = item.weight != null ? parseInt(item.weight, 10) : 0;
-
-    if (mode === 'domain') {
-        const hostname = String(item.hostname || '').trim();
-        return {
-            hostname,
-            weight,
-            ports: {
-                Default: port
-            }
-        };
-    }
-
-    const ip = String(item.ip || '').trim();
-    return {
-        ip,
-        weight,
-        ports: {
-            Default: port
-        }
+export function formatInstanceForApi(instance) {
+    const item = toFormInstance(instance);
+    const payload = {
+        addr: String(item.addr || '').trim(),
+        port: parseInt(item.port, 10),
+        weight: parseInt(item.weight, 10)
     };
+    const name = String(item.name || '').trim();
+    if (name) {
+        payload.name = name;
+    }
+    return payload;
 }
 
 export function formatInstancePoolForApi(instances) {
     const list = instances || [];
-    const { mode } = detectInstanceMode(list);
-    return list.map(item => formatInstanceForApi(item, mode));
+    return list.map(item => formatInstanceForApi(item));
 }
 
 export function getInstanceEndpointHosts(instances) {
-    const list = parseInstancePool(instances);
-    const { mode } = detectInstanceMode(list);
-    return list.map(instance => {
-        const port = instance.ports && instance.ports.Default != null
-            ? instance.ports.Default
-            : 80;
-        if (mode === 'domain') {
-            const host = String(instance.hostname || '').trim();
-            return `${host}:${port}`;
+    return parseInstancePool(instances).map(instance => {
+        const addr = String(instance.addr || '').trim();
+        if (!addr) {
+            return '';
         }
-        return `${instance.ip}:${port}`;
+        const port = instance.port != null ? instance.port : 80;
+        return `${addr}:${port}`;
     }).filter(Boolean);
 }
 
 function buildDomainInstance(domain) {
     const value = String(domain || '').trim();
     return {
-        hostname: value,
-        ports: { Default: DOMAIN_PORT },
+        addr: value,
+        port: DOMAIN_PORT,
         weight: DOMAIN_WEIGHT
-    };
-}
-
-function toIpFormInstance(instance) {
-    const item = normalizeInstance(instance);
-    return {
-        ip: String(item.ip || '').trim(),
-        ports: cloneDeep(item.ports),
-        weight: item.weight != null ? parseInt(item.weight, 10) : 100
     };
 }
 
@@ -407,17 +354,17 @@ export default {
             }
             return rules;
         },
-        instanceIpRules() {
+        instanceAddrRules() {
             return [
                 {
                     validator: (rule, value, callback) => {
-                        this.validateInstanceIp(rule, value, callback);
+                        this.validateInstanceAddr(rule, value, callback);
                     },
                     trigger: 'blur'
                 },
                 {
                     validator: (rule, value, callback) => {
-                        this.validateInstanceIp(rule, value, callback);
+                        this.validateInstanceAddr(rule, value, callback);
                     },
                     trigger: 'change'
                 }
@@ -484,7 +431,7 @@ export default {
                 this.formData.instanceMode = 'ip';
                 this.formData.domainName = '';
                 if (instances.length > 0) {
-                    this.formData.instances = instances.map(item => toIpFormInstance(item));
+                    this.formData.instances = instances.map(item => toFormInstance(item));
                 } else {
                     this.formData.instances = [createEmptyInstance()];
                 }
@@ -505,8 +452,8 @@ export default {
         handleAdd() {
             this.deleteAble = true;
             this.formData.instances.push({
-                ip: '',
-                ports: { Default: 80 },
+                addr: '',
+                port: 80,
                 weight: 0
             });
             this.validateInstancesField();
@@ -515,10 +462,11 @@ export default {
             const match = String(fieldPath || '').match(/^instances\.(\d+)\./);
             return match ? parseInt(match[1], 10) : -1;
         },
-        onInstancePortChange(item, key, index) {
+        onInstancePortChange(index) {
             this.$nextTick(() => {
-                if (item[key] !== null) {
-                    this.$set(item, key, parseInt(item[key], 10));
+                const item = this.formData.instances[index];
+                if (item && item.port !== null) {
+                    this.$set(item, 'port', parseInt(item.port, 10));
                 }
                 this.validateInstanceRow(index);
             });
@@ -551,8 +499,8 @@ export default {
                 const props = [];
                 this.formData.instances.forEach((_, index) => {
                     [
-                        `instances.${index}.ip`,
-                        `instances.${index}.ports.Default`,
+                        `instances.${index}.addr`,
+                        `instances.${index}.port`,
                         `instances.${index}.weight`
                     ].forEach(prop => {
                         if (registeredProps.has(prop)) {
@@ -608,7 +556,7 @@ export default {
                     if (
                         field.validateState === 'error'
                         && field.validateMessage
-                        && /^instances\.\d+\.(ip|ports\.Default|weight)$/.test(field.prop)
+                        && /^instances\.\d+\.(addr|port|weight)$/.test(field.prop)
                     ) {
                         firstError = field.validateMessage;
                         return true;
@@ -618,24 +566,24 @@ export default {
                 this.instanceErrorMessage = firstError;
             });
         },
-        validateInstanceIp(rule, value, callback) {
+        validateInstanceAddr(rule, value, callback) {
             const index = this.getInstanceFieldIndex(rule.field);
-            const ip = String(value || '').trim();
+            const addr = String(value || '').trim();
 
-            if (!ip) {
+            if (!addr) {
                 callback(new Error(this.$t('com.tipEnterX', {
                     obj: this.$t('instancePool.ipAddress')
                 })));
                 return;
             }
-            if (!isIP(ip, 4) && !isIP(ip, 6)) {
+            if (!isIP(addr, 4) && !isIP(addr, 6)) {
                 callback(new Error(this.$t('com.tipEnterX', {
                     obj: this.$t('instancePool.ipAddress')
                 })));
                 return;
             }
 
-            const duplicateError = this.getDuplicateIpError(index);
+            const duplicateError = this.getDuplicateAddrError(index);
             if (duplicateError) {
                 callback(new Error(duplicateError));
                 return;
@@ -660,13 +608,13 @@ export default {
             }
             callback();
         },
-        getDuplicateIpError(index) {
+        getDuplicateAddrError(index) {
             if (index < 0) {
                 return '';
             }
             const current = this.formData.instances[index];
-            const ip = String((current && current.ip) || '').trim();
-            if (!ip) {
+            const addr = String((current && current.addr) || '').trim();
+            if (!addr) {
                 return '';
             }
 
@@ -674,13 +622,13 @@ export default {
                 if (itemIndex === index) {
                     return false;
                 }
-                const otherIp = String(item.ip || '').trim();
-                return otherIp && otherIp === ip;
+                const otherAddr = String(item.addr || '').trim();
+                return otherAddr && otherAddr === addr;
             });
             if (!hasDuplicate) {
                 return '';
             }
-            return this.$t('instancePool.tipDuplicateIp', { ip });
+            return this.$t('instancePool.tipDuplicateIp', { ip: addr });
         },
         getWeightSumError() {
             if (this.formData.instanceMode !== 'ip') {
@@ -713,7 +661,7 @@ export default {
         emitSubmitData(instances) {
             this.$emit('submitData', {
                 topic: 'instancePoolData',
-                data: instances.map(item => normalizeInstance(item))
+                data: instances.map(item => toFormInstance(item))
             });
         },
         handleSubmit() {
