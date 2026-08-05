@@ -38,6 +38,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [v0.0.5] - 2026-07-24
+
+### Added
+
+- Reduced module scope: removed legacy modules including GSLB, Domains, SubClusters, AIClusters, and the old Instance Pool to streamline the product around AI gateway core workflows
+- List filtering: added filtering capabilities to key list views for easier data discovery
+- IPv6 CIDR support: enhanced utility functions to support IPv6 CIDR parsing, expansion, and comparison
+- Consumer management enhancements: improved Entity create/edit/view flows and hierarchical organization support
+- API Key enhancements: refined API Key list, detail, and upsert components with better quota and rate-limit handling
+- Expanded i18n coverage: updated English and Chinese translations for consumer, cluster, and route management
+
+### Changed
+
+- Navigation/sidebar reorganization: simplified sidebar navigation to focus on Resource, Route, Consumer, User, and AI Gateway Instance Pool
+- Router path updates: updated router paths; removed deprecated routes and set the default landing page to product.home
+- Component consolidation: merged and simplified cluster-related components (GatewayConfig, InstancePool, Review, Scheduler, etc.)
+- UI refresh: updated theme styles and sidebar layout
+- Code cleanup: removed deprecated modules and related assets
+
+### Fixed
+
+- Fixed multiple interaction issues in gateway configuration and route rule forms
+- Fixed request-layer error handling and response processing
+- Addressed UI rendering issues in pageTable and sidebar navigation
+- Fixed login and authorization edge cases
+
 ## [v0.0.4] - 2026-07-15
 
 ### Added
@@ -123,6 +149,7 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
+[v0.0.5]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.5
 [v0.0.4]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.4
 [v0.0.3]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.3
 [v0.0.2]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.2

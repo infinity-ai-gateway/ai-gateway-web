@@ -71,8 +71,7 @@ export default {
                 'route.admin.list': 'ivu-icon-ios-cube',
                 'resource.admin.list': 'ivu-icon-md-appstore',
                 'AICluster.list': 'iconfont icon-jiqun',
-                'AdvanceRouteRule.list': 'iconfont icon-zhuanfa',
-                'DefaultRouteRule.list': 'iconfont icon-zhuanfa'
+                'AdvanceRouteRule.list': 'iconfont icon-zhuanfa'
             }
         };
     },

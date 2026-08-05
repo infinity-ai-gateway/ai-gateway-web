@@ -32,7 +32,9 @@
         <Row :gutter="24">
           <Col span="12">
             <FormItem :label="$t('com.expiredDate')" prop="expired_time">
-              <Checkbox v-model="neverExpire">{{ $t('apiForm.neverExpire') }}</Checkbox>
+              <Checkbox v-model="neverExpire">{{
+                $t("apiForm.neverExpire")
+              }}</Checkbox>
               <DatePicker
                 v-if="!neverExpire"
                 :placeholder="$t('apiForm.selectTime')"
@@ -52,16 +54,16 @@
                 :key="'enabled-' + formRenderKey"
                 style="width: 100%"
               >
-                <Option value="true">{{ $t('com.enable') }}</Option>
-                <Option value="false">{{ $t('com.deactivate') }}</Option>
+                <Option value="true">{{ $t("com.enable") }}</Option>
+                <Option value="false">{{ $t("com.deactivate") }}</Option>
               </Select>
             </FormItem>
           </Col>
           <Col span="12">
             <FormItem :label="$t('apiKey.quotaCheck')">
               <Select v-model="formData.unlimited_quota" style="width: 100%">
-                <Option value="false">{{ $t('apiKey.yes') }}</Option>
-                <Option value="true">{{ $t('apiKey.no') }}</Option>
+                <Option value="false">{{ $t("apiKey.yes") }}</Option>
+                <Option value="true">{{ $t("apiKey.no") }}</Option>
               </Select>
             </FormItem>
           </Col>
@@ -102,7 +104,7 @@
                 :placeholder="$t('apiKey.subnetPlaceholder')"
                 @on-blur="validateSubnetRules"
               ></Input>
-              <p class="form-tip">{{ $t('apiKey.subnetTip') }}</p>
+              <p class="form-tip">{{ $t("apiKey.subnetTip") }}</p>
             </FormItem>
           </Col>
         </Row>
@@ -132,9 +134,12 @@
         <Row :gutter="24">
           <Col span="12">
             <FormItem :label="$t('apiKey.unlimitedQuota')">
-              <Select v-model="formData.quota_plan.unlimited" style="width: 100%">
-                <Option value="true">{{ $t('apiKey.yes') }}</Option>
-                <Option value="false">{{ $t('apiKey.no') }}</Option>
+              <Select
+                v-model="formData.quota_plan.unlimited"
+                style="width: 100%"
+              >
+                <Option value="true">{{ $t("apiKey.yes") }}</Option>
+                <Option value="false">{{ $t("apiKey.no") }}</Option>
               </Select>
             </FormItem>
           </Col>
@@ -143,14 +148,20 @@
           <Row :gutter="24">
             <Col span="12">
               <FormItem :label="$t('apiKey.passWhenNoQuota')">
-                <Select v-model="formData.quota_plan.pass_when_no_enough_quota" style="width: 100%">
-                  <Option value="true">{{ $t('apiKey.yes') }}</Option>
-                  <Option value="false">{{ $t('apiKey.no') }}</Option>
+                <Select
+                  v-model="formData.quota_plan.pass_when_no_enough_quota"
+                  style="width: 100%"
+                >
+                  <Option value="true">{{ $t("apiKey.yes") }}</Option>
+                  <Option value="false">{{ $t("apiKey.no") }}</Option>
                 </Select>
               </FormItem>
             </Col>
             <Col span="12">
-              <FormItem :label="$t('apiKey.quotaTotal')" prop="quota_plan.quota">
+              <FormItem
+                :label="$t('apiKey.quotaTotal')"
+                prop="quota_plan.quota"
+              >
                 <InputNumber
                   v-model="formData.quota_plan.quota"
                   :min="0"
@@ -174,10 +185,15 @@
             </Col>
             <Col span="12">
               <FormItem :label="$t('apiKey.resetPeriod')">
-                <Select v-model="formData.quota_plan.reset_period" style="width: 100%">
-                  <Option value="never">{{ $t('apiKey.resetNever') }}</Option>
-                  <Option value="weekly">{{ $t('apiKey.resetWeekly') }}</Option>
-                  <Option value="monthly">{{ $t('apiKey.resetMonthly') }}</Option>
+                <Select
+                  v-model="formData.quota_plan.reset_period"
+                  style="width: 100%"
+                >
+                  <Option value="never">{{ $t("apiKey.resetNever") }}</Option>
+                  <Option value="weekly">{{ $t("apiKey.resetWeekly") }}</Option>
+                  <Option value="monthly">{{
+                    $t("apiKey.resetMonthly")
+                  }}</Option>
                 </Select>
               </FormItem>
             </Col>
@@ -188,14 +204,17 @@
       <Card :title="$t('apiKey.rateLimitConfig')" class="form-card">
         <Row :gutter="24">
           <Col span="12">
-            <FormItem>
+            <FormItem prop="rate_limit_policy.enabled">
               <span slot="label" class="rate-limit-label">
-                {{ $t('apiKey.enableRateLimit') }}
+                {{ $t("apiKey.enableRateLimit") }}
                 <Tooltip placement="top" transfer max-width="320">
                   <div slot="content" class="rate-limit-tip-content">
-                    {{ $t('apiKey.enableRateLimitTip') }}
+                    {{ $t("apiKey.enableRateLimitTip") }}
                   </div>
-                  <Icon type="ios-help-circle-outline" class="rate-limit-help-icon" />
+                  <Icon
+                    type="ios-help-circle-outline"
+                    class="rate-limit-help-icon"
+                  />
                 </Tooltip>
               </span>
               <Select
@@ -203,8 +222,8 @@
                 style="width: 100%"
                 @on-change="validateRateLimitEnabledField"
               >
-                <Option value="true">{{ $t('apiKey.yes') }}</Option>
-                <Option value="false">{{ $t('apiKey.no') }}</Option>
+                <Option value="true">{{ $t("apiKey.yes") }}</Option>
+                <Option value="false">{{ $t("apiKey.no") }}</Option>
               </Select>
             </FormItem>
           </Col>
@@ -212,7 +231,7 @@
 
         <div v-if="formData.rate_limit_policy.enabled === 'true'">
           <div class="rules-section">
-            <h4 class="rules-title">{{ $t('apiKey.tpmRules') }}</h4>
+            <h4 class="rules-title">{{ $t("apiKey.tpmRules") }}</h4>
             <div
               v-for="(rule, index) in formData.rate_limit_policy.rules.tpm"
               :key="'tpm-' + index"
@@ -223,14 +242,21 @@
                   <FormItem
                     :label="$t('apiKey.ruleName')"
                     :prop="'rate_limit_policy.rules.tpm.' + index + '.name'"
-                    :rules="[{ required: true, validator: validateTpmRuleName }]"
+                    :rules="[
+                      { required: true, validator: validateTpmRuleName },
+                    ]"
                   >
                     <Input v-model="rule.name"></Input>
                   </FormItem>
                 </Col>
                 <Col span="4">
                   <FormItem :label="$t('apiKey.applyModel')">
-                    <el-select v-model="rule.model" style="width: 100%" filterable size="small">
+                    <el-select
+                      v-model="rule.model"
+                      style="width: 100%"
+                      filterable
+                      size="small"
+                    >
                       <el-option value="*" :label="$t('apiKey.allModels')" />
                       <el-option-group
                         v-for="group in modelGroups"
@@ -250,7 +276,9 @@
                 <Col span="3">
                   <FormItem
                     :label="$t('apiKey.timeWindow')"
-                    :prop="'rate_limit_policy.rules.tpm.' + index + '.window_minutes'"
+                    :prop="
+                      'rate_limit_policy.rules.tpm.' + index + '.window_minutes'
+                    "
                     :rules="[{ validator: validateTpmWindowMinutes }]"
                   >
                     <InputNumber
@@ -268,12 +296,14 @@
                 <Col span="4">
                   <FormItem
                     :label="$t('apiKey.maxTokens')"
-                    :prop="'rate_limit_policy.rules.tpm.' + index + '.max_tokens'"
+                    :prop="
+                      'rate_limit_policy.rules.tpm.' + index + '.max_tokens'
+                    "
                     :rules="[{ validator: validateTpmMaxTokens }]"
                   >
                     <InputNumber
                       v-model="rule.max_tokens"
-                      :min="1"
+                      :min="0"
                       :max="INT64_MAX"
                       :precision="0"
                       :formatter="formatNumberInput"
@@ -285,8 +315,12 @@
                 <Col span="3">
                   <FormItem
                     :label="$t('apiKey.stepMinutes')"
-                    :prop="'rate_limit_policy.rules.tpm.' + index + '.step_minutes'"
-                    :rules="[{ validator: validateTpmStepMinutes, trigger: 'change' }]"
+                    :prop="
+                      'rate_limit_policy.rules.tpm.' + index + '.step_minutes'
+                    "
+                    :rules="[
+                      { validator: validateTpmStepMinutes, trigger: 'change' },
+                    ]"
                   >
                     <InputNumber
                       v-model="rule.step_minutes"
@@ -302,20 +336,27 @@
                 </Col>
                 <Col span="2">
                   <FormItem :label="$t('com.operation')">
-                    <Button type="error" size="small" @click="removeTpmRule(index)">{{
-                      $t('com.del')
-                    }}</Button>
+                    <Button
+                      type="error"
+                      size="small"
+                      @click="removeTpmRule(index)"
+                      >{{ $t("com.del") }}</Button
+                    >
                   </FormItem>
                 </Col>
               </Row>
             </div>
-            <Button type="primary" size="small" @click="addTpmRule" icon="md-add">{{
-              $t('apiKey.addRule')
-            }}</Button>
+            <Button
+              type="primary"
+              size="small"
+              @click="addTpmRule"
+              icon="md-add"
+              >{{ $t("apiKey.addRule") }}</Button
+            >
           </div>
 
           <div class="rules-section">
-            <h4 class="rules-title">{{ $t('apiKey.rpmRules') }}</h4>
+            <h4 class="rules-title">{{ $t("apiKey.rpmRules") }}</h4>
             <div
               v-for="(rule, index) in formData.rate_limit_policy.rules.rpm"
               :key="'rpm-' + index"
@@ -326,14 +367,21 @@
                   <FormItem
                     :label="$t('apiKey.ruleName')"
                     :prop="'rate_limit_policy.rules.rpm.' + index + '.name'"
-                    :rules="[{ required: true, validator: validateRpmRuleName }]"
+                    :rules="[
+                      { required: true, validator: validateRpmRuleName },
+                    ]"
                   >
                     <Input v-model="rule.name"></Input>
                   </FormItem>
                 </Col>
                 <Col span="5">
                   <FormItem :label="$t('apiKey.applyModel')">
-                    <el-select v-model="rule.model" style="width: 100%" size="small" filterable>
+                    <el-select
+                      v-model="rule.model"
+                      style="width: 100%"
+                      size="small"
+                      filterable
+                    >
                       <el-option value="*" :label="$t('apiKey.allModels')" />
                       <el-option-group
                         v-for="group in modelGroups"
@@ -353,7 +401,9 @@
                 <Col span="4">
                   <FormItem
                     :label="$t('apiKey.timeWindow')"
-                    :prop="'rate_limit_policy.rules.rpm.' + index + '.window_minutes'"
+                    :prop="
+                      'rate_limit_policy.rules.rpm.' + index + '.window_minutes'
+                    "
                     :rules="[{ validator: validateRpmWindowMinutes }]"
                   >
                     <InputNumber
@@ -370,12 +420,14 @@
                 <Col span="5">
                   <FormItem
                     :label="$t('apiKey.maxRequests')"
-                    :prop="'rate_limit_policy.rules.rpm.' + index + '.max_requests'"
+                    :prop="
+                      'rate_limit_policy.rules.rpm.' + index + '.max_requests'
+                    "
                     :rules="[{ validator: validateRpmMaxRequests }]"
                   >
                     <InputNumber
                       v-model="rule.max_requests"
-                      :min="1"
+                      :min="0"
                       :max="INT64_MAX"
                       :precision="0"
                       :formatter="formatNumberInput"
@@ -386,9 +438,12 @@
                 </Col>
                 <Col span="2">
                   <FormItem :label="$t('com.operation')">
-                    <Button type="error" size="small" @click="removeRpmRule(index)">{{
-                      $t('com.del')
-                    }}</Button>
+                    <Button
+                      type="error"
+                      size="small"
+                      @click="removeRpmRule(index)"
+                      >{{ $t("com.del") }}</Button
+                    >
                   </FormItem>
                 </Col>
               </Row>
@@ -399,7 +454,7 @@
               class="mb20"
               @click="addRpmRule"
               icon="md-add"
-              >{{ $t('apiKey.addRule') }}</Button
+              >{{ $t("apiKey.addRule") }}</Button
             >
           </div>
 
@@ -412,9 +467,15 @@
                   style="width: 100%"
                   @on-change="onMaxConcurrencyModeChange"
                 >
-                  <Option value="unlimited">{{ $t('apiKey.maxConcurrencyUnlimited') }}</Option>
-                  <Option value="banned">{{ $t('apiKey.maxConcurrencyBanned') }}</Option>
-                  <Option value="limited">{{ $t('apiKey.maxConcurrencyLimited') }}</Option>
+                  <Option value="unlimited">{{
+                    $t("apiKey.maxConcurrencyUnlimited")
+                  }}</Option>
+                  <Option value="banned">{{
+                    $t("apiKey.maxConcurrencyBanned")
+                  }}</Option>
+                  <Option value="limited">{{
+                    $t("apiKey.maxConcurrencyLimited")
+                  }}</Option>
                 </Select>
                 <FormItem
                   v-if="maxConcurrencyMode === 'limited'"
@@ -429,7 +490,7 @@
                     :precision="0"
                     :formatter="formatNumberInput"
                     :parser="parseNumberInput"
-                    style="width: 100%;"
+                    style="width: 100%"
                     @on-change="onMaxConcurrencyValueChange"
                     @on-blur="validateMaxConcurrencyField"
                   ></InputNumber>
@@ -437,16 +498,15 @@
               </FormItem>
             </Col>
           </Row>
-          <FormItem prop="rate_limit_policy.enabled" class="rate-limit-policy-error" />
         </div>
       </Card>
 
       <FormItem class="com-btn-box drawer-footer">
         <Button @click="$emit('cancel')" class="btn-box-del">
-          {{ $t('com.cancel') }}
+          {{ $t("com.cancel") }}
         </Button>
         <Button type="primary" @click="handleSubmit('formData')">
-          {{ $t('com.submit') }}
+          {{ $t("com.submit") }}
         </Button>
       </FormItem>
     </Form>
@@ -454,10 +514,10 @@
 </template>
 
 <script>
-import { cloneDeep } from 'lodash';
-import moment from 'moment';
-import { isCidr, isCidrEqual, isCidrContained } from '@/utils/const';
-import { getModelGroupsFromServices } from '@/utils/model';
+import { cloneDeep } from "lodash";
+import moment from "moment";
+import { isCidr, isCidrEqual, isCidrContained } from "@/utils/const";
+import { getModelGroupsFromServices } from "@/utils/model";
 
 const INT64_MAX = 9223372036854775807;
 const INT_MAX = 2147483647;
@@ -469,24 +529,24 @@ export default {
       type: Object,
       default() {
         return {};
-      }
+      },
     },
     isAdd: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   data() {
     const that = this;
 
     // Validate description
     const validateDescription = (rule, value, callback) => {
-      if (!value || value.trim() === '') {
-        callback(new Error(this.$t('apiForm.nameRequired')));
+      if (!value || value.trim() === "") {
+        callback(new Error(this.$t("apiForm.nameRequired")));
         return;
       }
       if (value.length > DESCRIPTION_MAX_LENGTH) {
-        callback(new Error(this.$t('apiKey.descriptionLengthError')));
+        callback(new Error(this.$t("apiKey.descriptionLengthError")));
         return;
       }
       callback();
@@ -496,7 +556,7 @@ export default {
     const validateExpiredTime = (rule, value, callback) => {
       if (!that.neverExpire) {
         if (!value) {
-          callback(new Error(this.$t('apiKey.selectExpiredTime')));
+          callback(new Error(this.$t("apiKey.selectExpiredTime")));
           return;
         }
       }
@@ -505,21 +565,21 @@ export default {
 
     // Validate quota (required when quota_plan.unlimited=false)
     const validateQuota = (rule, value, callback) => {
-      if (that.formData.quota_plan.unlimited === 'false') {
-        if (value === null || value === undefined || value === '') {
-          callback(new Error(this.$t('apiKey.quotaRequired')));
+      if (that.formData.quota_plan.unlimited === "false") {
+        if (value === null || value === undefined || value === "") {
+          callback(new Error(this.$t("apiKey.quotaRequired")));
           return;
         }
         if (!Number.isInteger(value)) {
-          callback(new Error(this.$t('apiKey.quotaMustBeNonNegative')));
+          callback(new Error(this.$t("apiKey.quotaMustBeNonNegative")));
           return;
         }
         if (value < 0) {
-          callback(new Error(this.$t('apiKey.quotaRangeError')));
+          callback(new Error(this.$t("apiKey.quotaRangeError")));
           return;
         }
         if (value > INT64_MAX) {
-          callback(new Error(this.$t('apiKey.quotaMaxError')));
+          callback(new Error(this.$t("apiKey.quotaMaxError")));
           return;
         }
       }
@@ -530,36 +590,54 @@ export default {
     const validateSubnet = (rule, value, callback) => {
       const subnets = value || [];
       if (subnets.length === 0) {
-        callback(new Error(this.$t('apiKey.subnetRequired')));
+        callback(new Error(this.$t("apiKey.subnetRequired")));
         return;
       }
-      if (subnets.includes('*') && subnets.length > 1) {
-        callback(new Error(this.$t('apiKey.subnetCidrConflict')));
+      if (subnets.includes("*") && subnets.length > 1) {
+        callback(new Error(this.$t("apiKey.subnetCidrConflict")));
         return;
       }
       for (let i = 0; i < subnets.length; i++) {
         const cidr = subnets[i];
-        if (cidr === '*') continue;
+        if (cidr === "*") continue;
         if (!isCidr(cidr)) {
-          callback(new Error(this.$t('apiKey.subnetFormatError', { index: i + 1, cidr: cidr })));
+          callback(
+            new Error(
+              this.$t("apiKey.subnetFormatError", { index: i + 1, cidr: cidr })
+            )
+          );
           return;
         }
         for (let j = 0; j < subnets.length; j++) {
           if (i === j) continue;
           const otherCidr = subnets[j];
-          if (otherCidr === '*') continue;
+          if (otherCidr === "*") continue;
           if (isCidrEqual(cidr, otherCidr)) {
-            callback(new Error(this.$t('apiKey.subnetDuplicate', { cidr: cidr })));
+            callback(
+              new Error(this.$t("apiKey.subnetDuplicate", { cidr: cidr }))
+            );
             return;
           }
           if (isCidrContained(cidr, otherCidr)) {
             callback(
-              new Error(this.$t('apiKey.subnetContained', { cidr: cidr, parent: otherCidr }))
+              new Error(
+                this.$t("apiKey.subnetContained", {
+                  cidr: cidr,
+                  parent: otherCidr,
+                })
+              )
             );
             return;
           }
           if (isCidrContained(otherCidr, cidr)) {
-            callback(new Error(this.$t('apiKey.subnetContains', { cidr: cidr, child: otherCidr })));
+            callback(
+              new Error(
+                this.$t("apiKey.subnetContains", {
+                  cidr: cidr,
+                  child: otherCidr,
+                })
+              )
+            );
             return;
           }
         }
@@ -567,23 +645,44 @@ export default {
       callback();
     };
 
-    // Validate rate limit policy (at least one rule required)
+    // Validate rate limit policy (at least one rule required; no duplicate combinations)
     const validateRateLimitPolicy = (rule, value, callback) => {
-      if (that.formData.rate_limit_policy.enabled === 'true') {
+      if (that.formData.rate_limit_policy.enabled === "true") {
         const tpm = that.formData.rate_limit_policy.rules.tpm || [];
         const rpm = that.formData.rate_limit_policy.rules.rpm || [];
-        const maxConcurrency = that.formData.rate_limit_policy.rules.max_concurrency;
+        const maxConcurrency =
+          that.formData.rate_limit_policy.rules.max_concurrency;
         const hasTpmRules = tpm.length > 0;
         const hasRpmRules = rpm.length > 0;
         const hasEffectiveMaxConcurrency =
-          that.maxConcurrencyMode === 'banned'
-          || (
-            that.maxConcurrencyMode === 'limited'
-            && Number.isInteger(maxConcurrency)
-            && maxConcurrency > 0
-          );
+          that.maxConcurrencyMode === "banned" ||
+          (that.maxConcurrencyMode === "limited" &&
+            Number.isInteger(maxConcurrency) &&
+            maxConcurrency > 0);
         if (!hasTpmRules && !hasRpmRules && !hasEffectiveMaxConcurrency) {
-          callback(new Error(this.$t('apiKey.rateLimitRuleRequired')));
+          callback(new Error(this.$t("apiKey.rateLimitRuleRequired")));
+          return;
+        }
+
+        const tpmKeys = tpm.map(
+          (r) =>
+            `${r.model || ""}|${r.window_minutes || 0}|${r.max_tokens || 0}|${
+              r.step_minutes || 0
+            }`
+        );
+        const uniqueTpmKeys = [...new Set(tpmKeys)];
+        if (tpmKeys.length !== uniqueTpmKeys.length) {
+          callback(new Error(this.$t("apiKey.tpmCombinationDuplicate")));
+          return;
+        }
+
+        const rpmKeys = rpm.map(
+          (r) =>
+            `${r.model || ""}|${r.window_minutes || 0}|${r.max_requests || 0}`
+        );
+        const uniqueRpmKeys = [...new Set(rpmKeys)];
+        if (rpmKeys.length !== uniqueRpmKeys.length) {
+          callback(new Error(this.$t("apiKey.rpmCombinationDuplicate")));
           return;
         }
       }
@@ -595,38 +694,38 @@ export default {
       INT_MAX,
       DESCRIPTION_MAX_LENGTH,
       neverExpire: true,
-      subnetInput: '*',
+      subnetInput: "*",
       formRenderKey: 0,
-      unlimitedQuotaTop: 'true',
-      maxConcurrencyMode: 'limited',
+      unlimitedQuotaTop: "true",
+      maxConcurrencyMode: "limited",
       formData: {
-        description: '',
-        enabled: 'true',
+        description: "",
+        enabled: "true",
         expired_time: null,
-        unlimited_quota: 'false',
-        models: ['*'],
-        subnet: ['*'],
+        unlimited_quota: "false",
+        models: ["*"],
+        subnet: ["*"],
         entity_id: null,
         quota_plan: {
-          unlimited: 'true',
-          pass_when_no_enough_quota: 'false',
+          unlimited: "true",
+          pass_when_no_enough_quota: "false",
           quota: 100000000,
-          unit: 'total_token',
-          reset_period: 'never'
+          unit: "total_token",
+          reset_period: "never",
         },
         rate_limit_policy: {
-          enabled: 'false',
+          enabled: "false",
           rules: {
             tpm: [],
             rpm: [],
-            max_concurrency: 1
-          }
-        }
+            max_concurrency: 1,
+          },
+        },
       },
       options: {
         disabledDate(date) {
           return date && date.valueOf() < Date.now() - 86400000;
-        }
+        },
       },
       entityList: [],
       modelServices: [],
@@ -635,30 +734,30 @@ export default {
           {
             required: true,
             validator: validateDescription,
-          }
+          },
         ],
         expired_time: [
           {
-            validator: validateExpiredTime
-          }
+            validator: validateExpiredTime,
+          },
         ],
         subnet: [
           {
             validator: validateSubnet,
-            trigger: 'blur'
-          }
+            trigger: "blur",
+          },
         ],
-        'quota_plan.quota': [
+        "quota_plan.quota": [
           {
-            validator: validateQuota
-          }
+            validator: validateQuota,
+          },
         ],
-        'rate_limit_policy.enabled': [
+        "rate_limit_policy.enabled": [
           {
-            validator: validateRateLimitPolicy
-          }
-        ]
-      }
+            validator: validateRateLimitPolicy,
+          },
+        ],
+      },
     };
   },
   computed: {
@@ -666,23 +765,23 @@ export default {
       return getModelGroupsFromServices(this.modelServices);
     },
     descriptionLength() {
-      return (this.formData.description || '').length;
+      return (this.formData.description || "").length;
     },
     maxConcurrencyCustomRules() {
       return [
         {
           validator: this.validateMaxConcurrency,
-          trigger: 'change'
+          trigger: "change",
         },
         {
           validator: this.validateMaxConcurrency,
-          trigger: 'blur'
-        }
+          trigger: "blur",
+        },
       ];
-    }
+    },
   },
   watch: {
-    'formData.description'() {
+    "formData.description"() {
       this.validateDescriptionField();
     },
     currentData: {
@@ -692,36 +791,36 @@ export default {
         }
       },
       deep: true,
-      immediate: true
+      immediate: true,
     },
     subnetInput(newVal) {
       // Parse multi-line input to array, ignore empty lines
       if (newVal) {
         const subnets = newVal
-          .split('\n')
+          .split("\n")
           .map((item) => item.trim())
-          .filter((item) => item !== '');
-        this.formData.subnet = subnets.length > 0 ? subnets : ['*'];
+          .filter((item) => item !== "");
+        this.formData.subnet = subnets.length > 0 ? subnets : ["*"];
       } else {
-        this.formData.subnet = ['*'];
+        this.formData.subnet = ["*"];
       }
     },
-    'formData.models': {
+    "formData.models": {
       handler(val) {
         if (!val || val.length === 0) return;
-        const hasStar = val.includes('*');
+        const hasStar = val.includes("*");
         const hasOthers = val.length > 1;
         if (hasStar && hasOthers) {
           const lastIndex = val.length - 1;
-          if (val[lastIndex] === '*') {
-            this.formData.models = ['*'];
+          if (val[lastIndex] === "*") {
+            this.formData.models = ["*"];
           } else {
-            this.formData.models = val.filter((v) => v !== '*');
+            this.formData.models = val.filter((v) => v !== "*");
           }
         }
       },
-      deep: true
-    }
+      deep: true,
+    },
   },
   mounted() {
     this.fetchEntityList();
@@ -729,25 +828,27 @@ export default {
   },
   methods: {
     formatNumberInput(value) {
-      if (value === null || value === undefined || value === '') {
-        return '';
+      if (value === null || value === undefined || value === "") {
+        return "";
       }
       return Number(value).toLocaleString();
     },
     parseNumberInput(value) {
-      return String(value).replace(/,/g, '');
+      return String(value).replace(/,/g, "");
     },
     normalizeSelectBool(value, defaultValue = true) {
-      if (value === true || value === 'true') return 'true';
-      if (value === false || value === 'false') return 'false';
-      return defaultValue ? 'true' : 'false';
+      if (value === true || value === "true") return "true";
+      if (value === false || value === "false") return "false";
+      return defaultValue ? "true" : "false";
     },
     initFormData(data) {
       this.formData = cloneDeep(data);
 
       // Convert top-level boolean values to strings (must be done before Select renders)
       this.formData.enabled = this.normalizeSelectBool(
-        this.formData.enabled !== undefined ? this.formData.enabled : this.formData.enabled,
+        this.formData.enabled !== undefined
+          ? this.formData.enabled
+          : this.formData.enabled,
         true
       );
       this.formData.unlimited_quota = this.normalizeSelectBool(
@@ -762,45 +863,48 @@ export default {
         this.formData.expired_time = null; // DatePicker requires null instead of -1
       } else {
         this.neverExpire = false;
-        this.formData.expired_time = moment.unix(data.expired_time).format('YYYY-MM-DD HH:mm:ss');
+        this.formData.expired_time = moment
+          .unix(data.expired_time)
+          .format("YYYY-MM-DD HH:mm:ss");
       }
 
       // Handle subnet: convert array to multi-line text
       if (data.subnet && data.subnet.length > 0) {
-        this.subnetInput = data.subnet.join('\n');
+        this.subnetInput = data.subnet.join("\n");
       } else {
-        this.subnetInput = '*';
+        this.subnetInput = "*";
       }
 
       // Ensure quota_plan exists and convert boolean values to strings
       if (!this.formData.quota_plan) {
         this.formData.quota_plan = {
-          unlimited: 'true',
-          pass_when_no_enough_quota: 'false',
+          unlimited: "true",
+          pass_when_no_enough_quota: "false",
           quota: 100000000,
-          unit: 'total_token',
-          reset_period: 'never'
+          unit: "total_token",
+          reset_period: "never",
         };
       } else {
         this.formData.quota_plan.unlimited = this.normalizeSelectBool(
           this.formData.quota_plan.unlimited,
           true
         );
-        this.formData.quota_plan.pass_when_no_enough_quota = this.normalizeSelectBool(
-          this.formData.quota_plan.pass_when_no_enough_quota,
-          false
-        );
+        this.formData.quota_plan.pass_when_no_enough_quota =
+          this.normalizeSelectBool(
+            this.formData.quota_plan.pass_when_no_enough_quota,
+            false
+          );
       }
 
       // Ensure rate_limit_policy exists and convert boolean values to strings
       if (!this.formData.rate_limit_policy) {
         this.formData.rate_limit_policy = {
-          enabled: 'false',
+          enabled: "false",
           rules: {
             tpm: [],
             rpm: [],
-            max_concurrency: -1
-          }
+            max_concurrency: -1,
+          },
         };
       } else {
         this.formData.rate_limit_policy.enabled = this.normalizeSelectBool(
@@ -812,7 +916,7 @@ export default {
         this.formData.rate_limit_policy.rules = {
           tpm: [],
           rpm: [],
-          max_concurrency: -1
+          max_concurrency: -1,
         };
       }
 
@@ -820,10 +924,10 @@ export default {
 
       // Ensure models and subnet exist
       if (!this.formData.models || this.formData.models.length === 0) {
-        this.formData.models = ['*'];
+        this.formData.models = ["*"];
       }
       if (!this.formData.subnet || this.formData.subnet.length === 0) {
-        this.formData.subnet = ['*'];
+        this.formData.subnet = ["*"];
       }
 
       if (this.modelServices.length > 0) {
@@ -835,9 +939,9 @@ export default {
 
     fetchEntityList() {
       this.$request({
-        url: this.$urlFormat('entities'),
-        method: 'get',
-        openapi: true
+        url: this.$urlFormat("entities"),
+        method: "get",
+        openapi: true,
       })
         .then((data) => {
           if (data.status === 200) {
@@ -852,14 +956,24 @@ export default {
 
     fetchModelServices() {
       this.$request({
-        url: this.$urlFormat('global-models'),
-        method: 'get',
-        openapi: true
+        url: "clusters",
+        method: "get",
+        openapi: true,
       })
         .then((data) => {
           if (data.status === 200) {
-            const services = data.data.Data.services || [];
-            this.modelServices = services;
+            const clusters = data.data.Data || [];
+            this.modelServices = clusters
+              .filter(
+                (cluster) =>
+                  cluster.llm_config &&
+                  cluster.llm_config.models &&
+                  cluster.llm_config.models.length > 0
+              )
+              .map((cluster) => ({
+                cluster_name: cluster.name,
+                models: cluster.llm_config.models,
+              }));
             // After model list loads, if in edit mode, reformat model fields to ensure proper display
             if (!this.isAdd && this.formData && this.formData.id) {
               this.normalizeModelsField();
@@ -873,8 +987,8 @@ export default {
     normalizeModelsField() {
       if (this.formData.models && this.formData.models.length > 0) {
         const models = [...this.formData.models];
-        if (models.includes('*')) {
-          this.formData.models = ['*'];
+        if (models.includes("*")) {
+          this.formData.models = ["*"];
         } else {
           this.formData.models = models;
         }
@@ -883,15 +997,15 @@ export default {
 
     addTpmRule() {
       if (this.formData.rate_limit_policy.rules.tpm.length >= 3) {
-        this.$Message.warning(this.$t('apiKey.maxRulesTip'));
+        this.$Message.warning(this.$t("apiKey.maxRulesTip"));
         return;
       }
       this.formData.rate_limit_policy.rules.tpm.push({
-        name: '',
-        model: '*',
+        name: "",
+        model: "*",
         window_minutes: 1,
         max_tokens: 10000,
-        step_minutes: 1
+        step_minutes: 1,
       });
       this.validateRateLimitEnabledField();
     },
@@ -903,14 +1017,14 @@ export default {
 
     addRpmRule() {
       if (this.formData.rate_limit_policy.rules.rpm.length >= 3) {
-        this.$Message.warning(this.$t('apiKey.maxRulesTip'));
+        this.$Message.warning(this.$t("apiKey.maxRulesTip"));
         return;
       }
       this.formData.rate_limit_policy.rules.rpm.push({
-        name: '',
-        model: '*',
+        name: "",
+        model: "*",
         window_minutes: 1,
-        max_requests: 100
+        max_requests: 100,
       });
       this.validateRateLimitEnabledField();
     },
@@ -923,7 +1037,9 @@ export default {
     validateMaxConcurrencyField() {
       this.$nextTick(() => {
         if (!this.$refs.formData) return;
-        this.$refs.formData.validateField('rate_limit_policy.rules.max_concurrency');
+        this.$refs.formData.validateField(
+          "rate_limit_policy.rules.max_concurrency"
+        );
         this.validateRateLimitEnabledField();
       });
     },
@@ -931,28 +1047,29 @@ export default {
     validateRateLimitEnabledField() {
       this.$nextTick(() => {
         if (!this.$refs.formData) return;
-        this.$refs.formData.validateField('rate_limit_policy.enabled');
+        this.$refs.formData.validateField("rate_limit_policy.enabled");
       });
     },
 
     syncMaxConcurrencyMode() {
-      const maxConcurrency = this.formData.rate_limit_policy.rules.max_concurrency;
+      const maxConcurrency =
+        this.formData.rate_limit_policy.rules.max_concurrency;
       if (maxConcurrency === 0) {
-        this.maxConcurrencyMode = 'banned';
+        this.maxConcurrencyMode = "banned";
         return;
       }
       if (Number.isFinite(maxConcurrency) && maxConcurrency > 0) {
-        this.maxConcurrencyMode = 'limited';
+        this.maxConcurrencyMode = "limited";
         return;
       }
-      this.maxConcurrencyMode = 'unlimited';
+      this.maxConcurrencyMode = "unlimited";
       this.formData.rate_limit_policy.rules.max_concurrency = -1;
     },
 
     onMaxConcurrencyModeChange(mode) {
-      if (mode === 'banned') {
+      if (mode === "banned") {
         this.formData.rate_limit_policy.rules.max_concurrency = 0;
-      } else if (mode === 'limited') {
+      } else if (mode === "limited") {
         const current = this.formData.rate_limit_policy.rules.max_concurrency;
         if (!Number.isFinite(current) || current <= 0) {
           this.formData.rate_limit_policy.rules.max_concurrency = 1;
@@ -960,7 +1077,7 @@ export default {
       } else {
         this.formData.rate_limit_policy.rules.max_concurrency = -1;
       }
-      if (mode === 'limited') {
+      if (mode === "limited") {
         this.validateMaxConcurrencyField();
       } else {
         this.validateRateLimitEnabledField();
@@ -968,49 +1085,54 @@ export default {
     },
 
     onMaxConcurrencyValueChange(value) {
-      if (this.maxConcurrencyMode !== 'limited') {
+      if (this.maxConcurrencyMode !== "limited") {
         return;
       }
-      if (value === null || value === undefined || value === '') {
+      if (value === null || value === undefined || value === "") {
         this.formData.rate_limit_policy.rules.max_concurrency = null;
       }
       this.validateMaxConcurrencyField();
     },
 
     validateMaxConcurrency(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      if (this.maxConcurrencyMode === 'unlimited') {
+      if (this.maxConcurrencyMode === "unlimited") {
         callback();
         return;
       }
-      if (this.maxConcurrencyMode === 'banned') {
+      if (this.maxConcurrencyMode === "banned") {
         if (this.formData.rate_limit_policy.rules.max_concurrency !== 0) {
-          callback(new Error(this.$t('apiKey.maxConcurrencyBannedError')));
+          callback(new Error(this.$t("apiKey.maxConcurrencyBannedError")));
           return;
         }
         callback();
         return;
       }
 
-      if (this.maxConcurrencyMode === 'limited') {
-        const currentValue = this.formData.rate_limit_policy.rules.max_concurrency;
-        if (currentValue === null || currentValue === undefined || currentValue === '') {
-          callback(new Error(this.$t('apiKey.maxConcurrencyLimitedRequired')));
+      if (this.maxConcurrencyMode === "limited") {
+        const currentValue =
+          this.formData.rate_limit_policy.rules.max_concurrency;
+        if (
+          currentValue === null ||
+          currentValue === undefined ||
+          currentValue === ""
+        ) {
+          callback(new Error(this.$t("apiKey.maxConcurrencyLimitedRequired")));
           return;
         }
         if (!Number.isInteger(currentValue)) {
-          callback(new Error(this.$t('apiKey.maxConcurrencyLimitedInvalid')));
+          callback(new Error(this.$t("apiKey.maxConcurrencyLimitedInvalid")));
           return;
         }
         if (currentValue <= 0) {
-          callback(new Error(this.$t('apiKey.maxConcurrencyLimitedInvalid')));
+          callback(new Error(this.$t("apiKey.maxConcurrencyLimitedInvalid")));
           return;
         }
         if (currentValue > INT_MAX) {
-          callback(new Error(this.$t('apiKey.maxConcurrencyMaxError')));
+          callback(new Error(this.$t("apiKey.maxConcurrencyMaxError")));
           return;
         }
         callback();
@@ -1021,8 +1143,8 @@ export default {
     },
 
     getRuleFieldIndex(field, ruleType) {
-      const fieldPath = field || '';
-      const parts = fieldPath.split('.');
+      const fieldPath = field || "";
+      const parts = fieldPath.split(".");
       const typeIndex = parts.indexOf(ruleType);
       if (typeIndex === -1 || typeIndex + 1 >= parts.length) return 0;
       const index = parseInt(parts[typeIndex + 1], 10);
@@ -1030,149 +1152,184 @@ export default {
     },
 
     getRuleFieldPath(rule) {
-      return rule.fullField || rule.field || '';
+      return rule.fullField || rule.field || "";
     },
 
     onTpmWindowChange(index) {
       this.$nextTick(() => {
         if (!this.$refs.formData) return;
-        this.$refs.formData.validateField(`rate_limit_policy.rules.tpm.${index}.step_minutes`);
+        this.$refs.formData.validateField(
+          `rate_limit_policy.rules.tpm.${index}.step_minutes`
+        );
       });
     },
 
     validateTpmStepMinutesField(index) {
       this.$nextTick(() => {
         if (!this.$refs.formData) return;
-        this.$refs.formData.validateField(`rate_limit_policy.rules.tpm.${index}.step_minutes`);
+        this.$refs.formData.validateField(
+          `rate_limit_policy.rules.tpm.${index}.step_minutes`
+        );
       });
     },
 
     validateTpmWindowMinutes(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
+      const index =
+        this.getRuleFieldIndex(this.getRuleFieldPath(rule), "tpm") + 1;
+      if (value === null || value === undefined || value === "") {
+        callback(new Error(this.$t("apiKey.windowMinutesRequired", { index })));
+        return;
+      }
       if (!Number.isFinite(value) || value < 1 || value > 360) {
-        callback(new Error(this.$t('apiKey.windowMinutesInvalid', { index })));
+        callback(new Error(this.$t("apiKey.windowMinutesInvalid", { index })));
         return;
       }
       callback();
     },
 
     validateTpmMaxTokens(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
-      if (value === null || value === undefined || value === '') {
-        callback(new Error(this.$t('apiKey.maxTokensRequired', { index })));
+      const index =
+        this.getRuleFieldIndex(this.getRuleFieldPath(rule), "tpm") + 1;
+      if (value === null || value === undefined || value === "") {
+        callback(new Error(this.$t("apiKey.maxTokensRequired", { index })));
         return;
       }
-      if (!Number.isFinite(value) || value < 1) {
-        callback(new Error(this.$t('apiKey.maxTokensInvalid', { index })));
+      if (!Number.isFinite(value) || value < 0) {
+        callback(new Error(this.$t("apiKey.maxTokensInvalid", { index })));
         return;
       }
       if (value > INT64_MAX) {
-        callback(new Error(this.$t('apiKey.maxTokensMaxError', { index })));
+        callback(new Error(this.$t("apiKey.maxTokensMaxError", { index })));
         return;
       }
       callback();
     },
 
     validateTpmStepMinutes(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      const ruleIndex = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm');
+      const ruleIndex = this.getRuleFieldIndex(
+        this.getRuleFieldPath(rule),
+        "tpm"
+      );
       const index = ruleIndex + 1;
       const tpmRules = this.formData.rate_limit_policy.rules.tpm || [];
       const tpmRule = tpmRules[ruleIndex];
       const windowMinutes = tpmRule ? tpmRule.window_minutes : undefined;
-      if (value === null || value === undefined || value === '') {
-        callback(new Error(this.$t('apiKey.stepMinutesRequired', { index })));
+      if (value === null || value === undefined || value === "") {
+        callback(new Error(this.$t("apiKey.stepMinutesRequired", { index })));
         return;
       }
       if (!Number.isFinite(value) || value < 1 || value > 360) {
-        callback(new Error(this.$t('apiKey.stepMinutesRange', { index })));
+        callback(new Error(this.$t("apiKey.stepMinutesRange", { index })));
         return;
       }
       if (Number.isFinite(windowMinutes) && value > windowMinutes) {
-        callback(new Error(this.$t('apiKey.stepMinutesInvalid', { index })));
+        callback(new Error(this.$t("apiKey.stepMinutesInvalid", { index })));
         return;
       }
       callback();
     },
 
     validateRpmWindowMinutes(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
+      const index =
+        this.getRuleFieldIndex(this.getRuleFieldPath(rule), "rpm") + 1;
+      if (value === null || value === undefined || value === "") {
+        callback(new Error(this.$t("apiKey.windowMinutesRequired", { index })));
+        return;
+      }
       if (!Number.isFinite(value) || value < 1 || value > 360) {
-        callback(new Error(this.$t('apiKey.windowMinutesInvalid', { index })));
+        callback(new Error(this.$t("apiKey.windowMinutesInvalid", { index })));
         return;
       }
       callback();
     },
 
     validateRpmMaxRequests(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
-      if (value === null || value === undefined || value === '') {
-        callback(new Error(this.$t('apiKey.maxRequestsRequired', { index })));
+      const index =
+        this.getRuleFieldIndex(this.getRuleFieldPath(rule), "rpm") + 1;
+      if (value === null || value === undefined || value === "") {
+        callback(new Error(this.$t("apiKey.maxRequestsRequired", { index })));
         return;
       }
-      if (!Number.isFinite(value) || value < 1) {
-        callback(new Error(this.$t('apiKey.maxRequestsInvalid', { index })));
+      if (!Number.isFinite(value) || value < 0) {
+        callback(new Error(this.$t("apiKey.maxRequestsInvalid", { index })));
         return;
       }
       if (value > INT64_MAX) {
-        callback(new Error(this.$t('apiKey.maxRequestsMaxError', { index })));
+        callback(new Error(this.$t("apiKey.maxRequestsMaxError", { index })));
         return;
       }
       callback();
     },
 
     validateTpmRuleName(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      if (value === null || value === undefined || String(value).trim() === '') {
-        const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
-        callback(new Error(this.$t('apiKey.ruleNameRequired', { index })));
+      const trimmed = String(value || "").trim();
+      if (trimmed === "") {
+        const index =
+          this.getRuleFieldIndex(this.getRuleFieldPath(rule), "tpm") + 1;
+        callback(new Error(this.$t("apiKey.ruleNameRequired", { index })));
+        return;
+      }
+      if (trimmed.length < 1 || trimmed.length > 128) {
+        callback(new Error(this.$t("apiKey.ruleNameLengthError")));
         return;
       }
       const tpm = this.formData.rate_limit_policy.rules.tpm || [];
-      const count = tpm.filter((r) => r.name === value.trim()).length;
+      const count = tpm.filter((r) => r.name === trimmed).length;
       if (count > 1) {
-        callback(new Error(this.$t('apiKey.ruleNameDuplicate', { name: value.trim() })));
+        callback(
+          new Error(this.$t("apiKey.ruleNameDuplicate", { name: trimmed }))
+        );
         return;
       }
       callback();
     },
 
     validateRpmRuleName(rule, value, callback) {
-      if (this.formData.rate_limit_policy.enabled === 'false') {
+      if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
         return;
       }
-      if (value === null || value === undefined || String(value).trim() === '') {
-        const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
-        callback(new Error(this.$t('apiKey.ruleNameRequired', { index })));
+      const trimmed = String(value || "").trim();
+      if (trimmed === "") {
+        const index =
+          this.getRuleFieldIndex(this.getRuleFieldPath(rule), "rpm") + 1;
+        callback(new Error(this.$t("apiKey.ruleNameRequired", { index })));
+        return;
+      }
+      if (trimmed.length < 1 || trimmed.length > 128) {
+        callback(new Error(this.$t("apiKey.ruleNameLengthError")));
         return;
       }
       const rpm = this.formData.rate_limit_policy.rules.rpm || [];
-      const count = rpm.filter((r) => r.name === value.trim()).length;
+      const count = rpm.filter((r) => r.name === trimmed).length;
       if (count > 1) {
-        callback(new Error(this.$t('apiKey.ruleNameDuplicate', { name: value.trim() })));
+        callback(
+          new Error(this.$t("apiKey.ruleNameDuplicate", { name: trimmed }))
+        );
         return;
       }
       callback();
@@ -1181,7 +1338,7 @@ export default {
     validateDescriptionField() {
       this.$nextTick(() => {
         if (this.$refs.formData) {
-          this.$refs.formData.validateField('description');
+          this.$refs.formData.validateField("description");
         }
       });
     },
@@ -1189,7 +1346,7 @@ export default {
     validateSubnetRules() {
       // Trigger form validation for subnet field
       if (this.$refs.formData) {
-        this.$refs.formData.validateField('subnet');
+        this.$refs.formData.validateField("subnet");
       }
     },
 
@@ -1210,33 +1367,37 @@ export default {
             }
 
             // Convert string boolean values to actual boolean values
-            submitData.enabled = submitData.enabled === 'true';
-            submitData.unlimited_quota = submitData.unlimited_quota === 'true';
-            submitData.quota_plan.unlimited = submitData.quota_plan.unlimited === 'true';
+            submitData.enabled = submitData.enabled === "true";
+            submitData.unlimited_quota = submitData.unlimited_quota === "true";
+            submitData.quota_plan.unlimited =
+              submitData.quota_plan.unlimited === "true";
             submitData.quota_plan.pass_when_no_enough_quota =
-              submitData.quota_plan.pass_when_no_enough_quota === 'true';
+              submitData.quota_plan.pass_when_no_enough_quota === "true";
             if (!submitData.quota_plan.unlimited) {
-              submitData.quota_plan.quota = Math.trunc(submitData.quota_plan.quota);
+              submitData.quota_plan.quota = Math.trunc(
+                submitData.quota_plan.quota
+              );
             }
-            submitData.rate_limit_policy.enabled = submitData.rate_limit_policy.enabled === 'true';
+            submitData.rate_limit_policy.enabled =
+              submitData.rate_limit_policy.enabled === "true";
 
             // If rate limit policy is disabled, clear rules but keep structure
             if (!submitData.rate_limit_policy.enabled) {
               submitData.rate_limit_policy.rules = {
                 tpm: [],
                 rpm: [],
-                max_concurrency: -1
+                max_concurrency: -1,
               };
             }
 
-            this.$emit('submit', submitData);
+            this.$emit("submit", submitData);
           } else {
-            this.$Message.error(this.$t('com.tipValidateError'));
+            this.$Message.error(this.$t("com.tipValidateError"));
           }
         });
       });
-    }
-  }
+    },
+  },
 };
 </script>
 

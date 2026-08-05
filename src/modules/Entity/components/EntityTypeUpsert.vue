@@ -83,7 +83,7 @@ export default {
             ruleValidate: {
                 type_name: [
                     { required: true, message: that.$t('entity.enterTypeName'), trigger: 'blur' },
-                    { pattern: /^[a-z0-9_-]{1,32}$/, message: that.$t('entity.typeNameFormatError'), trigger: 'blur' }
+                    { pattern: /^[a-z0-9]([a-z0-9_-]{0,30}[a-z0-9])?$/, message: that.$t('entity.typeNameFormatError'), trigger: 'blur' }
                 ],
                 description: [
                     { max: 1024, message: that.$t('apiKey.descriptionLengthError'), trigger: 'blur' }

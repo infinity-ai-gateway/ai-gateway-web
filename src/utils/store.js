@@ -35,7 +35,9 @@ const ADMIN_NAV_KEY = 'admin';
 export default {
     state: Vue.observable({
         user: null,
-        meta: null
+        meta: null,
+        breadcrumbTitle: '',
+        breadcrumbRouteName: ''
     }),
     getUser() {
         if (this.state.user) {
@@ -77,6 +79,16 @@ export default {
     removeUserData() {
         this.state.user = null;
         localStorage.removeItem('user');
+    },
+    setBreadcrumbTitle(title, routeName) {
+        this.state.breadcrumbTitle = title || '';
+        this.state.breadcrumbRouteName = routeName || '';
+    },
+    getBreadcrumbTitle() {
+        return this.state.breadcrumbTitle;
+    },
+    getBreadcrumbRouteName() {
+        return this.state.breadcrumbRouteName;
     }
 };
 

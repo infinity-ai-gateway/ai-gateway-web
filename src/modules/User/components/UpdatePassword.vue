@@ -105,7 +105,7 @@ export default {
                 callback(new Error(this.$t('com.tipEnterX', { obj: this.$t('user.newPassword') })));
                 return;
             }
-            if (!PasswordRegCheck(value)) {
+            if (!PasswordRegCheck(value, this.formData.user_name)) {
                 callback(new Error(this.$t('user.tipPasswordRule')));
                 return;
             }

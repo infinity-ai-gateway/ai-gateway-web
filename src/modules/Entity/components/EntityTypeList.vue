@@ -263,8 +263,8 @@ export default {
             })
                 .then(res => {
                     if (res.status === 200) {
-                        const data = res.data.Data;
-                        this.tableData = data.list || data || [];
+                        const data = res.data.Data || {};
+                        this.tableData = Array.isArray(data.list) ? data.list : [];
                     }
                 })
                 .finally(() => {

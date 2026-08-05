@@ -127,10 +127,150 @@ import InstancePool, {
     getClusterInstancePool,
     formatInstancePoolForApi
 } from './InstancePool';
-import PassiveHealthCheck from './PassiveHealthCheck';
+import PassiveHealthCheck, {
+    formatPassiveHealthCheckForApi
+} from './PassiveHealthCheck';
 import { cloneDeep } from 'lodash';
 import Review from './Review';
 import GatewayConfig from './GatewayConfig.vue';
+
+const BASIC_DEFAULTS = {
+    protocol: 'https',
+    connection: {
+        max_idle_conn_per_rs: 0,
+        cancel_on_client_close: false
+    },
+    retries: {
+        max_retry_in_cluster: 2
+    },
+    buffers: {
+        req_write_buffer_size: 512
+    },
+    timeouts: {
+        timeout_conn_serv: 50000,
+        timeout_response_header: 50000,
+        timeout_readbody_client: 30000,
+        timeout_read_client_again: 30000,
+        timeout_write_client: 60000
+    }
+};
+
+function parseOptionalInt(value, defaultValue) {
+    if (value == null || value === '') {
+        return defaultValue;
+    }
+    return parseInt(value, 10);
+}
+
+function formatBasicForApi(baseConfigData) {
+    const src = baseConfigData || {};
+    const connection = src.connection || {};
+    const retries = src.retries || {};
+    const buffers = src.buffers || {};
+    const timeouts = src.timeouts || {};
+    const cancelRaw = connection.cancel_on_client_close;
+
+    let cancelOnClientClose = BASIC_DEFAULTS.connection.cancel_on_client_close;
+    if (cancelRaw != null && cancelRaw !== '') {
+        cancelOnClientClose = cancelRaw === 'true' || cancelRaw === true;
+    }
+
+    return {
+        protocol: src.protocol || BASIC_DEFAULTS.protocol,
+        connection: {
+            max_idle_conn_per_rs: parseOptionalInt(
+                connection.max_idle_conn_per_rs,
+                BASIC_DEFAULTS.connection.max_idle_conn_per_rs
+            ),
+            cancel_on_client_close: cancelOnClientClose
+        },
+        retries: {
+            max_retry_in_cluster: parseOptionalInt(
+                retries.max_retry_in_cluster,
+                BASIC_DEFAULTS.retries.max_retry_in_cluster
+            )
+        },
+        buffers: {
+            req_write_buffer_size: parseOptionalInt(
+                buffers.req_write_buffer_size,
+                BASIC_DEFAULTS.buffers.req_write_buffer_size
+            )
+        },
+        timeouts: {
+            timeout_conn_serv: parseOptionalInt(
+                timeouts.timeout_conn_serv,
+                BASIC_DEFAULTS.timeouts.timeout_conn_serv
+            ),
+            timeout_response_header: parseOptionalInt(
+                timeouts.timeout_response_header,
+                BASIC_DEFAULTS.timeouts.timeout_response_header
+            ),
+            timeout_readbody_client: parseOptionalInt(
+                timeouts.timeout_readbody_client,
+                BASIC_DEFAULTS.timeouts.timeout_readbody_client
+            ),
+            timeout_read_client_again: parseOptionalInt(
+                timeouts.timeout_read_client_again,
+                BASIC_DEFAULTS.timeouts.timeout_read_client_again
+            ),
+            timeout_write_client: parseOptionalInt(
+                timeouts.timeout_write_client,
+                BASIC_DEFAULTS.timeouts.timeout_write_client
+            )
+        }
+    };
+}
+
+export function formatStickySessionsForEdit(stickySessions) {
+    if (!stickySessions) {
+        return stickySessions;
+    }
+    const result = { ...stickySessions };
+    if (result.enabled === true) {
+        result.enabled = 'true';
+    } else if (result.enabled === false || result.enabled === undefined) {
+        result.enabled = 'false';
+    }
+    return result;
+}
+
+function formatStickySessionsForApi(stickySessions) {
+    if (!stickySessions) {
+        return stickySessions;
+    }
+    const result = { ...stickySessions };
+    if (result.enabled === 'true' || result.enabled === true) {
+        result.enabled = true;
+        if (result.hash_strategy === 'CLIENT_IP_ONLY') {
+            delete result.hash_header;
+        }
+    } else {
+        return { enabled: false };
+    }
+    return result;
+}
+
+function formatLlmConfigForApi(llmConfig) {
+    const src = llmConfig || {};
+    const result = { ...src };
+    if (!result.model_endpoint) {
+        result.model_endpoint = {};
+    }
+    if (!result.model_endpoint.schema) {
+        result.model_endpoint.schema = 'https';
+    }
+    if (!result.model_endpoint.uri) {
+        result.model_endpoint.uri = '/v1/models';
+    }
+    if (!result.provider_type) {
+        delete result.provider_type;
+    }
+    delete result.service_name;
+    delete result.group;
+    delete result.enable;
+    delete result.keyInput;
+    return result;
+}
 
 export default {
     name: 'newClusters',
@@ -271,20 +411,12 @@ export default {
             let data = {
                 name: this.baseConfigData.name,
                 description: this.baseConfigData.description,
-                basic: {
-                    protocol: this.baseConfigData.protocol,
-                    connection: this.baseConfigData.connection,
-                    retries: this.baseConfigData.retries,
-                    buffers: this.baseConfigData.buffers,
-                    timeouts: this.baseConfigData.timeouts
-                },
+                basic: formatBasicForApi(this.baseConfigData),
                 instance_pool: formatInstancePoolForApi(this.instancePoolData),
-                sticky_sessions: this.baseConfigData.sticky_sessions,
-                passive_health_check: this.passiveHealthData,
-                llm_config: this.llmConfigData
+                sticky_sessions: formatStickySessionsForApi(this.baseConfigData.sticky_sessions),
+                passive_health_check: formatPassiveHealthCheckForApi(this.passiveHealthData),
+                llm_config: formatLlmConfigForApi(this.llmConfigData)
             };
-            data.basic.connection.cancel_on_client_close =
-                this.baseConfigData.connection.cancel_on_client_close === 'true';
             this.changeObj(data);
             return data;
         },
@@ -327,17 +459,26 @@ export default {
         },
         changeData() {
             const tmpData = cloneDeep(this.currentCluster);
+            const retries = tmpData.basic.retries || {};
             this.baseConfigData = {
                 name: tmpData.name,
                 description: tmpData.description,
                 protocol: tmpData.basic.protocol,
                 connection: tmpData.basic.connection,
                 buffers: tmpData.basic.buffers,
-                retries: tmpData.basic.retries,
+                retries: {
+                    max_retry_in_cluster: retries.max_retry_in_cluster != null
+                        ? retries.max_retry_in_cluster
+                        : BASIC_DEFAULTS.retries.max_retry_in_cluster
+                },
                 timeouts: tmpData.basic.timeouts,
-                sticky_sessions: tmpData.sticky_sessions
+                sticky_sessions: formatStickySessionsForEdit(tmpData.sticky_sessions)
             };
-            this.passiveHealthData = tmpData.passive_health_check;
+            if (this.baseConfigData.connection) {
+                this.baseConfigData.connection.cancel_on_client_close =
+                    String(this.baseConfigData.connection.cancel_on_client_close);
+            }
+            this.passiveHealthData = tmpData.passive_health_check || {};
             this.llmConfigData = tmpData.llm_config || {};
             this.originalLlmConfigKey = (tmpData.llm_config && tmpData.llm_config.key) || '';
             this.originalLlmConfigHeaders = cloneDeep(
