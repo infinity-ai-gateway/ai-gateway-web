@@ -15,9 +15,18 @@
 */
 <template>
   <div class="rule-form">
-    <Form ref="formData" :model="formData" :rules="ruleValidate" label-position="top">
+    <Form
+      ref="formData"
+      :model="formData"
+      :rules="ruleValidate"
+      label-position="top"
+    >
       <FormItem :label="$t('route.ruleName')" prop="name">
-        <Input v-model="formData.name" :disabled="readonly" :placeholder="$t('route.ruleNamePlaceholder')" />
+        <Input
+          v-model="formData.name"
+          :disabled="readonly"
+          :placeholder="$t('route.ruleNamePlaceholder')"
+        />
       </FormItem>
 
       <FormItem :label="$t('route.expression')" prop="Cond">
@@ -113,9 +122,13 @@
           + {{ $t('route.addTarget') }}
         </Button>
       </div>
-      <p v-if="!readonly && weightError" class="weight-error">{{ $t('route.weightSumError') }}</p>
+      <p v-if="!readonly && weightError" class="weight-error">
+        {{ $t('route.weightSumError') }}
+      </p>
 
-      <div class="section-title" style="margin-top: 24px;">{{ $t('route.fallbackClusterAndModel') }}</div>
+      <div class="section-title" style="margin-top: 24px;">
+        {{ $t('route.fallbackClusterAndModel') }}
+      </div>
       <div v-if="formData.fallbacks.length === 0" class="empty-fallback">
         {{ $t('route.noFallbackCluster') }}
       </div>
@@ -161,7 +174,12 @@
             </Select>
           </Col>
           <Col span="4" class="delete-col">
-            <Button v-if="!readonly" class="delete-btn" size="small" @click="removeFallback(index)">
+            <Button
+              v-if="!readonly"
+              class="delete-btn"
+              size="small"
+              @click="removeFallback(index)"
+            >
               {{ $t('com.del') }}
             </Button>
           </Col>
@@ -174,7 +192,12 @@
       </div>
 
       <FormItem class="com-btn-box drawer-footer">
-        <Button v-if="!readonly" type="primary" size="small" @click="handleSubmit">
+        <Button
+          v-if="!readonly"
+          type="primary"
+          size="small"
+          @click="handleSubmit"
+        >
           {{ $t('com.localSave') }}
         </Button>
         <Button size="small" style="margin-left: 8px;" @click="handleReset">
@@ -264,6 +287,17 @@ export default {
             required: true,
             message: this.$t('com.tipNotEmptyX', { obj: this.$t('route.ruleName') }),
             trigger: 'blur'
+          },
+          {
+            min: 1,
+            max: 64,
+            message: this.$t('route.ruleNameLengthError') || '规则名称长度为 1–64 个字符',
+            trigger: 'blur'
+          },
+          {
+            pattern: /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/,
+            message: this.$t('route.ruleNameFormatError') || '规则名称仅允许字母、数字、-、_、.，且不允许以 -、_、. 开头或结尾',
+            trigger: 'blur'
           }
         ],
         Cond: [
@@ -346,34 +380,10 @@ export default {
       return this.clusters || [];
     },
 
-    getModelsByCluster(clusterName, currentIndex, type) {
+    getModelsByCluster(clusterName) {
       if (!clusterName) return [];
       const service = (this.modelServices || []).find(s => s.cluster_name === clusterName);
-      const models = service && service.models ? service.models : [];
-
-      const currentItem = type === 'target'
-        ? this.formData.targets[currentIndex]
-        : this.formData.fallbacks[currentIndex];
-      const currentModel = currentItem?.Model;
-
-      const selectedKeys = new Set();
-      (this.formData.targets || []).forEach((t, idx) => {
-        if (type === 'target' && idx === currentIndex) return;
-        if (t.ClusterName && t.Model != null) {
-          selectedKeys.add(`${t.ClusterName}|${t.Model}`);
-        }
-      });
-      (this.formData.fallbacks || []).forEach((f, idx) => {
-        if (type === 'fallback' && idx === currentIndex) return;
-        if (f.ClusterName && f.Model != null) {
-          selectedKeys.add(`${f.ClusterName}|${f.Model}`);
-        }
-      });
-
-      return models.filter(model => {
-        if (model === currentModel) return true;
-        return !selectedKeys.has(`${clusterName}|${model}`);
-      });
+      return service && service.models ? service.models : [];
     },
 
     fetchModelServices() {

@@ -345,6 +345,7 @@ export default {
     routeTableEnabled: '路由表已启用',
     routeTableDisabled: '路由表已停用',
     toggleStatusFailed: '切换路由表状态失败',
+    loadFailed: '加载路由规则失败',
     currentRouteTable: '当前路由表',
     enterEditMode: '进入编辑模式',
     exitEditMode: '退出编辑模式',
@@ -361,6 +362,9 @@ export default {
     targetDuplicate: '目标集群和模型组合不能重复',
     fallbackDuplicate: '备用集群和模型组合不能重复',
     ruleNameDuplicate: '规则名称不能重复',
+    ruleNameLengthError: '规则名称长度为 1–64 个字符',
+    ruleNameFormatError:
+      '规则名称仅允许字母、数字、-、_、.，且不允许以 -、_、. 开头或结尾',
     selectModel: '请选择模型',
     selectFallbackCluster: '请选择备用集群',
     modelTransparent: '留空表示透传',
@@ -425,6 +429,7 @@ export default {
     timeoutValueMustGreaterThanZero: '超时时间必须大于0',
     reqWriteBufferSizeMustGreaterThanZero: '请求写缓存大小必须大于0',
     tipsValueMax: '输入值过大',
+    tipHashHeaderRequired: '哈希头部不能为空',
     descriptionLengthError: '集群描述不能超过256个字符',
     descriptionControlCharsError: '集群描述不能包含控制字符',
     tipClusterNameRule:

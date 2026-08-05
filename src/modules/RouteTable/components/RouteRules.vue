@@ -295,7 +295,13 @@ export default {
               this.enabled = data.enabled === true;
               this.rules = data.rules || [];
               this.refreshRuleIndex();
+            } else {
+              this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
             }
+          })
+          .catch(err => {
+            console.error('加载 Global 路由规则失败:', err);
+            this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
           })
           .finally(() => {
             this.loading = false;
@@ -315,7 +321,13 @@ export default {
             this.enabled = routeRules.enabled === true;
             this.rules = routeRules.rules || [];
             this.refreshRuleIndex();
+          } else {
+            this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
           }
+        })
+        .catch(err => {
+          console.error('加载路由规则失败:', err);
+          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
         })
         .finally(() => {
           this.loading = false;
@@ -408,6 +420,8 @@ export default {
             this.originalRules = null;
             this.mode = 'view';
             this.$emit('submit');
+          } else {
+            this.$Message.error(this.$t('com.tipSubmitFailed'));
           }
         })
         .catch(err => {

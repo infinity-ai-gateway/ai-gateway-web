@@ -70,7 +70,7 @@ export default {
           searchFilters: [
             { label: 'Global', value: 'global' },
             { label: 'Entity', value: 'entity' },
-            { label: 'API-Key', value: 'api_key' }
+            { label: 'API-Key', value: 'apikey' }
           ],
           render(h, params) {
             return <span>{TYPE_MAP[params.row.type] || params.row.type || '-'}</span>;
@@ -111,6 +111,7 @@ export default {
           render(h, params) {
             const row = params.row;
             const enabled = row.enabled === true;
+            const isLoading = that.loading;
             return h('div', [
               h('Button', {
                 props: { size: 'small', type: 'primary' },
@@ -118,12 +119,12 @@ export default {
                 on: { click: () => that.onView(row) }
               }, that.$t('com.see')),
               h('Button', {
-                props: { size: 'small', type: 'success', disabled: enabled },
+                props: { size: 'small', type: 'success', disabled: enabled || isLoading },
                 style: { marginRight: '8px' },
                 on: { click: () => that.onToggleEnabled(row, true) }
               }, that.$t('com.enable')),
               h('Button', {
-                props: { size: 'small', type: 'warning', disabled: !enabled },
+                props: { size: 'small', type: 'warning', disabled: !enabled || isLoading },
                 on: { click: () => that.onToggleEnabled(row, false) }
               }, that.$t('com.deactivate'))
             ]);
@@ -207,6 +208,10 @@ export default {
     },
 
     onToggleEnabled(row, newEnabled) {
+      // 防抖：如果正在加载中，忽略快速点击
+      if (this.loading) {
+        return;
+      }
       this.loading = true;
       this.fetchFullRules(row)
         .then(fullRules => {
@@ -245,6 +250,11 @@ export default {
           if (res.status === 200) {
             return res.data.Data || { enabled: false, rules: [] };
           }
+          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+          return { enabled: false, rules: [] };
+        }).catch(err => {
+          console.error('加载 Global 路由规则失败:', err);
+          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
           return { enabled: false, rules: [] };
         });
       }
@@ -258,6 +268,11 @@ export default {
           const data = res.data.Data || {};
           return data.route_rules || { enabled: false, rules: [] };
         }
+        this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+        return { enabled: false, rules: [] };
+      }).catch(err => {
+        console.error('加载路由规则失败:', err);
+        this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
         return { enabled: false, rules: [] };
       });
     },

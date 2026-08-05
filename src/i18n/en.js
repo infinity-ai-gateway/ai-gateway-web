@@ -424,6 +424,7 @@ export default {
     timeoutValueMustGreaterThanZero: 'Timeout value must be greater than 0',
     reqWriteBufferSizeMustGreaterThanZero: 'Request write buffer size must be greater than 0',
     tipsValueMax: 'Input value too big',
+    tipHashHeaderRequired: 'Hash header cannot be empty',
     descriptionLengthError: 'Description cannot exceed 256 characters',
     descriptionControlCharsError: 'Description cannot contain control characters',
     tipClusterNameRule:

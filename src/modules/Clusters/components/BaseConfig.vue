@@ -1,125 +1,131 @@
-/**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. * * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */ /** *
+Copyright (c) 2021 The BFE Authors. * * Licensed under the Apache License,
+Version 2.0 (the "License"); * you may not use this file except in compliance
+with the License. * You may obtain a copy of the License at * *
+http://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable law
+or agreed to in writing, software * distributed under the License is distributed
+on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 <template>
-    <Form label-position="top" ref="formData" :model="formData" :rules="ruleValidate">
-        <FormItem :label="$t('com.nameX', { obj: $t('cluster.name') })" prop="name">
-            <Input v-model="formData.name" :disabled="!isAdd" :maxlength="64" />
-        </FormItem>
-        <FormItem :label="$t('cluster.clusterDescription')" prop="description">
-            <Input v-model="formData.description" />
-        </FormItem>
-        <FormItem :label="$t('cluster.protocol')" prop="protocol">
-            <Select v-model="formData.protocol">
-                <Option value="http">http</Option>
-                <Option value="https">https</Option>
-            </Select>
-        </FormItem>
-        <FormItem
-            v-if="formData.connection"
-            :label="$t('cluster.maxIdleConnPerRs')"
-            prop="connection.max_idle_conn_per_rs"
-        >
-            <InputNumber
-                v-model="formData.connection.max_idle_conn_per_rs"
-                class="from-item-inp"
-            ></InputNumber>
-        </FormItem>
-        <FormItem
-            v-if="formData.sticky_sessions"
-            :label="$t('cluster.stickySessionsEnabled')"
-            prop="sticky_sessions.enabled"
-        >
-            <Select
-                v-model="formData.sticky_sessions.enabled"
-                size="small"
-                class="from-item-inp"
-            >
-                <Option v-for="item in boolOptions" :value="item.value" :key="item.value">{{
+  <Form
+    label-position="top"
+    ref="formData"
+    :model="formData"
+    :rules="ruleValidate"
+  >
+    <FormItem :label="$t('com.nameX', { obj: $t('cluster.name') })" prop="name">
+      <Input v-model="formData.name" :disabled="!isAdd" :maxlength="64" />
+    </FormItem>
+    <FormItem :label="$t('cluster.clusterDescription')" prop="description">
+      <Input v-model="formData.description" />
+    </FormItem>
+    <FormItem :label="$t('cluster.protocol')" prop="protocol">
+      <Select v-model="formData.protocol">
+        <Option value="http">http</Option>
+        <Option value="https">https</Option>
+      </Select>
+    </FormItem>
+    <FormItem
+      v-if="formData.connection"
+      :label="$t('cluster.maxIdleConnPerRs')"
+      prop="connection.max_idle_conn_per_rs"
+    >
+      <InputNumber
+        v-model="formData.connection.max_idle_conn_per_rs"
+        class="from-item-inp"
+      ></InputNumber>
+    </FormItem>
+    <FormItem
+      v-if="formData.sticky_sessions"
+      :label="$t('cluster.stickySessionsEnabled')"
+      prop="sticky_sessions.enabled"
+    >
+      <Select
+        v-model="formData.sticky_sessions.enabled"
+        size="small"
+        class="from-item-inp"
+      >
+        <Option
+          v-for="item in boolOptions"
+          :value="item.value"
+          :key="item.value"
+          >{{
                     item.name
-                }}</Option>
-            </Select>
-        </FormItem>
-        <FormItem
-            v-if="formData.sticky_sessions && formData.sticky_sessions.enabled === 'true'"
-            :label="$t('cluster.hashStrategy')"
-            prop="sticky_sessions.hash_strategy"
+          }}</Option
         >
-            <Select
-                v-model="formData.sticky_sessions.hash_strategy"
-                size="small"
-                class="from-item-inp"
-                @change="selectHashStrategy"
-            >
-                <Option v-for="item in hashStrategyOptions" :value="item.name" :key="item.name">{{
+      </Select>
+    </FormItem>
+    <FormItem
+      v-if="formData.sticky_sessions && formData.sticky_sessions.enabled === 'true'"
+      :label="$t('cluster.hashStrategy')"
+      prop="sticky_sessions.hash_strategy"
+    >
+      <Select
+        v-model="formData.sticky_sessions.hash_strategy"
+        size="small"
+        class="from-item-inp"
+        @change="selectHashStrategy"
+      >
+        <Option
+          v-for="item in hashStrategyOptions"
+          :value="item.name"
+          :key="item.name"
+          >{{
                     item.name
-                }}</Option>
-            </Select>
-        </FormItem>
-        <FormItem
-            v-if="
+          }}</Option
+        >
+      </Select>
+    </FormItem>
+    <FormItem
+      v-if="
                 formData.sticky_sessions &&
                 formData.sticky_sessions.enabled === 'true' &&
                 formData.sticky_sessions.hash_strategy !== 'CLIENT_IP_ONLY'
             "
-            :label="$t('cluster.hashHeader')"
-            prop="sticky_sessions.hash_header"
-        >
-            <Input v-model="formData.sticky_sessions.hash_header" />
-        </FormItem>
-        <FormItem
-            v-if="formData.buffers"
-            :label="$t('cluster.reqWriteBufferSize')"
-            prop="buffers.req_write_buffer_size"
-        >
-            <InputNumber
-                v-model="formData.buffers.req_write_buffer_size"
-                class="from-item-inp"
-            ></InputNumber>
-        </FormItem>
-        <FormItem
-            v-if="formData.connection"
-            :label="$t('cluster.cancelOnClientClose')"
-            prop="connection.cancel_on_client_close"
-        >
-            <Select
-                v-model="formData.connection.cancel_on_client_close"
-                size="small"
-                class="from-item-inp"
-            >
-                <Option v-for="item in boolOptions" :value="item.value" :key="item.value">{{
+      :label="$t('cluster.hashHeader')"
+      prop="sticky_sessions.hash_header"
+    >
+      <Input v-model="formData.sticky_sessions.hash_header" />
+    </FormItem>
+    <FormItem
+      v-if="formData.buffers"
+      :label="$t('cluster.reqWriteBufferSize')"
+      prop="buffers.req_write_buffer_size"
+    >
+      <InputNumber
+        v-model="formData.buffers.req_write_buffer_size"
+        class="from-item-inp"
+      ></InputNumber>
+    </FormItem>
+    <FormItem
+      v-if="formData.connection"
+      :label="$t('cluster.cancelOnClientClose')"
+      prop="connection.cancel_on_client_close"
+    >
+      <Select
+        v-model="formData.connection.cancel_on_client_close"
+        size="small"
+        class="from-item-inp"
+      >
+        <Option
+          v-for="item in boolOptions"
+          :value="item.value"
+          :key="item.value"
+          >{{
                     item.name
-                }}</Option>
-            </Select>
-        </FormItem>
-    </Form>
+          }}</Option
+        >
+      </Select>
+    </FormItem>
+  </Form>
 </template>
 <script>
 import { ClustersNameRegCheck, NumRegCheck } from '@/utils/const';
@@ -250,6 +256,25 @@ export default {
             }
             callback();
         };
+        const validateHashHeader = (rule, value, callback) => {
+            const stickySessions = this.formData.sticky_sessions || {};
+            if (stickySessions.enabled !== 'true') {
+                callback();
+                return;
+            }
+            const strategy = stickySessions.hash_strategy;
+            if (strategy === 'CLIENT_IP_ONLY') {
+                callback();
+                return;
+            }
+            if (strategy === 'CLIENT_ID_ONLY' || strategy === 'CLIENT_ID_PREFERED') {
+                if (value === undefined || value === null || String(value).trim() === '') {
+                    callback(new Error(this.$t('cluster.tipHashHeaderRequired')));
+                    return;
+                }
+            }
+            callback();
+        };
         return {
             ruleValidate: {
                 name: [
@@ -294,8 +319,9 @@ export default {
                 ],
                 'sticky_sessions.hash_header': [
                     {
-                        required: false,
-                        trigger: 'change'
+                        required: true,
+                        trigger: 'blur',
+                        validator: validateHashHeader
                     }
                 ],
                 'buffers.req_write_buffer_size': [
