@@ -116,6 +116,7 @@
                 style="width: 100%"
                 filterable
                 size="small"
+                clearable
                 :placeholder="$t('apiKey.selectEntity')"
               >
                 <el-option

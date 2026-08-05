@@ -212,11 +212,17 @@ export default {
           searchable: that.mode !== 'view',
           render(h, params) {
             const targets = params.row.targets || [];
-            return h('div', targets.map(t =>
-              h('Tag', {
-                key: `${t.ClusterName}-${t.Model}`
-              }, `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`)
-            ));
+            return h('div', targets.map(t => {
+              const text = `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`;
+              return h('Tooltip', {
+                props: { content: text, transfer: true, maxWidth: 600 }
+              }, [
+                h('Tag', {
+                  key: `${t.ClusterName}-${t.Model}`,
+                  style: 'max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
+                }, text)
+              ]);
+            }));
           }
         },
         {
@@ -226,11 +232,17 @@ export default {
           sortable: 'custom',
           render(h, params) {
             const fallbacks = params.row.fallbacks || [];
-            return h('div', fallbacks.map((f, index) =>
-              h('Tag', {
-                key: index
-              }, `${f.ClusterName}/${f.Model || ''}`)
-            ));
+            return h('div', fallbacks.map((f, index) => {
+              const text = `${f.ClusterName}/${f.Model || ''}`;
+              return h('Tooltip', {
+                props: { content: text, transfer: true, maxWidth: 600 }
+              }, [
+                h('Tag', {
+                  key: index,
+                  style: 'max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
+                }, text)
+              ]);
+            }));
           }
         },
         {
