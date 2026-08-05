@@ -1,18 +1,11 @@
-/**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. * * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */
 <template>
   <div class="route-rules">
     <div class="route-editor-header">
@@ -215,11 +208,12 @@ export default {
             return h('div', targets.map(t => {
               const text = `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`;
               return h('Tooltip', {
-                props: { content: text, transfer: true, maxWidth: 600 }
+                props: { content: text, transfer: true, maxWidth: 600 },
+                style: 'display: block; width: 100%; margin-bottom: 4px;'
               }, [
                 h('Tag', {
                   key: `${t.ClusterName}-${t.Model}`,
-                  style: 'max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
+                  style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
                 }, text)
               ]);
             }));
@@ -235,11 +229,12 @@ export default {
             return h('div', fallbacks.map((f, index) => {
               const text = `${f.ClusterName}/${f.Model || ''}`;
               return h('Tooltip', {
-                props: { content: text, transfer: true, maxWidth: 600 }
+                props: { content: text, transfer: true, maxWidth: 600 },
+                style: 'display: block; width: 100%; margin-bottom: 4px;'
               }, [
                 h('Tag', {
                   key: index,
-                  style: 'max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
+                  style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
                 }, text)
               ]);
             }));
@@ -494,6 +489,12 @@ export default {
 
 <style lang="less" scoped>
 .route-rules {
+  // Tooltip 外层为 inline-block 且宽度随内容收缩，导致内部标签
+  // max-width:100% 循环解析失效、溢出单元格被裁剪贴边；约束到单元格宽度
+  .ivu-table-cell .ivu-tooltip {
+    max-width: 100%;
+  }
+
   .route-editor-header {
     display: flex;
     align-items: center;
