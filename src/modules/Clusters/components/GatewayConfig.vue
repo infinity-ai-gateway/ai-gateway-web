@@ -416,6 +416,15 @@ export default {
             immediate: true
         }
     },
+    mounted() {
+        if (!this.isAdd) {
+            this.$nextTick(() => {
+                if (this.llmConfigData && Object.keys(this.llmConfigData).length > 0) {
+                    this.applyLlmConfigData(this.llmConfigData);
+                }
+            });
+        }
+    },
     methods: {
         resetLlmForm() {
             this.formData = {

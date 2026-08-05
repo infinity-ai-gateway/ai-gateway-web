@@ -212,11 +212,18 @@ export default {
           searchable: that.mode !== 'view',
           render(h, params) {
             const targets = params.row.targets || [];
-            return h('div', targets.map(t =>
-              h('Tag', {
-                key: `${t.ClusterName}-${t.Model}`
-              }, `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`)
-            ));
+            return h('div', targets.map(t => {
+              const text = `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`;
+              return h('Tooltip', {
+                props: { content: text, transfer: true, maxWidth: 600 },
+                style: 'display: block; width: 100%; margin-bottom: 4px;'
+              }, [
+                h('Tag', {
+                  key: `${t.ClusterName}-${t.Model}`,
+                  style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
+                }, text)
+              ]);
+            }));
           }
         },
         {
@@ -226,11 +233,18 @@ export default {
           sortable: 'custom',
           render(h, params) {
             const fallbacks = params.row.fallbacks || [];
-            return h('div', fallbacks.map((f, index) =>
-              h('Tag', {
-                key: index
-              }, `${f.ClusterName}/${f.Model || ''}`)
-            ));
+            return h('div', fallbacks.map((f, index) => {
+              const text = `${f.ClusterName}/${f.Model || ''}`;
+              return h('Tooltip', {
+                props: { content: text, transfer: true, maxWidth: 600 },
+                style: 'display: block; width: 100%; margin-bottom: 4px;'
+              }, [
+                h('Tag', {
+                  key: index,
+                  style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
+                }, text)
+              ]);
+            }));
           }
         },
         {
@@ -482,6 +496,12 @@ export default {
 
 <style lang="less" scoped>
 .route-rules {
+  // Tooltip 外层为 inline-block 且宽度随内容收缩，导致内部标签
+  // max-width:100% 循环解析失效、溢出单元格被裁剪贴边；约束到单元格宽度
+  .ivu-table-cell .ivu-tooltip {
+    max-width: 100%;
+  }
+
   .route-editor-header {
     display: flex;
     align-items: center;
