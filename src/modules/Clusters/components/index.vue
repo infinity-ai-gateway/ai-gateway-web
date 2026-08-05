@@ -241,12 +241,11 @@ function formatStickySessionsForApi(stickySessions) {
     const result = { ...stickySessions };
     if (result.enabled === 'true' || result.enabled === true) {
         result.enabled = true;
-    } else if (result.enabled === 'false' || result.enabled === false) {
-        result.enabled = false;
-    }
-    if (!result.enabled) {
-        result.hash_strategy = 'CLIENT_ID_ONLY';
-        result.hash_header = '';
+        if (result.hash_strategy === 'CLIENT_IP_ONLY') {
+            delete result.hash_header;
+        }
+    } else {
+        return { enabled: false };
     }
     return result;
 }

@@ -398,17 +398,24 @@ export default {
             }
         },
         handleSubmit(name) {
-            if (this.formData.sticky_sessions.hash_strategy === 'CLIENT_IP_ONLY') {
-                this.$set(this.formData.sticky_sessions, 'hash_header', '');
-            }
             this.$refs[name].validate(valid => {
                 if (!valid) {
                     this.$Message.error(this.$t('com.tipValidateError'));
                     return;
                 }
+                const submitData = cloneDeep(this.formData);
+                if (submitData.sticky_sessions) {
+                    if (submitData.sticky_sessions.enabled !== 'true') {
+                        // 停用时只传 enabled
+                        submitData.sticky_sessions = { enabled: 'false' };
+                    } else if (submitData.sticky_sessions.hash_strategy === 'CLIENT_IP_ONLY') {
+                        // CLIENT_IP_ONLY 不传 hash_header
+                        delete submitData.sticky_sessions.hash_header;
+                    }
+                }
                 this.$emit('submitData', {
                     topic: 'baseConfigData',
-                    data: this.formData
+                    data: submitData
                 });
             });
         }
