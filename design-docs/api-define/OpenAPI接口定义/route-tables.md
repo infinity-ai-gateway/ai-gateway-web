@@ -4,6 +4,7 @@
 
 ```json
 {
+  "id": 1,
   "type": "global",
   "owner": "global",
   "enabled": true
@@ -14,6 +15,7 @@
 
 | 字段 | 类型 | 说明 | 可能取值 |
 |------|------|------|----------|
+| `id` | int64 | 路由规则记录唯一ID | - |
 | `type` | string | 路由表类型 | `global`（全局路由表）、`entity`（Entity路由表）、`api_key`（API-Key路由表） |
 | `owner` | string | 所有者标识 | `global` 类型固定为 `global`；`entity` 类型为 `entity_id`；`api_key` 类型为 `apikey_id` |
 | `enabled` | bool | 是否启用该路由表 | `true`（启用）、`false`（停用） |
@@ -58,16 +60,19 @@ Data为数组，元素字段同第1节数据模型。
     "Data": {
         "list": [
             {
+                "id": 1,
                 "type": "global",
                 "owner": "global",
                 "enabled": true
             },
             {
+                "id": 2,
                 "type": "entity",
                 "owner": "ent-001",
                 "enabled": false
             },
             {
+                "id": 3,
                 "type": "api_key",
                 "owner": "apikey-001",
                 "enabled": true

@@ -418,7 +418,7 @@ export default {
             this.$router.push({
                 name: 'AdvanceRouteRule.list',
                 query: {
-                    type: 'api_key',
+                    type: 'apikey',
                     owner: row.id
                 }
             });

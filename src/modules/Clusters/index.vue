@@ -65,6 +65,38 @@
                 :originalLlmConfigHeaders="originalLlmConfigHeaders"
             />
         </Drawer>
+
+        <Modal
+            v-model="deleteErrorVisible"
+            :mask-closable="false"
+            width="560"
+        >
+            <div slot="header" class="delete-error-title">
+                <Icon type="ios-close-circle" color="#ed4014" :size="22" />
+                <span>{{ $t('cluster.deleteFailed') }}</span>
+            </div>
+            <div class="delete-error-content">
+                <p
+                    v-for="(ref, index) in deleteErrorRefs"
+                    :key="index"
+                    class="delete-error-line"
+                >
+                    {{
+                        $t('cluster.deleteBlockedByRule', {
+                            cluster: deleteErrorCluster,
+                            table: buildRouteTableLabel(ref),
+                            rule: ref.ruleName
+                        })
+                    }}
+                    <a @click="goToRouteTable(ref)">{{ $t('cluster.goToHandle') }}</a>
+                </p>
+            </div>
+            <div slot="footer">
+                <Button type="primary" @click="deleteErrorVisible = false">{{
+                    $t('com.confirm')
+                }}</Button>
+            </div>
+        </Modal>
     </div>
 </template>
 <script>
@@ -163,10 +195,6 @@ export default {
         this.getClusters();
     },
 
-    beforeDestroy() {
-        delete window.__goToRouteTableFromDeleteError;
-    },
-
     data() {
         return {
             tableLoading: false,
@@ -182,6 +210,8 @@ export default {
             llmConfigData: {},
             originalLlmConfigKey: '',
             originalLlmConfigHeaders: {},
+            deleteErrorVisible: false,
+            deleteErrorCluster: '',
             deleteErrorRefs: []
         };
     },
@@ -294,52 +324,12 @@ export default {
             });
         },
         showDeleteError(clusterName, res) {
-            // iview $Modal 为单例，remove 后 300ms 才真正销毁；
-            // 新弹框必须等销毁完成后创建，否则会被延迟销毁一并移除
-            const removeTime = Date.now();
             this.$Modal.remove();
             this.findClusterReferences(clusterName).then(refs => {
                 if (refs.length) {
+                    this.deleteErrorCluster = clusterName;
                     this.deleteErrorRefs = refs;
-                    window.__goToRouteTableFromDeleteError = index => {
-                        const ref = this.deleteErrorRefs[index];
-                        if (!ref) {
-                            return;
-                        }
-                        this.$Modal.remove();
-                        this.$router.push({
-                            name: 'AdvanceRouteRule.list',
-                            query: {
-                                type: ref.type,
-                                owner: ref.owner
-                            }
-                        });
-                    };
-                    const lines = refs
-                        .map((ref, index) => {
-                            const sentence = this.escapeHtml(
-                                this.$t('cluster.deleteBlockedByRule', {
-                                    cluster: clusterName,
-                                    table: this.buildRouteTableLabel(ref),
-                                    rule: ref.ruleName
-                                })
-                            );
-                            const linkText = this.escapeHtml(this.$t('cluster.goToHandle'));
-                            return (
-                                `<p style="margin: 8px 0;">${sentence}` +
-                                `<a href="javascript:void(0)" onclick="window.__goToRouteTableFromDeleteError(${index})">${linkText}</a>` +
-                                '</p>'
-                            );
-                        })
-                        .join('');
-                    const wait = Math.max(0, 350 - (Date.now() - removeTime));
-                    setTimeout(() => {
-                        this.$Modal.error({
-                            title: this.$t('com.tipError'),
-                            width: 560,
-                            content: `<div>${lines}</div>`
-                        });
-                    }, wait);
+                    this.deleteErrorVisible = true;
                 } else {
                     const errMsg =
                         (res && res.errMsg) ||
@@ -349,23 +339,22 @@ export default {
                 }
             });
         },
-        escapeHtml(value) {
-            return String(value).replace(/[&<>"']/g, c => {
-                const map = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#39;'
-                };
-                return map[c];
+        goToRouteTable(ref) {
+            this.deleteErrorVisible = false;
+            this.$router.push({
+                name: 'AdvanceRouteRule.list',
+                query: {
+                    type: ref.type,
+                    owner: ref.owner,
+                    rule: ref.ruleName
+                }
             });
         },
         buildRouteTableLabel(ref) {
             const typeLabels = {
                 global: 'Global',
                 entity: 'Entity',
-                api_key: 'API-Key'
+                apikey: 'API-Key'
             };
             const typeLabel = typeLabels[ref.type] || ref.type;
             if (ref.type === 'global') {
@@ -393,10 +382,7 @@ export default {
                                     const inTargets = (rule.targets || []).some(
                                         t => t.ClusterName === clusterName
                                     );
-                                    const inFallbacks = (rule.fallbacks || []).some(
-                                        f => f.ClusterName === clusterName
-                                    );
-                                    return inTargets || inFallbacks;
+                                    return inTargets;
                                 });
                                 return matched.map(rule => ({
                                     type: row.type,
@@ -415,7 +401,7 @@ export default {
         },
         fetchOwnerLabels(tables) {
             const needEntity = tables.some(row => row.type === 'entity');
-            const needApiKey = tables.some(row => row.type === 'api_key');
+            const needApiKey = tables.some(row => row.type === 'apikey');
             const jobs = [];
             if (needEntity) {
                 jobs.push(
@@ -447,7 +433,7 @@ export default {
                                 list.forEach(item => {
                                     const id = item.id || item.key_id || item.name;
                                     if (id != null) {
-                                        map[`api_key:${id}`] = item.name || id;
+                                        map[`apikey:${id}`] = item.name || id;
                                     }
                                 });
                             }
@@ -489,3 +475,25 @@ export default {
     }
 };
 </script>
+<style lang="less" scoped>
+.delete-error-title {
+    display: flex;
+    align-items: center;
+
+    span {
+        margin-left: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #17233d;
+    }
+}
+
+.delete-error-content {
+    text-align: center;
+
+    .delete-error-line {
+        margin: 8px 0;
+        text-align: left;
+    }
+}
+</style>

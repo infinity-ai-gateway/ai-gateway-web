@@ -17,6 +17,7 @@
 | P2 | 展示型 Tag 悬停小手 | 全局 | 已修改 | `.ivu-tag { cursor: default }` |
 | P2 | API Key ID 列可搜索 | API Key · 列表 | 已修改 | `searchable: true` |
 | P2 | Entity 列表新增 ID 列 | Entity · 列表 | 已修改 | 可排序、可搜索 |
+| P2 | Entity/API-Key 列表新增「管理路由规则」按钮 | Entity · API Key · 列表 | 已修改 | 直达对应路由规则列表 |
 | P2 | CHANGELOG v0.0.6 | 文档 | 已修改 | 记录 0.0.5 之后变更 |
 
 ---
@@ -118,7 +119,15 @@ iview 基础样式 `.ivu-tag { cursor: pointer }` 使纯展示 Tag（API-Key 详
 
 列表首位新增 `ID` 列（`key: 'id'`，`minWidth: 120`，`sortable: 'custom'`，`searchable: true`），支持排序与搜索。
 
-### 6.4 CHANGELOG
+### 6.4 Entity / API-Key 列表新增「管理路由规则」按钮
+
+**影响文件**：`src/modules/Entity/components/EntityList.vue`、`src/modules/APIKey/components/ApiKeyList.vue`、i18n
+
+- 操作列首位新增绿色 `success`「管理路由规则」按钮（编辑/删除保持不变），列宽 250 → 300
+- 点击跳转 `$router.push({ name: 'AdvanceRouteRule.list', query: { type, owner: row.id } })`：Entity 传 `type: 'entity'`，API-Key 传 `type: 'api_key'`
+- 路由表页 `openFromQuery` 读取 query 后自动打开该条记录对应的路由规则列表，实现从列表行直达其规则管理界面
+
+### 6.5 CHANGELOG
 
 `CHANGELOG.md` 新增 `v0.0.6 - 2026-08-06` 条目及 release 链接。
 
@@ -130,6 +139,7 @@ iview 基础样式 `.ivu-tag { cursor: pointer }` 使纯展示 Tag（API-Key 详
 | ----- | ------ |
 | `cluster.deleteBlockedByRule` | 集群 {cluster} 被路由表 {table}（路由表类型/路由表属主）的 {rule} 路由规则引用，无法删除。可以点击链接前往对应路由表快速处理： |
 | `cluster.goToHandle` | 前往处理 |
+| `route.manageRouteRules` | 管理路由规则 |
 
 英文同步新增。
 
@@ -145,6 +155,7 @@ iview 基础样式 `.ivu-tag { cursor: pointer }` 使纯展示 Tag（API-Key 详
 - [ ] 大模型配置：IP 形态 host 只读且仅首项；协议框宽度合适；编辑空模型映射初始化一行
 - [ ] API-Key/Entity 详情 Tag 悬停不再显示小手
 - [ ] Entity 列表：ID 列展示、排序、搜索正常
+- [ ] Entity/API-Key 列表：点击「管理路由规则」跳转并自动打开该条记录的路由规则列表；按钮样式为绿色 success
 
 ---
 
