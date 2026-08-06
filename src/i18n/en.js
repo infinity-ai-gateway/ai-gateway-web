@@ -340,6 +340,7 @@ export default {
     routeTableEnabled: 'Route table enabled',
     routeTableDisabled: 'Route table disabled',
     toggleStatusFailed: 'Toggle route table status failed',
+    manageRouteRules: 'Manage Route Rules',
     currentRouteTable: 'Current Route Table',
     enterEditMode: 'Enter Edit Mode',
     exitEditMode: 'Exit Edit Mode',

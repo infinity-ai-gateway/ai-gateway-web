@@ -346,6 +346,7 @@ export default {
     routeTableDisabled: '路由表已停用',
     toggleStatusFailed: '切换路由表状态失败',
     loadFailed: '加载路由规则失败',
+    manageRouteRules: '管理路由规则',
     currentRouteTable: '当前路由表',
     enterEditMode: '进入编辑模式',
     exitEditMode: '退出编辑模式',
