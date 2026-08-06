@@ -21,10 +21,14 @@
         {{ ownerLabel }}
       </div>
       <div class="header-actions">
+        <Button size="small" class="back-btn" @click="onCancel">
+          <Icon type="ios-arrow-back" />
+          {{ $t('com.back') }}
+        </Button>
         <Button
           v-if="mode === 'view'"
           size="small"
-          type="primary"
+          type="success"
           @click="enterEditMode"
         >
           {{ $t('route.enterEditMode') }}
@@ -70,7 +74,12 @@
       </Button>
     </div>
 
-    <pageTable :columns="ruleColumns" :tableData="rules" :loading="loading" />
+    <pageTable
+      ref="ruleTable"
+      :columns="ruleColumns"
+      :tableData="rules"
+      :loading="loading"
+    />
 
     <Drawer
       v-model="viewRuleVisible"
@@ -113,7 +122,7 @@ import { cloneDeep } from 'lodash';
 const TYPE_LABELS = {
   global: 'Global',
   entity: 'Entity',
-  api_key: 'API-Key'
+  apikey: 'API-Key'
 };
 
 export default {
@@ -134,9 +143,17 @@ export default {
       type: String,
       default: ''
     },
+    ownerName: {
+      type: String,
+      default: ''
+    },
     initialData: {
       type: Object,
       default: null
+    },
+    initialFilter: {
+      type: String,
+      default: ''
     }
   },
 
@@ -149,6 +166,7 @@ export default {
       enabledValue: 'false',
       rules: [],
       originalRules: null,
+      originalEnabled: null,
       mode: 'view',
       clusters: [],
       ruleDrawerVisible: false,
@@ -167,7 +185,16 @@ export default {
     },
     ownerLabel() {
       if (this.type === 'global') return 'Global';
-      return this.owner || '-';
+      return this.ownerName || this.owner || '-';
+    },
+    isDirty() {
+      if (this.mode !== 'edit' || this.originalRules === null) {
+        return false;
+      }
+      if (this.enabled !== this.originalEnabled) {
+        return true;
+      }
+      return JSON.stringify(this.rules) !== JSON.stringify(this.originalRules);
     }
   },
 
@@ -190,7 +217,7 @@ export default {
         {
           title: that.$t('route.ruleName'),
           key: 'name',
-          searchable: that.mode !== 'view',
+          searchable: true,
           sortable: 'custom',
           render(h, params) {
             return <span>{params.row.name || '-'}</span>;
@@ -200,7 +227,7 @@ export default {
           title: that.$t('route.expression'),
           key: 'Cond',
           sortable: 'custom',
-          searchable: that.mode !== 'view',
+          searchable: true,
           render(h, params) {
             return <span>{params.row.Cond || '-'}</span>;
           }
@@ -209,7 +236,7 @@ export default {
           title: that.$t('route.targetClusterAndModel'),
           key: 'targets',
           sortable: 'custom',
-          searchable: that.mode !== 'view',
+          searchable: true,
           render(h, params) {
             const targets = params.row.targets || [];
             return h('div', targets.map(t => {
@@ -220,27 +247,6 @@ export default {
               }, [
                 h('Tag', {
                   key: `${t.ClusterName}-${t.Model}`,
-                  style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
-                }, text)
-              ]);
-            }));
-          }
-        },
-        {
-          title: that.$t('route.fallbackClusterAndModel'),
-          key: 'fallbacks',
-          searchable: that.mode !== 'view',
-          sortable: 'custom',
-          render(h, params) {
-            const fallbacks = params.row.fallbacks || [];
-            return h('div', fallbacks.map((f, index) => {
-              const text = `${f.ClusterName}/${f.Model || ''}`;
-              return h('Tooltip', {
-                props: { content: text, transfer: true, maxWidth: 600 },
-                style: 'display: block; width: 100%; margin-bottom: 4px;'
-              }, [
-                h('Tag', {
-                  key: index,
                   style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
                 }, text)
               ]);
@@ -309,6 +315,7 @@ export default {
               this.enabled = data.enabled === true;
               this.rules = data.rules || [];
               this.refreshRuleIndex();
+              this.applyInitialFilter();
             } else {
               this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
             }
@@ -335,6 +342,7 @@ export default {
             this.enabled = routeRules.enabled === true;
             this.rules = routeRules.rules || [];
             this.refreshRuleIndex();
+            this.applyInitialFilter();
           } else {
             this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
           }
@@ -352,9 +360,29 @@ export default {
       this.rules = this.rules.map((rule, index) => ({ ...rule, index }));
     },
 
+    applyInitialFilter() {
+      if (!this.initialFilter) {
+        return;
+      }
+      const column = this.ruleColumns.find(item => item.key === 'name');
+      if (!column) {
+        return;
+      }
+      // pageTable 的 tableData watcher 会清空 searchValue，需在其执行后再预置
+      this.$nextTick(() => {
+        column.searchValue = this.initialFilter;
+        this.$nextTick(() => {
+          if (this.$refs.ruleTable) {
+            this.$refs.ruleTable.searchTable(column);
+          }
+        });
+      });
+    },
+
     enterEditMode() {
       this.mode = 'edit';
       this.originalRules = cloneDeep(this.rules);
+      this.originalEnabled = this.enabled;
     },
 
     exitEditMode() {
@@ -372,8 +400,7 @@ export default {
       this.currentRule = {
         name: '',
         Cond: '',
-        targets: [{ ClusterName: '', Model: '', Weight: 100 }],
-        fallbacks: []
+        targets: [{ ClusterName: '', Model: '', Weight: 100 }]
       };
       this.ruleDrawerTitle = this.$t('com.createX', { obj: this.$t('route.rule') });
       this.ruleDrawerVisible = true;
@@ -453,6 +480,7 @@ export default {
         delete clean.index;
         delete clean._index;
         delete clean._rowKey;
+        delete clean.fallbacks;
         return clean;
       });
       if (this.type === 'global') {
@@ -507,6 +535,12 @@ export default {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
+
+    .header-actions {
+      .back-btn {
+        margin-right: 8px;
+      }
+    }
   }
 
   .route-owner-label {

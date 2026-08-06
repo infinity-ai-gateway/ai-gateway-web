@@ -87,6 +87,13 @@ export default {
             tableData: [],
             columns: [
                 {
+                    title: 'ID',
+                    key: 'id',
+                    minWidth: 120,
+                    sortable: 'custom',
+                    searchable: true
+                },
+                {
                     title: that.$t('entity.name'),
                     key: 'name',
                     minWidth: 120,
@@ -150,9 +157,28 @@ export default {
                 },
                 {
                     title: that.$t('com.operation'),
-                    width: 250,
+                    width: 300,
                     render(h, params) {
                         return h('div', [
+                            h(
+                                'Button',
+                                {
+                                    props: {
+                                        type: 'success',
+                                        size: 'small'
+                                    },
+                                    style: {
+                                        marginRight: '5px'
+                                    },
+                                    on: {
+                                        click: (e) => {
+                                            e.stopPropagation();
+                                            that.onManageRules(params.row);
+                                        }
+                                    }
+                                },
+                                that.$t('route.manageRouteRules')
+                            ),
                             h(
                                 'Button',
                                 {
@@ -242,6 +268,15 @@ export default {
             this.currentId = row.id;
             this.currentData = row;
             this.isHiden = true;
+        },
+        onManageRules(row) {
+            this.$router.push({
+                name: 'AdvanceRouteRule.list',
+                query: {
+                    type: 'entity',
+                    owner: row.id
+                }
+            });
         },
         onDel(row) {
             this.currentId = row.id;

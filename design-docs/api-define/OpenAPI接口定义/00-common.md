@@ -96,7 +96,6 @@
 | `name` | string | Y | 规则名称，用于日志和监控 | 必填、非空；在同一组 `route_rules` 内唯一 |
 | `Cond` | string | Y | BFE 条件表达式；命中则使用该规则 | 必填、非空；须为合法 BFE 条件表达式 |
 | `targets` | array | Y | 转发目标列表 | 必填，至少 1 个元素；每个元素类型见下表 |
-| `fallbacks` | array | N | 降级目标列表 | 可选；允许为空；每个元素类型见下表 |
 
 `targets` 元素结构：
 
@@ -110,13 +109,6 @@
 
 - 同一 `targets` 数组内，`(ClusterName, Model)` 组合不能重复。
 
-`fallbacks` 元素结构：
-
-| 字段 | 类型 | 必填 | 说明 | 合法性条件 |
-|------|------|------|------|------------|
-| `ClusterName` | string | Y | 后端集群名称 | 必填；类型为 [ClusterName](#15-集群名称clustername)；须为 `/clusters` 中已存在的集群名称 |
-| `Model` | string | N | 模型名称；空字符串表示透传原始模型 | 非空时，须为对应集群 `llm_config.models` 中已配置的模型名称 |
-
 示例：
 
 ```json
@@ -129,8 +121,7 @@
       "Model": "",
       "Weight": 100
     }
-  ],
-  "fallbacks": []
+  ]
 }
 ```
 
@@ -158,8 +149,7 @@
           "Model": "",
           "Weight": 100
         }
-      ],
-      "fallbacks": []
+      ]
     }
   ]
 }

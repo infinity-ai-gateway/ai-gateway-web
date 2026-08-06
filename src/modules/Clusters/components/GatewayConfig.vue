@@ -37,23 +37,17 @@
           :label="$t('gatewayConfig.modelListEndpoint')"
           prop="model_endpoint"
         >
-          <div class="flex">
-            <Select class="item" v-model="formData.model_endpoint.schema">
-              <Option value="http">http</Option>
-              <Option value="https">https</Option>
+          <div class="endpoint-url-group">
+            <Select class="endpoint-protocol" v-model="formData.model_endpoint.schema">
+              <Option value="http">http://</Option>
+              <Option value="https">https://</Option>
             </Select>
-            <Input
-              class="item"
-              v-model="ipStr"
-              type="textarea"
-              readonly
-              :rows="4"
-            />
-            <Input class="item" v-model="formData.model_endpoint.uri" />
+            <span class="endpoint-host" :title="endpointHostDisplay">{{ endpointHostDisplay }}</span>
+            <Input class="endpoint-uri" v-model="formData.model_endpoint.uri" />
           </div>
           <Button
             type="primary"
-            style="margin-left: 14px; margin-bottom: 14px;"
+            style="margin-top: 14px; margin-bottom: 14px;"
             @click="addHeader"
             size="small"
             >+{{ $t('com.createX', { obj: 'Header' }) }}</Button
@@ -89,6 +83,7 @@
           <el-select
             v-model="formData.models"
             style="width: 487px;"
+            size="small"
             multiple
             clearable
             filterable
@@ -104,7 +99,7 @@
           </el-select>
           <Button
             type="primary"
-            :disabled="!ipStr || !formData.provider_type"
+            :disabled="!endpointHostDisplay || !formData.provider_type"
             :loading="btnLoading"
             @click="queryModels"
             >{{ $t('gatewayConfig.get') }}
@@ -188,7 +183,7 @@
 <script>
 import { cloneDeep, isEmpty } from 'lodash';
 import { maskSecretKey } from '@/utils/const';
-import { getInstanceEndpointHosts } from './InstancePool';
+import { getInstanceEndpointHosts, detectInstanceMode } from './InstancePool';
 export default {
     components: {},
     props: {
@@ -346,7 +341,6 @@ export default {
                 ]
             },
             selectData: [],
-            ipStr: '',
             hasExistingKey: false,
             maskedExistingKey: '',
             keyModifiedInSession: false,
@@ -373,14 +367,20 @@ export default {
             btnLoading: false
         };
     },
+    computed: {
+        endpointHostDisplay() {
+            const hosts = getInstanceEndpointHosts(this.instancePoolData);
+            if (!hosts.length) {
+                return '';
+            }
+            const modeInfo = detectInstanceMode(this.instancePoolData);
+            if (modeInfo.mode === 'domain') {
+                return hosts.join('\n');
+            }
+            return hosts[0];
+        }
+    },
     watch: {
-        instancePoolData: {
-            handler(v) {
-                this.ipStr = [...new Set(getInstanceEndpointHosts(v))].join('\n');
-            },
-            immediate: true,
-            deep: true
-        },
         reportFlag: {
             handler(v) {
                 this.handleSubmit('formData');
@@ -523,7 +523,7 @@ export default {
                 this.$set(this.formData, 'models', []);
             }
 
-            if (!this.formData.model_mappings) {
+            if (!this.formData.model_mappings || this.formData.model_mappings.length === 0) {
                 this.$set(this.formData, 'model_mappings', [
                     {
                         source_model: '',
@@ -689,7 +689,7 @@ export default {
             this.getModels('query');
         },
         getModels(val) {
-            const ipPort = this.ipStr.split('\n');
+            const ipPort = [...new Set(getInstanceEndpointHosts(this.instancePoolData))];
             this.modelsList = [];
             this.btnLoading = true;
             this.$request({
@@ -790,13 +790,41 @@ export default {
 </script>
 
 <style lang="less" scoped>
-.flex {
+.endpoint-url-group {
     display: flex;
-    justify-content: center;
     align-items: center;
-    .item {
-        flex: 1;
-        margin-right: 10px;
+    max-width: 680px;
+    border: 1px solid #dcdee2;
+    border-radius: 4px;
+    overflow: hidden;
+    .endpoint-protocol {
+        width: 80px;
+        border-right: 1px solid #dcdee2;
+        flex-shrink: 0;
+        /deep/ .ivu-select-selection {
+            border: none;
+            border-radius: 0;
+        }
+    }
+    .endpoint-host {
+        min-width: 120px;
+        padding: 0 8px;
+        color: #909399;
+        background: #f5f5f5;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 30px;
+        cursor: not-allowed;
+    }
+    .endpoint-uri {
+        width: 180px;
+        flex-shrink: 0;
+        border-left: 1px solid #dcdee2;
+        /deep/ .ivu-input {
+            border: none;
+            border-radius: 0;
+        }
     }
 }
 

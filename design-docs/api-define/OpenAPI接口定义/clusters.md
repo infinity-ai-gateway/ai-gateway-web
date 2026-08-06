@@ -36,8 +36,8 @@
     },
     "sticky_sessions": {
         "enabled": false,
-        "hash_strategy": "CLIENT_ID_ONLY",
-        "hash_header": "Cookie:USERID"
+        "hash_strategy": "CLIENT_IP_ONLY",
+        "hash_header": ""
     },
     "passive_health_check": {
         "interval": 1000,
@@ -103,8 +103,8 @@
 | 参数名 | 类型 |参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | -  | - | - | - | - |
 | enabled| bool |  是否开启会话保持 | N | **默认false**。为true时开启会话保持；为false时关闭 | 非必填；默认值为 `false` |
-| hash_strategy| string |  会话保持策略  | N | CLIENT_IP_ONLY，根据client ip做会话保持 <br/>	CLIENT_ID_ONLY，根据请求中header做会话保持(默认值) <br>	CLIENT_ID_PERFERED，优先基于特定header，如果请求中没有对应header，则使用client ip| 非必填；默认值为 `CLIENT_ID_ONLY`；有效枚举：`CLIENT_IP_ONLY`、`CLIENT_ID_ONLY`、`CLIENT_ID_PREFERED` |
-| hash_header| string |  指定CLIENT_ID使用的header | N | 当使用cookie作为会话保持的哈希key时，数据格式为Cookie:${key} | 非必填；默认值为空字符串；`hash_strategy` 为 `CLIENT_ID_ONLY` 或 `CLIENT_ID_PREFERED` 时建议非空 |
+| hash_strategy| string |  会话保持策略  | N | CLIENT_IP_ONLY，根据client ip做会话保持(默认值) <br/>	CLIENT_ID_ONLY，根据请求中header做会话保持 <br>	CLIENT_ID_PERFERED，优先基于特定header，如果请求中没有对应header，则使用client ip| 非必填；默认值为 `CLIENT_IP_ONLY`；有效枚举：`CLIENT_IP_ONLY`、`CLIENT_ID_ONLY`、`CLIENT_ID_PREFERED` |
+| hash_header| string |  指定CLIENT_ID使用的header | N | 当使用cookie作为会话保持的哈希key时，数据格式为Cookie:${key} | 非必填；默认值为空字符串；`enabled=true` 且 `hash_strategy` 为 `CLIENT_ID_ONLY` 或 `CLIENT_ID_PREFERED` 时必须非空 |
 
 **表：超时设置**
 
@@ -245,8 +245,8 @@
     },
     "sticky_sessions": {
         "enabled": false,
-        "hash_strategy": "CLIENT_ID_ONLY",
-        "hash_header": "Cookie:USERID"
+        "hash_strategy": "CLIENT_IP_ONLY",
+        "hash_header": ""
     },
     "passive_health_check": {
         "interval": 1000,
@@ -424,8 +424,8 @@
     },
     "sticky_sessions": {
         "enabled": false,
-        "hash_strategy": "CLIENT_ID_ONLY",
-        "hash_header": "Cookie:USERID"
+        "hash_strategy": "CLIENT_IP_ONLY",
+        "hash_header": ""
     },
     "passive_health_check": {
         "interval": 1000,

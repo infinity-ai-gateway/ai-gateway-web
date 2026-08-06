@@ -15,12 +15,6 @@
           "Model": "",
           "Weight": 100
         }
-      ],
-      "fallbacks": [
-        {
-          "ClusterName": "cluster_global_fallback",
-          "Model": ""
-        }
       ]
     }
   ]
@@ -81,12 +75,6 @@
                     "Model": "",
                     "Weight": 100
                 }
-            ],
-            "fallbacks": [
-                {
-                    "ClusterName": "cluster_global_fallback",
-                    "Model": ""
-                }
             ]
         }
     ]
@@ -125,12 +113,6 @@
                         "ClusterName": "cluster_global",
                         "Model": "",
                         "Weight": 100
-                    }
-                ],
-                "fallbacks": [
-                    {
-                        "ClusterName": "cluster_global_fallback",
-                        "Model": ""
                     }
                 ]
             }

@@ -22,10 +22,13 @@
     <div v-else class="detail-view">
       <div class="detail-content">
         <RouteRules
+          ref="routeRules"
           :type="currentType"
           :owner="currentOwner"
+          :owner-name="detailOwnerLabel"
           :initialData="currentInitialData"
-          @close="backToList"
+          :initial-filter="currentRuleFilter"
+          @close="onCloseRequest"
           @submit="onRulesSubmit"
         />
       </div>
@@ -40,7 +43,7 @@ import RouteRules from './components/RouteRules.vue';
 const TYPE_MAP = {
   global: 'Global',
   entity: 'Entity',
-  api_key: 'API-Key'
+  apikey: 'API-Key'
 };
 
 export default {
@@ -59,6 +62,8 @@ export default {
       currentType: '',
       currentOwner: '',
       currentInitialData: null,
+      currentRuleFilter: '',
+      entityNameMap: {},
       tableData: [],
       columns: [
         {
@@ -82,7 +87,11 @@ export default {
           searchable: true,
           sortable: 'custom',
           render(h, params) {
-            return <span>{params.row.owner || '-'}</span>;
+            const row = params.row;
+            if (row.type === 'entity') {
+              return <span>{that.entityNameMap[row.owner] || row.owner || '-'}</span>;
+            }
+            return <span>{row.owner || '-'}</span>;
           }
         },
         {
@@ -140,12 +149,17 @@ export default {
     },
     detailOwnerLabel() {
       if (this.currentType === 'global') return 'Global';
+      if (this.currentType === 'entity') {
+        return this.entityNameMap[this.currentOwner] || this.currentOwner || '-';
+      }
       return this.currentOwner || '-';
     }
   },
 
   mounted() {
     this.fetchData();
+    this.fetchEntityNames();
+    this.openFromQuery();
   },
 
   beforeDestroy() {
@@ -157,9 +171,19 @@ export default {
   watch: {
     '$store.state.breadcrumbTitle'(val) {
       if (!val && this.detailVisible) {
-        this.backToList();
+        this.confirmLeaveIfDirty(
+          () => this.backToList(),
+          () => this.updateBreadcrumb()
+        );
       }
     }
+  },
+
+  beforeRouteLeave(to, from, next) {
+    this.confirmLeaveIfDirty(
+      () => next(),
+      () => next(false)
+    );
   },
 
   methods: {
@@ -182,10 +206,52 @@ export default {
         });
     },
 
+    fetchEntityNames() {
+      this.$request({
+        url: 'entities',
+        method: 'get',
+        openapi: true
+      })
+        .then(res => {
+          if (res.status === 200) {
+            const data = res.data.Data || {};
+            const list = Array.isArray(data.list) ? data.list : [];
+            const map = {};
+            list.forEach(item => {
+              if (item && item.id != null) {
+                map[item.id] = item.name || item.id;
+              }
+            });
+            this.entityNameMap = map;
+            if (this.detailVisible) {
+              this.updateBreadcrumb();
+            }
+          }
+        })
+        .catch(err => {
+          console.error('获取 Entity 列表失败:', err);
+        });
+    },
+
     onView(row) {
       this.currentType = row.type;
       this.currentOwner = row.type === 'global' ? '' : row.owner;
       this.currentInitialData = null;
+      this.currentRuleFilter = '';
+      this.detailVisible = true;
+      this.updateBreadcrumb();
+    },
+
+    openFromQuery() {
+      const query = this.$route.query || {};
+      const type = query.type;
+      if (!type || !TYPE_MAP[type]) {
+        return;
+      }
+      this.currentType = type;
+      this.currentOwner = type === 'global' ? '' : query.owner || '';
+      this.currentInitialData = null;
+      this.currentRuleFilter = query.rule || '';
       this.detailVisible = true;
       this.updateBreadcrumb();
     },
@@ -195,7 +261,32 @@ export default {
       this.currentType = '';
       this.currentOwner = '';
       this.currentInitialData = null;
+      this.currentRuleFilter = '';
       this.$store.setBreadcrumbTitle('');
+    },
+
+    onCloseRequest() {
+      this.confirmLeaveIfDirty(() => this.backToList());
+    },
+
+    confirmLeaveIfDirty(onOk, onCancel) {
+      const rulesRef = this.$refs.routeRules;
+      if (this.detailVisible && rulesRef && rulesRef.isDirty) {
+        this.$Modal.confirm({
+          title: this.$t('com.informationTips'),
+          content: this.$t('route.tipUnsavedLeave'),
+          onOk: () => {
+            onOk();
+          },
+          onCancel: () => {
+            if (onCancel) {
+              onCancel();
+            }
+          }
+        });
+      } else {
+        onOk();
+      }
     },
 
     updateBreadcrumb() {

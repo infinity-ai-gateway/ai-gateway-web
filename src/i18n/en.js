@@ -188,7 +188,8 @@ export default {
     domain: 'Provider Domain',
     domainRequired: 'Please enter the provider domain',
     domainPlaceholder: 'Enter provider domain, e.g. example.com',
-    invalidDomain: 'Please enter a valid provider domain or IP address, e.g. example.com or 192.168.1.1',
+    invalidDomain:
+      'Please enter a valid provider domain or IP address, e.g. example.com or 192.168.1.1',
 
     tipWeightRang: 'Wrong weight, should be between 0 and 100',
     weightRequired: 'Please enter instance weight',
@@ -196,7 +197,8 @@ export default {
     tipPortRang: 'Wrong port, shoudl be between 1 and 65535',
     tipDuplicateIpPort: 'Duplicate IP/domain and port: "{ipPort}"',
     tipDuplicateIp: 'Duplicate IP address: "{ip}"',
-    tipAtLeastOnePositiveWeight: 'At least one instance must have a weight greater than 0',
+    tipAtLeastOnePositiveWeight:
+      'At least one instance must have a weight greater than 0',
   },
   login: {
     userLogin: 'User Login',
@@ -324,8 +326,10 @@ export default {
     expression: 'Expression',
     rule: 'Rule',
     config: 'Configuration',
-    tipExplain: 'Forward rules are matched in order; matched requests are forwarded to the target cluster.',
-    tipAdvanceExplain: 'Advanced rules match requests by expression. Drag rows to change execution order.',
+    tipExplain:
+      'Forward rules are matched in order; matched requests are forwarded to the target cluster.',
+    tipAdvanceExplain:
+      'Advanced rules match requests by expression. Drag rows to change execution order.',
     tipDel: 'Confirm delete this rule?',
     tipUnsavedLeave:
       'Rule changes have not been submitted and applied. Leaving this page will discard your changes. Continue?',
@@ -340,28 +344,24 @@ export default {
     routeTableEnabled: 'Route table enabled',
     routeTableDisabled: 'Route table disabled',
     toggleStatusFailed: 'Toggle route table status failed',
+    manageRouteRules: 'Manage Route Rules',
     currentRouteTable: 'Current Route Table',
     enterEditMode: 'Enter Edit Mode',
     exitEditMode: 'Exit Edit Mode',
     targetClusterAndModel: 'Target Cluster and Model',
-    fallbackClusterAndModel: 'Fallback Cluster and Model',
     target: 'Target',
-    fallback: 'Fallback',
     addTarget: 'Add Target',
-    addFallback: 'Add Fallback',
     weight: 'Weight',
     weightSumError: 'Target weights must sum to 100',
     weightRangeError: 'Weight must be between 0 and 100',
     targetAtLeastOne: 'At least one target cluster is required',
-    targetDuplicate: 'Target cluster and model combination cannot be duplicated',
-    fallbackDuplicate: 'Fallback cluster and model combination cannot be duplicated',
+    targetDuplicate:
+      'Target cluster and model combination cannot be duplicated',
     ruleNameDuplicate: 'Rule names cannot be duplicated',
     selectModel: 'Select Model',
-    selectFallbackCluster: 'Select Fallback Cluster',
     modelTransparent: 'Leave blank for transparent transmission',
     cluster: 'Cluster',
     model: 'Model',
-    noFallbackCluster: 'No backup clusters yet',
   },
   cluster: {
     name: 'Cluster',
@@ -387,10 +387,12 @@ export default {
       'Failure Threshold (Triggers instance unavailable and initiate passive healthcheck)',
     faultThreshold: 'Failure Threshold',
     healthCheckHost: 'Host',
-    healthCheckHostTip: 'Uses the first instance address in the pool when left empty',
+    healthCheckHostTip:
+      'Uses the first instance address in the pool when left empty',
     healthCheckUri: 'Uri',
     healthCheckStatuscode: 'Expected Status Code',
-    healthCheckStatuscodeRangeError: 'Status code must be 0 or between 100 and 599',
+    healthCheckStatuscodeRangeError:
+      'Status code must be 0 or between 100 and 599',
     proportion: 'Weight',
     manual: 'Manual Mode',
     subClusterPool: 'Sub-Cluster List',
@@ -416,17 +418,21 @@ export default {
     tipBfeClusterNotExist:
       'AI Gateway Cluster not exist, please config AI Gateway cluster first',
     tipAtLeastoneInstance: 'Please add at least one instance',
-    tipDomainOnlyOne: 'When using a domain, only one instance is allowed; otherwise use multiple IP addresses',
-    tipDomainIpMixed: 'Domain and IP cannot be mixed; use a single domain or multiple IP addresses',
+    tipDomainOnlyOne:
+      'When using a domain, only one instance is allowed; otherwise use multiple IP addresses',
+    tipDomainIpMixed:
+      'Domain and IP cannot be mixed; use a single domain or multiple IP addresses',
     tipSubClusterCapacityTotalRule:
       'Sum weight of all sub-cluster should be 100 for each AI Gateway Cluster',
     tipValueNonnegativeInteger: 'Value should be >=0',
     timeoutValueMustGreaterThanZero: 'Timeout value must be greater than 0',
-    reqWriteBufferSizeMustGreaterThanZero: 'Request write buffer size must be greater than 0',
+    reqWriteBufferSizeMustGreaterThanZero:
+      'Request write buffer size must be greater than 0',
     tipsValueMax: 'Input value too big',
     tipHashHeaderRequired: 'Hash header cannot be empty',
     descriptionLengthError: 'Description cannot exceed 256 characters',
-    descriptionControlCharsError: 'Description cannot contain control characters',
+    descriptionControlCharsError:
+      'Description cannot contain control characters',
     tipClusterNameRule:
       'Cluster name must be 1-64 characters, only letters, numbers, dash, dot, underline are allowed, and cannot start or end with dot, dash, or underline',
     tipNameRule:
@@ -435,6 +441,10 @@ export default {
       'When an EPP instance pool is mounted, no other instance pools can be mounted',
     tipMountEppAfterUnmountOthers:
       'Please unmount other mounted instance pools before mounting an EPP instance pool',
+    deleteBlockedByRule:
+      'Cluster {cluster} is referenced by route rule {rule} in route table {table} (route table type / route table owner) and cannot be deleted. Click the link to go to the corresponding route table for quick handling: ',
+    goToHandle: 'Go to handle',
+    deleteFailed: 'Delete Failed',
   },
   subCluster: {
     name: 'SubCluster',
@@ -527,19 +537,24 @@ export default {
     windowMinutesInvalid:
       'Time window at index {index} must be between 1-360 minutes',
     windowMinutesRequired: 'Time window at index {index} cannot be empty',
-    maxTokensInvalid: 'Max tokens at index {index} must be greater than or equal to 0',
+    maxTokensInvalid:
+      'Max tokens at index {index} must be greater than or equal to 0',
     maxTokensRequired: 'Please enter max tokens for rule #{index}',
     maxTokensMaxError: 'Max tokens at index {index} exceeds the allowed range',
-    maxRequestsInvalid: 'Max requests at index {index} must be greater than or equal to 0',
+    maxRequestsInvalid:
+      'Max requests at index {index} must be greater than or equal to 0',
     maxRequestsRequired: 'Please enter max requests for rule #{index}',
-    maxRequestsMaxError: 'Max requests at index {index} exceeds the allowed range',
+    maxRequestsMaxError:
+      'Max requests at index {index} exceeds the allowed range',
     stepMinutesInvalid:
       'Step minutes at index {index} cannot exceed time window',
     stepMinutesRange:
       'Step minutes at index {index} must be between 1-360 minutes',
     stepMinutesRequired: 'Please enter step minutes for rule #{index}',
-    tpmCombinationDuplicate: 'Duplicate TPM rule combination (model, time window, max tokens, step minutes)',
-    rpmCombinationDuplicate: 'Duplicate RPM rule combination (model, time window, max requests)',
+    tpmCombinationDuplicate:
+      'Duplicate TPM rule combination (model, time window, max tokens, step minutes)',
+    rpmCombinationDuplicate:
+      'Duplicate RPM rule combination (model, time window, max requests)',
     rateLimitRuleRequired:
       'Add a TPM/RPM rule, or set max concurrency to Banned / Limit concurrency',
     keyId: 'Key ID',
@@ -570,7 +585,8 @@ export default {
     subnetRequired: 'Please enter allowed subnets',
     subnetCidrConflict:
       'When "*" is filled to indicate no restriction, other CIDRs cannot be filled',
-    subnetFormatError: 'Line {index} "{cidr}" is not a valid IPv4/IPv6 CIDR format',
+    subnetFormatError:
+      'Line {index} "{cidr}" is not a valid IPv4/IPv6 CIDR format',
     subnetDuplicate: 'CIDR "{cidr}" is duplicated',
     subnetContained: 'CIDR "{cidr}" is contained in "{parent}"',
     subnetContains: 'CIDR "{cidr}" contains "{child}"',
@@ -638,14 +654,16 @@ export default {
     typeNamePlaceholder: 'e.g.: dep',
     typeNameRule:
       '1-32 characters, only lowercase letters, numbers, underscores, hyphens, and cannot start or end with underscore or hyphen',
-    typeNameFormatError: 'Type name format is incorrect, cannot start or end with underscore or hyphen',
+    typeNameFormatError:
+      'Type name format is incorrect, cannot start or end with underscore or hyphen',
     enterDescription: 'Please enter description',
     descriptionPlaceholder: 'e.g.: Level 1 Department',
     selectLevel: 'Please select level',
     levelTip: 'Value range 1-5, smaller number means higher level',
     enterName: 'Please enter Entity name',
     namePlaceholder: 'Please enter Entity name',
-    nameLeadingTrailingWhitespace: 'Entity name cannot contain leading or trailing whitespace',
+    nameLeadingTrailingWhitespace:
+      'Entity name cannot contain leading or trailing whitespace',
     nameLengthError: 'Entity name cannot exceed 64 characters',
     nameControlCharsError: 'Entity name cannot contain control characters',
     selectType: 'Please select type',
@@ -672,10 +690,13 @@ export default {
     tpmRuleNameDuplicate: 'TPM rule name {name} is duplicated',
     tpmWindowMinutesInvalid:
       'Time window for TPM rule #{index} must be between 1-360 minutes',
-    tpmWindowMinutesRequired: 'Time window for TPM rule #{index} cannot be empty',
+    tpmWindowMinutesRequired:
+      'Time window for TPM rule #{index} cannot be empty',
     tpmMaxTokensRequired: 'Please enter max tokens for TPM rule #{index}',
-    tpmMaxTokensInvalid: 'Max tokens for TPM rule #{index} must be greater than or equal to 0',
-    maxTokensMaxError: 'Max tokens for TPM rule #{index} exceeds the allowed range',
+    tpmMaxTokensInvalid:
+      'Max tokens for TPM rule #{index} must be greater than or equal to 0',
+    maxTokensMaxError:
+      'Max tokens for TPM rule #{index} exceeds the allowed range',
     tpmStepMinutesInvalid:
       'Step minutes cannot exceed time window for TPM rule #{index}',
     tpmStepMinutesRange:
@@ -684,14 +705,19 @@ export default {
     rpmRuleNameRequired: 'Please enter rule name for RPM rule #{index}',
     rpmRuleNameDuplicate: 'RPM rule name {name} is duplicated',
     ruleNameLengthError: 'Rule name cannot exceed 128 characters',
-    tpmCombinationDuplicate: 'Duplicate TPM rule combination (model, time window, max tokens, step minutes)',
-    rpmCombinationDuplicate: 'Duplicate RPM rule combination (model, time window, max requests)',
+    tpmCombinationDuplicate:
+      'Duplicate TPM rule combination (model, time window, max tokens, step minutes)',
+    rpmCombinationDuplicate:
+      'Duplicate RPM rule combination (model, time window, max requests)',
     rpmWindowMinutesInvalid:
       'Time window for RPM rule #{index} must be between 1-360 minutes',
-    rpmWindowMinutesRequired: 'Time window for RPM rule #{index} cannot be empty',
+    rpmWindowMinutesRequired:
+      'Time window for RPM rule #{index} cannot be empty',
     rpmMaxRequestsRequired: 'Please enter max requests for RPM rule #{index}',
-    rpmMaxRequestsInvalid: 'Max requests for RPM rule #{index} must be greater than or equal to 0',
-    maxRequestsMaxError: 'Max requests for RPM rule #{index} exceeds the allowed range',
+    rpmMaxRequestsInvalid:
+      'Max requests for RPM rule #{index} must be greater than or equal to 0',
+    maxRequestsMaxError:
+      'Max requests for RPM rule #{index} exceeds the allowed range',
     rpmStepMinutesInvalid:
       'Step minutes cannot exceed time window for RPM rule #{index}',
     rpmStepMinutesRange:
@@ -773,7 +799,8 @@ export default {
     modelMappingValueRequired:
       'The "Forwarded Backend Model Name" in line {line} cannot be empty',
     serviceAuthKeyPlaceholder: 'Please enter service auth key',
-    serviceAuthKeyEditTip: 'A key is already configured. Enter a new key to replace it; leave blank to keep unchanged',
+    serviceAuthKeyEditTip:
+      'A key is already configured. Enter a new key to replace it; leave blank to keep unchanged',
   },
   aiRouteRules: {
     rulesList: 'Rules List',
@@ -797,8 +824,9 @@ export default {
     privateKeyFile: 'PrivateKey File',
     globalDefaultCert: 'Global Default Certificate',
 
-    tipCertNameRule: 'Special characters are not allowed in certificate file name',
+    tipCertNameRule:
+      'Special characters are not allowed in certificate file name',
     tipSumitCertFile: 'Config the certificate ',
-    tipCofigDefault: ' as Global Default Certificate'
-}
+    tipCofigDefault: ' as Global Default Certificate',
+  },
 };

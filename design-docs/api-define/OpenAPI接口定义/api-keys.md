@@ -49,8 +49,7 @@
             "Model": "",
             "Weight": 100
           }
-        ],
-        "fallbacks": []
+        ]
       }
     ]
   },
@@ -113,7 +112,7 @@
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
 | key | string | API-Key值 | N | 可选。若传入则使用该值作为API-Key；若不传则由后台生成。用于从其他系统导入API-Key | 若传入则必填、非空；长度 1-128 字符；仅允许大小写字母、数字、连字符(-)、下划线(_)；须全局唯一 |
-| description | string | API-Key描述 | Y | - | 必填、非空；长度不超过 511 字符 |
+| description | string | API-Key描述 | Y | - | 必填、非空；长度不超过 512 字符 |
 | expired_time | int64 | 过期时间 | N | -1表示永不过期；其他为Unix时间戳（秒） | -1 或 Unix 时间戳秒；非 -1 时必须 >= 当前时间 |
 | enabled | bool | 是否启用 | N | 默认true | - |
 | unlimited_quota | bool | 是否无限配额 | N | 默认false | - |
@@ -129,7 +128,7 @@
 - `quota_plan`、`rate_limit_policy`、`route_rules` 的字段及合法性条件分别见 [QuotaPlan](./00-common.md#公共参数类型)、[RateLimitPolicy](./00-common.md#公共参数类型)、[RouteRules](./00-common.md#公共参数类型) 公共类型定义。
 - 若 `entity_id` 不为空，该Entity必须存在。
 - 若传入 `key`，其值需在系统中全局唯一，长度 1-128 字符，且仅允许大小写字母、数字、连字符(-)、下划线(_)；若重复或格式非法，返回422。
-- `description` 必填，长度必须小于 512 字符。
+- `description` 必填，长度不超过 512 字符。
 - `expired_time` 为 -1 表示永不过期；其他值必须是不小于当前时间的 Unix 时间戳秒。
 - `models` 每个元素类型为 [AIModel](./00-common.md#公共参数类型)；为 `"*"` 时表示不限制。
 - `subnet` 每个元素类型为 [CIDR](./00-common.md#公共参数类型)；为 `"*"` 时表示不限制。
@@ -174,8 +173,7 @@
                         "Model": "",
                         "Weight": 100
                     }
-                ],
-                "fallbacks": []
+                ]
             }
         ]
     },
@@ -243,8 +241,7 @@
                             "Model": "",
                             "Weight": 100
                         }
-                    ],
-                    "fallbacks": []
+                    ]
                 }
             ]
         },

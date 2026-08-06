@@ -159,6 +159,7 @@ export default {
                     title: that.$t('apiKey.keyId'),
                     key: 'id',
                     minWidth: 120,
+                    searchable: true,
                     sortable: 'custom'
                 },
                 {
@@ -294,9 +295,28 @@ export default {
                 },
                 {
                     title: that.$t('com.operation'),
-                    width: 250,
+                    width: 300,
                     render(h, params) {
                         return h('div', [
+                            h(
+                                'Button',
+                                {
+                                    props: {
+                                        type: 'success',
+                                        size: 'small'
+                                    },
+                                    style: {
+                                        marginRight: '5px'
+                                    },
+                                    on: {
+                                        click: (e) => {
+                                            e.stopPropagation();
+                                            that.onManageRules(params.row);
+                                        }
+                                    }
+                                },
+                                that.$t('route.manageRouteRules')
+                            ),
                             h(
                                 'Button',
                                 {
@@ -393,6 +413,15 @@ export default {
             this.currentId = row.id;
             this.currentData = row;
             this.isHiden = true;
+        },
+        onManageRules(row) {
+            this.$router.push({
+                name: 'AdvanceRouteRule.list',
+                query: {
+                    type: 'apikey',
+                    owner: row.id
+                }
+            });
         },
         onView(row) {
             this.isAdd = false;

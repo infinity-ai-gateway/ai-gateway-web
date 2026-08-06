@@ -126,71 +126,6 @@
         {{ $t('route.weightSumError') }}
       </p>
 
-      <div class="section-title" style="margin-top: 24px;">
-        {{ $t('route.fallbackClusterAndModel') }}
-      </div>
-      <div v-if="formData.fallbacks.length === 0" class="empty-fallback">
-        {{ $t('route.noFallbackCluster') }}
-      </div>
-      <div
-        v-for="(fallback, index) in formData.fallbacks"
-        :key="`fallback-${index}`"
-        class="dynamic-row target-row"
-      >
-        <Row :gutter="8" type="flex" align="middle">
-          <Col span="2" class="field-label">{{ $t('route.cluster') }}</Col>
-          <Col span="6">
-            <Select
-              v-model="fallback.ClusterName"
-              :disabled="readonly"
-              :placeholder="$t('route.selectFallbackCluster')"
-              filterable
-              @on-change="onFallbackClusterChange(index)"
-            >
-              <Option
-                v-for="cluster in getClusters(index, 'fallback')"
-                :key="cluster.name"
-                :value="cluster.name"
-                :label="cluster.name"
-              />
-            </Select>
-          </Col>
-          <Col span="2" class="field-label">{{ $t('route.model') }}</Col>
-          <Col span="10">
-            <Select
-              v-model="fallback.Model"
-              :disabled="readonly"
-              :placeholder="$t('route.modelTransparent')"
-              filterable
-              allow-create
-              clearable
-            >
-              <Option
-                v-for="model in getModelsByCluster(fallback.ClusterName, index, 'fallback')"
-                :key="model"
-                :value="model"
-                :label="model"
-              />
-            </Select>
-          </Col>
-          <Col span="4" class="delete-col">
-            <Button
-              v-if="!readonly"
-              class="delete-btn"
-              size="small"
-              @click="removeFallback(index)"
-            >
-              {{ $t('com.del') }}
-            </Button>
-          </Col>
-        </Row>
-      </div>
-      <div v-if="!readonly" class="add-btn-row">
-        <Button size="small" class="add-btn" @click="addFallback">
-          + {{ $t('route.addFallback') }}
-        </Button>
-      </div>
-
       <FormItem class="com-btn-box drawer-footer">
         <Button
           v-if="!readonly"
@@ -213,7 +148,6 @@ import Expression from '@/components/Expression';
 import { cloneDeep } from 'lodash';
 
 const defaultTarget = { ClusterName: '', Model: '', Weight: 0 };
-const defaultFallback = { ClusterName: '', Model: '' };
 
 export default {
   name: 'RuleForm',
@@ -343,14 +277,6 @@ export default {
       this.formData.targets.splice(index, 1);
     },
 
-    addFallback() {
-      this.formData.fallbacks.push(cloneDeep(defaultFallback));
-    },
-
-    removeFallback(index) {
-      this.formData.fallbacks.splice(index, 1);
-    },
-
     validateWeight() {
       const sum = (this.formData.targets || []).reduce((acc, t) => acc + (Number(t.Weight) || 0), 0);
       this.weightError = sum !== 100;
@@ -359,17 +285,10 @@ export default {
 
     validateDuplicate() {
       const targets = this.formData.targets || [];
-      const fallbacks = this.formData.fallbacks || [];
       const targetKeys = targets.map(t => `${t.ClusterName || ''}|${t.Model || ''}`);
-      const fallbackKeys = fallbacks.map(f => `${f.ClusterName || ''}|${f.Model || ''}`);
       const targetDup = targetKeys.find((key, idx) => targetKeys.indexOf(key) !== idx);
-      const fallbackDup = fallbackKeys.find((key, idx) => fallbackKeys.indexOf(key) !== idx);
       if (targetDup) {
         this.$Message.error(this.$t('route.targetDuplicate'));
-        return false;
-      }
-      if (fallbackDup) {
-        this.$Message.error(this.$t('route.fallbackDuplicate'));
         return false;
       }
       return true;
@@ -413,13 +332,6 @@ export default {
       }
     },
 
-    onFallbackClusterChange(index) {
-      const fallback = this.formData.fallbacks[index];
-      if (fallback) {
-        fallback.Model = '';
-      }
-    },
-
     handleSubmit() {
       this.$refs.formData.validate(valid => {
         if (!valid) {
@@ -439,9 +351,7 @@ export default {
         }
         const result = cloneDeep(this.formData);
         delete result.condErrmsg;
-        if (!result.fallbacks) {
-          result.fallbacks = [];
-        }
+        delete result.fallbacks;
         this.$emit('submit', result);
       });
     },
@@ -513,11 +423,6 @@ export default {
       border: 1px solid #dcdee2;
       color: #515a6e;
     }
-  }
-
-  .empty-fallback {
-    color: #999;
-    margin-bottom: 12px;
   }
 
   .weight-error {
