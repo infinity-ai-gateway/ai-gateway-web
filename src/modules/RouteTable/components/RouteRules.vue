@@ -21,10 +21,14 @@
         {{ ownerLabel }}
       </div>
       <div class="header-actions">
+        <Button size="small" class="back-btn" @click="onCancel">
+          <Icon type="ios-arrow-back" />
+          {{ $t('com.back') }}
+        </Button>
         <Button
           v-if="mode === 'view'"
           size="small"
-          type="primary"
+          type="success"
           @click="enterEditMode"
         >
           {{ $t('route.enterEditMode') }}
@@ -134,6 +138,10 @@ export default {
       type: String,
       default: ''
     },
+    ownerName: {
+      type: String,
+      default: ''
+    },
     initialData: {
       type: Object,
       default: null
@@ -167,7 +175,7 @@ export default {
     },
     ownerLabel() {
       if (this.type === 'global') return 'Global';
-      return this.owner || '-';
+      return this.ownerName || this.owner || '-';
     }
   },
 
@@ -507,6 +515,12 @@ export default {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 16px;
+
+    .header-actions {
+      .back-btn {
+        margin-right: 8px;
+      }
+    }
   }
 
   .route-owner-label {

@@ -24,6 +24,7 @@
         <RouteRules
           :type="currentType"
           :owner="currentOwner"
+          :owner-name="detailOwnerLabel"
           :initialData="currentInitialData"
           @close="backToList"
           @submit="onRulesSubmit"
@@ -59,6 +60,7 @@ export default {
       currentType: '',
       currentOwner: '',
       currentInitialData: null,
+      entityNameMap: {},
       tableData: [],
       columns: [
         {
@@ -82,7 +84,11 @@ export default {
           searchable: true,
           sortable: 'custom',
           render(h, params) {
-            return <span>{params.row.owner || '-'}</span>;
+            const row = params.row;
+            if (row.type === 'entity') {
+              return <span>{that.entityNameMap[row.owner] || row.owner || '-'}</span>;
+            }
+            return <span>{row.owner || '-'}</span>;
           }
         },
         {
@@ -140,12 +146,17 @@ export default {
     },
     detailOwnerLabel() {
       if (this.currentType === 'global') return 'Global';
+      if (this.currentType === 'entity') {
+        return this.entityNameMap[this.currentOwner] || this.currentOwner || '-';
+      }
       return this.currentOwner || '-';
     }
   },
 
   mounted() {
     this.fetchData();
+    this.fetchEntityNames();
+    this.openFromQuery();
   },
 
   beforeDestroy() {
@@ -182,9 +193,49 @@ export default {
         });
     },
 
+    fetchEntityNames() {
+      this.$request({
+        url: 'entities',
+        method: 'get',
+        openapi: true
+      })
+        .then(res => {
+          if (res.status === 200) {
+            const data = res.data.Data || {};
+            const list = Array.isArray(data.list) ? data.list : [];
+            const map = {};
+            list.forEach(item => {
+              if (item && item.id != null) {
+                map[item.id] = item.name || item.id;
+              }
+            });
+            this.entityNameMap = map;
+            if (this.detailVisible) {
+              this.updateBreadcrumb();
+            }
+          }
+        })
+        .catch(err => {
+          console.error('获取 Entity 列表失败:', err);
+        });
+    },
+
     onView(row) {
       this.currentType = row.type;
       this.currentOwner = row.type === 'global' ? '' : row.owner;
+      this.currentInitialData = null;
+      this.detailVisible = true;
+      this.updateBreadcrumb();
+    },
+
+    openFromQuery() {
+      const query = this.$route.query || {};
+      const type = query.type;
+      if (!type || !TYPE_MAP[type]) {
+        return;
+      }
+      this.currentType = type;
+      this.currentOwner = type === 'global' ? '' : query.owner || '';
       this.currentInitialData = null;
       this.detailVisible = true;
       this.updateBreadcrumb();

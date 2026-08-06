@@ -435,6 +435,9 @@ export default {
       'When an EPP instance pool is mounted, no other instance pools can be mounted',
     tipMountEppAfterUnmountOthers:
       'Please unmount other mounted instance pools before mounting an EPP instance pool',
+    deleteBlockedByRule:
+      'Cluster {cluster} is referenced by route rule {rule} in route table {table} (route table type / route table owner) and cannot be deleted. Click the link to go to the corresponding route table for quick handling: ',
+    goToHandle: 'Go to handle',
   },
   subCluster: {
     name: 'SubCluster',

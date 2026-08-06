@@ -439,6 +439,9 @@ export default {
     tipEppMountedOnlyOnePool: '已挂载EPP类型实例池时，不可再挂载其他实例池',
     tipMountEppAfterUnmountOthers:
       '挂载EPP类型实例池前，请先卸载其他已挂载实例池',
+    deleteBlockedByRule:
+      '集群 {cluster} 被路由表 {table}（路由表类型/路由表属主）的 {rule} 路由规则引用，无法删除。可以点击链接前往对应路由表快速处理：',
+    goToHandle: '前往处理',
   },
   subCluster: {
     name: '子集群',

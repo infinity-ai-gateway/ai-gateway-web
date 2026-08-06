@@ -87,6 +87,13 @@ export default {
             tableData: [],
             columns: [
                 {
+                    title: 'ID',
+                    key: 'id',
+                    minWidth: 120,
+                    sortable: 'custom',
+                    searchable: true
+                },
+                {
                     title: that.$t('entity.name'),
                     key: 'name',
                     minWidth: 120,

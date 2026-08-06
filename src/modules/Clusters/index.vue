@@ -163,6 +163,10 @@ export default {
         this.getClusters();
     },
 
+    beforeDestroy() {
+        delete window.__goToRouteTableFromDeleteError;
+    },
+
     data() {
         return {
             tableLoading: false,
@@ -177,7 +181,8 @@ export default {
             instancePoolData: [],
             llmConfigData: {},
             originalLlmConfigKey: '',
-            originalLlmConfigHeaders: {}
+            originalLlmConfigHeaders: {},
+            deleteErrorRefs: []
         };
     },
 
@@ -267,22 +272,215 @@ export default {
                         url: this.$urlFormat('clusters/{cluster_name}', {
                             cluster_name: params.row.name
                         }),
-                        method: 'delete'
+                        method: 'delete',
+                        unneedTips: true
                     })
                         .then(data => {
                             if (data.status === 200) {
+                                this.$Modal.remove();
                                 this.getClusters();
                                 this.tableData.splice(params.index, 1);
                                 this.$Message.success({
                                     content: this.$t('com.tipDelSucc')
                                 });
+                            } else {
+                                this.showDeleteError(params.row.name, data);
                             }
                         })
-                        .finally(() => {
+                        .catch(() => {
                             this.$Modal.remove();
                         });
                 }
             });
+        },
+        showDeleteError(clusterName, res) {
+            // iview $Modal 为单例，remove 后 300ms 才真正销毁；
+            // 新弹框必须等销毁完成后创建，否则会被延迟销毁一并移除
+            const removeTime = Date.now();
+            this.$Modal.remove();
+            this.findClusterReferences(clusterName).then(refs => {
+                if (refs.length) {
+                    this.deleteErrorRefs = refs;
+                    window.__goToRouteTableFromDeleteError = index => {
+                        const ref = this.deleteErrorRefs[index];
+                        if (!ref) {
+                            return;
+                        }
+                        this.$Modal.remove();
+                        this.$router.push({
+                            name: 'AdvanceRouteRule.list',
+                            query: {
+                                type: ref.type,
+                                owner: ref.owner
+                            }
+                        });
+                    };
+                    const lines = refs
+                        .map((ref, index) => {
+                            const sentence = this.escapeHtml(
+                                this.$t('cluster.deleteBlockedByRule', {
+                                    cluster: clusterName,
+                                    table: this.buildRouteTableLabel(ref),
+                                    rule: ref.ruleName
+                                })
+                            );
+                            const linkText = this.escapeHtml(this.$t('cluster.goToHandle'));
+                            return (
+                                `<p style="margin: 8px 0;">${sentence}` +
+                                `<a href="javascript:void(0)" onclick="window.__goToRouteTableFromDeleteError(${index})">${linkText}</a>` +
+                                '</p>'
+                            );
+                        })
+                        .join('');
+                    const wait = Math.max(0, 350 - (Date.now() - removeTime));
+                    setTimeout(() => {
+                        this.$Modal.error({
+                            title: this.$t('com.tipError'),
+                            width: 560,
+                            content: `<div>${lines}</div>`
+                        });
+                    }, wait);
+                } else {
+                    const errMsg =
+                        (res && res.errMsg) ||
+                        (res.data && res.data.ErrMsg) ||
+                        this.$t('com.tipError');
+                    this.$Message.error(errMsg);
+                }
+            });
+        },
+        escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, c => {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                };
+                return map[c];
+            });
+        },
+        buildRouteTableLabel(ref) {
+            const typeLabels = {
+                global: 'Global',
+                entity: 'Entity',
+                api_key: 'API-Key'
+            };
+            const typeLabel = typeLabels[ref.type] || ref.type;
+            if (ref.type === 'global') {
+                return 'Global / Global';
+            }
+            const ownerLabel = ref.ownerLabel || ref.owner || '-';
+            return `${typeLabel} / ${ownerLabel}`;
+        },
+        findClusterReferences(clusterName) {
+            return this.$request({
+                url: 'route-tables',
+                method: 'get',
+                openapi: true,
+                unneedTips: true
+            })
+                .then(res => {
+                    if (res.status !== 200) {
+                        return [];
+                    }
+                    const list = ((res.data || {}).Data || {}).list || [];
+                    return this.fetchOwnerLabels(list).then(labelMap => {
+                        const jobs = list.map(row =>
+                            this.fetchTableRules(row).then(rules => {
+                                const matched = (rules || []).filter(rule => {
+                                    const inTargets = (rule.targets || []).some(
+                                        t => t.ClusterName === clusterName
+                                    );
+                                    const inFallbacks = (rule.fallbacks || []).some(
+                                        f => f.ClusterName === clusterName
+                                    );
+                                    return inTargets || inFallbacks;
+                                });
+                                return matched.map(rule => ({
+                                    type: row.type,
+                                    owner: row.owner,
+                                    ownerLabel: labelMap[`${row.type}:${row.owner}`],
+                                    ruleName: rule.name
+                                }));
+                            })
+                        );
+                        return Promise.all(jobs).then(results =>
+                            results.reduce((acc, cur) => acc.concat(cur), [])
+                        );
+                    });
+                })
+                .catch(() => []);
+        },
+        fetchOwnerLabels(tables) {
+            const needEntity = tables.some(row => row.type === 'entity');
+            const needApiKey = tables.some(row => row.type === 'api_key');
+            const jobs = [];
+            if (needEntity) {
+                jobs.push(
+                    this.$request({ url: 'entities', method: 'get', openapi: true, unneedTips: true })
+                        .then(res => {
+                            const map = {};
+                            if (res.status === 200) {
+                                (((res.data || {}).Data || {}).list || []).forEach(item => {
+                                    if (item && item.id != null) {
+                                        map[`entity:${item.id}`] = item.name || item.id;
+                                    }
+                                });
+                            }
+                            return map;
+                        })
+                        .catch(() => ({}))
+                );
+            } else {
+                jobs.push(Promise.resolve({}));
+            }
+            if (needApiKey) {
+                jobs.push(
+                    this.$request({ url: 'api-keys', method: 'get', openapi: true, unneedTips: true })
+                        .then(res => {
+                            const map = {};
+                            if (res.status === 200) {
+                                const data = ((res.data || {}).Data || {});
+                                const list = Array.isArray(data) ? data : data.list || [];
+                                list.forEach(item => {
+                                    const id = item.id || item.key_id || item.name;
+                                    if (id != null) {
+                                        map[`api_key:${id}`] = item.name || id;
+                                    }
+                                });
+                            }
+                            return map;
+                        })
+                        .catch(() => ({}))
+                );
+            } else {
+                jobs.push(Promise.resolve({}));
+            }
+            return Promise.all(jobs).then(maps =>
+                maps.reduce((acc, cur) => Object.assign(acc, cur), {})
+            );
+        },
+        fetchTableRules(row) {
+            const url =
+                row.type === 'global'
+                    ? 'global-route-rules'
+                    : row.type === 'entity'
+                        ? `entities/${row.owner}`
+                        : `api-keys/${row.owner}`;
+            return this.$request({ url, method: 'get', openapi: true, unneedTips: true })
+                .then(res => {
+                    if (res.status !== 200) {
+                        return [];
+                    }
+                    const data = ((res.data || {}).Data) || {};
+                    if (row.type === 'global') {
+                        return data.rules || [];
+                    }
+                    return (data.route_rules && data.route_rules.rules) || [];
+                })
+                .catch(() => []);
         },
         upsertSubmit() {
             this.getClusters();

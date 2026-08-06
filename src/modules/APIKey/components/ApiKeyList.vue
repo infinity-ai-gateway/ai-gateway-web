@@ -159,6 +159,7 @@ export default {
                     title: that.$t('apiKey.keyId'),
                     key: 'id',
                     minWidth: 120,
+                    searchable: true,
                     sortable: 'custom'
                 },
                 {
