@@ -159,6 +159,7 @@ export default {
                     title: that.$t('apiKey.keyId'),
                     key: 'id',
                     minWidth: 120,
+                    searchable: true,
                     sortable: 'custom'
                 },
                 {
@@ -225,7 +226,7 @@ export default {
                 },
                 {
                     title: that.$t('apiKey.quotaType'),
-                    key: 'quota_plan.unlimited',
+                    key: 'quota_plan_unlimited',
                     minWidth: 120,
                     sortable: 'custom',
                     searchable: true,
@@ -246,7 +247,7 @@ export default {
                 },
                 {
                     title: that.$t('apiKey.quota'),
-                    key: 'quota_plan',
+                    key: 'quota_plan_used',
                     minWidth: 140,
                     sortable: 'custom',
                     searchable: true,
@@ -283,7 +284,7 @@ export default {
                 },
                 {
                     title: that.$t('apiKey.mountedEntity'),
-                    key: 'entity',
+                    key: 'entity_name',
                     minWidth: 120,
                     searchable: true,
                     sortable: 'custom',
@@ -294,9 +295,28 @@ export default {
                 },
                 {
                     title: that.$t('com.operation'),
-                    width: 250,
+                    width: 300,
                     render(h, params) {
                         return h('div', [
+                            h(
+                                'Button',
+                                {
+                                    props: {
+                                        type: 'success',
+                                        size: 'small'
+                                    },
+                                    style: {
+                                        marginRight: '5px'
+                                    },
+                                    on: {
+                                        click: (e) => {
+                                            e.stopPropagation();
+                                            that.onManageRules(params.row);
+                                        }
+                                    }
+                                },
+                                that.$t('route.manageRouteRules')
+                            ),
                             h(
                                 'Button',
                                 {
@@ -393,6 +413,15 @@ export default {
             this.currentId = row.id;
             this.currentData = row;
             this.isHiden = true;
+        },
+        onManageRules(row) {
+            this.$router.push({
+                name: 'AdvanceRouteRule.list',
+                query: {
+                    type: 'apikey',
+                    owner: row.id
+                }
+            });
         },
         onView(row) {
             this.isAdd = false;
@@ -498,12 +527,20 @@ export default {
             })
                 .then(res => {
                     if (res.status === 200) {
-                        const data = res.data.Data;
-                        const list = data.list || data || [];
-                        this.tableData = list.map(item => ({
-                            ...item,
-                            rate_limit_policy_enabled: !!(item.rate_limit_policy && item.rate_limit_policy.enabled)
-                        }));
+                        const data = res.data.Data || {};
+                        const list = Array.isArray(data.list) ? data.list : [];
+                        this.tableData = list.map(item => {
+                            const quotaPlan = item.quota_plan || {};
+                            const entity = item.entity || {};
+                            const isUnlimited = quotaPlan.unlimited === true || quotaPlan.unlimited === 'true';
+                            return {
+                                ...item,
+                                rate_limit_policy_enabled: !!(item.rate_limit_policy && item.rate_limit_policy.enabled),
+                                quota_plan_unlimited: isUnlimited,
+                                quota_plan_used: (quotaPlan.balance && quotaPlan.balance.used) || 0,
+                                entity_name: entity.name || ''
+                            };
+                        });
                     }
                 })
                 .finally(() => {

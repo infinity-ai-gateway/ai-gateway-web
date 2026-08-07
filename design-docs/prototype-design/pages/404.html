@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/404.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/layout.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: '', breadcrumb: '404', basePath: '../' });
+  root.innerHTML =
+    '<div style="text-align:center;padding:80px 20px;">' +
+      '<h1 style="font-size:72px;margin:0;color:#dcdee2;">404</h1>' +
+      '<p style="color:#808695;margin:16px 0 24px;">抱歉，您访问的页面不存在</p>' +
+      IvuUI.btn('返回首页', 'primary', 'default', '', 'onclick="location.href=\'home.html\'"') +
+    '</div>';
+});
+</script>
+</body>
+</html>

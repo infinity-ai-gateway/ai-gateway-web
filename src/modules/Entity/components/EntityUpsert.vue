@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@
           v-model="formData.name"
           :disabled="!isAdd"
           :placeholder="$t('entity.namePlaceholder')"
-          :maxlength="64"
           show-word-limit
         ></Input>
       </FormItem>
@@ -204,14 +203,17 @@
     <Card :title="$t('entity.rateLimitConfig')" class="form-card">
       <Row :gutter="24">
         <Col span="12">
-          <FormItem>
+          <FormItem prop="rate_limit_policy.enabled">
             <span slot="label" class="rate-limit-label">
               {{ $t('entity.enableRateLimit') }}
               <Tooltip placement="top" transfer max-width="320">
                 <div slot="content" class="rate-limit-tip-content">
                   {{ $t('entity.enableRateLimitTip') }}
                 </div>
-                <Icon type="ios-help-circle-outline" class="rate-limit-help-icon" />
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="rate-limit-help-icon"
+                />
               </Tooltip>
             </span>
             <Select
@@ -246,8 +248,8 @@
               </Col>
               <Col span="4">
                 <FormItem
-                :label="$t('entity.applyModel')"
-                :prop="'rate_limit_policy.rules.tpm.' + index + '.model'"
+                  :label="$t('entity.applyModel')"
+                  :prop="'rate_limit_policy.rules.tpm.' + index + '.model'"
                 >
                   <el-select
                     v-model="rule.model"
@@ -297,7 +299,7 @@
                 >
                   <InputNumber
                     v-model="rule.max_tokens"
-                    :min="1"
+                    :min="0"
                     :precision="0"
                     :formatter="formatNumberInput"
                     :parser="parseNumberInput"
@@ -342,7 +344,7 @@
             icon="md-add"
             >{{ $t('entity.addRule') }}</Button
           >
-          </div>
+        </div>
 
         <div class="rules-section">
           <h4 class="rules-title">{{ $t('entity.rpmRules') }}</h4>
@@ -410,7 +412,7 @@
                 >
                   <InputNumber
                     v-model="rule.max_requests"
-                    :min="1"
+                    :min="0"
                     :max="INT64_MAX"
                     :precision="0"
                     :formatter="formatNumberInput"
@@ -449,9 +451,18 @@
                 style="width: 100%;"
                 @on-change="onMaxConcurrencyModeChange"
               >
-                <Option value="unlimited">{{ $t('entity.maxConcurrencyUnlimited') }}</Option>
-                <Option value="banned">{{ $t('entity.maxConcurrencyBanned') }}</Option>
-                <Option value="limited">{{ $t('entity.maxConcurrencyLimited') }}</Option>
+                <Option
+                  value="unlimited"
+                  >{{ $t('entity.maxConcurrencyUnlimited') }}</Option
+                >
+                <Option
+                  value="banned"
+                  >{{ $t('entity.maxConcurrencyBanned') }}</Option
+                >
+                <Option
+                  value="limited"
+                  >{{ $t('entity.maxConcurrencyLimited') }}</Option
+                >
               </Select>
               <FormItem
                 v-if="maxConcurrencyMode === 'limited'"
@@ -474,7 +485,6 @@
             </FormItem>
           </Col>
         </Row>
-        <FormItem prop="rate_limit_policy.enabled" class="rate-limit-policy-error" />
       </div>
     </Card>
 
@@ -526,6 +536,19 @@ export default {
                 callback(new Error(this.$t('entity.enterName')));
                 return;
             }
+            const trimmed = value.trim();
+            if (trimmed.length !== value.length) {
+                callback(new Error(this.$t('entity.nameLeadingTrailingWhitespace')));
+                return;
+            }
+            if (trimmed.length > 64) {
+                callback(new Error(this.$t('entity.nameLengthError')));
+                return;
+            }
+            if (/[\x00-\x1F\x7F]/.test(trimmed)) {
+                callback(new Error(this.$t('entity.nameControlCharsError')));
+                return;
+            }
             callback();
         };
 
@@ -561,7 +584,7 @@ export default {
             callback();
         };
 
-        // Validate rate limit policy (at least one rule required)
+        // Validate rate limit policy (at least one rule required; no duplicate combinations)
         const validateRateLimitPolicy = (rule, value, callback) => {
             if (that.formData.rate_limit_policy.enabled === 'true') {
                 const tpm = that.formData.rate_limit_policy.rules.tpm || [];
@@ -578,6 +601,20 @@ export default {
                     );
                 if (!hasTpmRules && !hasRpmRules && !hasEffectiveMaxConcurrency) {
                     callback(new Error(this.$t('entity.rateLimitRuleRequired')));
+                    return;
+                }
+
+                const tpmKeys = tpm.map(r => `${r.model || ''}|${r.window_minutes || 0}|${r.max_tokens || 0}|${r.step_minutes || 0}`);
+                const uniqueTpmKeys = [...new Set(tpmKeys)];
+                if (tpmKeys.length !== uniqueTpmKeys.length) {
+                    callback(new Error(this.$t('entity.tpmCombinationDuplicate')));
+                    return;
+                }
+
+                const rpmKeys = rpm.map(r => `${r.model || ''}|${r.window_minutes || 0}|${r.max_requests || 0}`);
+                const uniqueRpmKeys = [...new Set(rpmKeys)];
+                if (rpmKeys.length !== uniqueRpmKeys.length) {
+                    callback(new Error(this.$t('entity.rpmCombinationDuplicate')));
                     return;
                 }
             }
@@ -646,14 +683,14 @@ export default {
         parentEntityList() {
             if (!this.formData.type) return [];
             const currentType = this.entityTypeList.find(
-                t => t.type_name === this.formData.type
+                t => t && t.type_name === this.formData.type
             );
             if (!currentType) return [];
             const currentLevel = currentType.level;
             return this.entityList.filter(entity => {
-                if (entity.id === this.currentData.id) return false; // Cannot select self
+                if (!entity || entity.id === this.currentData.id) return false;
                 const entityType = this.entityTypeList.find(
-                    t => t.type_name === entity.type
+                    t => t && t.type_name === entity.type
                 );
                 return entityType && entityType.level < currentLevel;
             });
@@ -780,7 +817,9 @@ export default {
                 openapi: true
             }).then(data => {
                 if (data.status === 200) {
-                    this.entityTypeList = data.data.Data.list || data.data.Data || [];
+                    const list = data.data.Data?.list || data.data.Data || [];
+                    this.entityTypeList = (Array.isArray(list) ? list : [])
+                        .filter(item => item && item.type_name);
                 }
             }).catch(() => {
                 this.entityTypeList = [];
@@ -789,13 +828,18 @@ export default {
 
         fetchModelServices() {
             this.$request({
-                url: 'global-models',
+                url: 'clusters',
                 method: 'get',
                 openapi: true
             }).then(data => {
                 if (data.status === 200) {
-                    const services = data.data.Data.services || [];
-                    this.modelServices = services;
+                    const clusters = data.data.Data || [];
+                    this.modelServices = clusters
+                        .filter(cluster => cluster.llm_config && cluster.llm_config.models && cluster.llm_config.models.length > 0)
+                        .map(cluster => ({
+                            cluster_name: cluster.name,
+                            models: cluster.llm_config.models
+                        }));
                     // After model list loads, if in edit mode, reformat model fields to ensure proper display
                     if (!this.isAdd && this.formData && this.formData.id) {
                         this.normalizeModelFields();
@@ -999,6 +1043,10 @@ export default {
                 return;
             }
             const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
+            if (value === null || value === undefined || value === '') {
+                callback(new Error(this.$t('entity.tpmWindowMinutesRequired', { index })));
+                return;
+            }
             if (!Number.isFinite(value) || value < 1 || value > 360) {
                 callback(new Error(this.$t('entity.tpmWindowMinutesInvalid', { index })));
                 return;
@@ -1016,7 +1064,7 @@ export default {
                 callback(new Error(this.$t('entity.tpmMaxTokensRequired', { index })));
                 return;
             }
-            if (!Number.isFinite(value) || value < 1) {
+            if (!Number.isFinite(value) || value < 0) {
                 callback(new Error(this.$t('entity.tpmMaxTokensInvalid', { index })));
                 return;
             }
@@ -1059,6 +1107,10 @@ export default {
                 return;
             }
             const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
+            if (value === null || value === undefined || value === '') {
+                callback(new Error(this.$t('entity.rpmWindowMinutesRequired', { index })));
+                return;
+            }
             if (!Number.isFinite(value) || value < 1 || value > 360) {
                 callback(new Error(this.$t('entity.rpmWindowMinutesInvalid', { index })));
                 return;
@@ -1076,7 +1128,7 @@ export default {
                 callback(new Error(this.$t('entity.rpmMaxRequestsRequired', { index })));
                 return;
             }
-            if (!Number.isFinite(value) || value < 1) {
+            if (!Number.isFinite(value) || value < 0) {
                 callback(new Error(this.$t('entity.rpmMaxRequestsInvalid', { index })));
                 return;
             }
@@ -1092,15 +1144,20 @@ export default {
                 callback();
                 return;
             }
-            if (value === null || value === undefined || String(value).trim() === '') {
+            const trimmed = String(value || '').trim();
+            if (trimmed === '') {
                 const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'tpm') + 1;
                 callback(new Error(this.$t('entity.tpmRuleNameRequired', { index })));
                 return;
             }
+            if (trimmed.length < 1 || trimmed.length > 128) {
+                callback(new Error(this.$t('entity.ruleNameLengthError')));
+                return;
+            }
             const tpm = this.formData.rate_limit_policy.rules.tpm || [];
-            const count = tpm.filter(r => r.name === value.trim()).length;
+            const count = tpm.filter(r => r.name === trimmed).length;
             if (count > 1) {
-                callback(new Error(this.$t('entity.ruleNameDuplicate', { name: value.trim() })));
+                callback(new Error(this.$t('entity.ruleNameDuplicate', { name: trimmed })));
                 return;
             }
             callback();
@@ -1111,15 +1168,20 @@ export default {
                 callback();
                 return;
             }
-            if (value === null || value === undefined || String(value).trim() === '') {
+            const trimmed = String(value || '').trim();
+            if (trimmed === '') {
                 const index = this.getRuleFieldIndex(this.getRuleFieldPath(rule), 'rpm') + 1;
                 callback(new Error(this.$t('entity.rpmRuleNameRequired', { index })));
                 return;
             }
+            if (trimmed.length < 1 || trimmed.length > 128) {
+                callback(new Error(this.$t('entity.ruleNameLengthError')));
+                return;
+            }
             const rpm = this.formData.rate_limit_policy.rules.rpm || [];
-            const count = rpm.filter(r => r.name === value.trim()).length;
+            const count = rpm.filter(r => r.name === trimmed).length;
             if (count > 1) {
-                callback(new Error(this.$t('entity.ruleNameDuplicate', { name: value.trim() })));
+                callback(new Error(this.$t('entity.ruleNameDuplicate', { name: trimmed })));
                 return;
             }
             callback();

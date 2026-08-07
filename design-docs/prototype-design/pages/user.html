@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/user.css" />
+  <link rel="stylesheet" href="../assets/font/iconfont.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/user-upsert.js"></script>
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/prototype.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: 'user.list', basePath: '../' });
+  var userContent =
+    '<div class="title user-page">' +
+      IvuUI.btn('添加用户', 'primary', 'small', 'add-button', 'id="btn-user-add"') +
+    '</div>' +
+    '<div id="user-table"></div>';
+  var tokenContent =
+    '<div class="title user-page">' +
+      IvuUI.btn('创建', 'primary', 'small', 'add-button', 'id="btn-token-add"') +
+    '</div>' +
+    '<div class="ivu-alert ivu-alert-info ivu-alert-with-icon user-token-alert">' +
+      '<span class="ivu-alert-icon"><i class="ivu-icon ivu-icon-ios-information-circle"></i></span>' +
+      '<span class="ivu-alert-message">Token 是内部程序访问APIServer的鉴权凭证，请按需创建，谨慎删除</span>' +
+    '</div>' +
+    '<div id="token-table"></div>';
+
+  root.innerHTML =
+    IvuUI.tabs([
+      { name: 'User', label: '用户' },
+      { name: 'Token', label: 'Token' }
+    ], IvuUI.tabPane('User', userContent, true) + IvuUI.tabPane('Token', tokenContent, false)) +
+    UserUpsert.drawerUser() +
+    UserUpsert.drawerTokenCreate() +
+    UserUpsert.drawerTokenDetail();
+
+  Prototype.initTabs(root);
+
+  var userState = {
+    rows: cloneRows(MockData.users),
+    filteredRows: [],
+    search: { user_name: '' },
+    pageSize: 20,
+    currentPage: 1,
+    drawerMode: 'create',
+    currentRow: null
+  };
+
+  var tokenState = {
+    rows: cloneRows(MockData.tokens),
+    pageSize: 20,
+    currentPage: 1
+  };
+
+  function cloneRows(list) {
+    return JSON.parse(JSON.stringify(list || []));
+  }
+
+  function filterUserRows() {
+    userState.filteredRows = userState.rows.filter(function (row) {
+      var keyword = String(userState.search.user_name || '').trim().toUpperCase();
+      if (!keyword) return true;
+      return String(row.user_name || '').toUpperCase().indexOf(keyword) !== -1;
+    });
+  }
+
+  function getUserPageRows() {
+    var start = (userState.currentPage - 1) * userState.pageSize;
+    return userState.filteredRows.slice(start, start + userState.pageSize);
+  }
+
+  function getTokenPageRows() {
+    var start = (tokenState.currentPage - 1) * tokenState.pageSize;
+    return tokenState.rows.slice(start, start + tokenState.pageSize);
+  }
+
+  function findUserRowIndex(row) {
+    if (!row) return -1;
+    return userState.rows.findIndex(function (item) {
+      return item.user_name === row.user_name;
+    });
+  }
+
+  function setUserDrawerTitle(mode) {
+    var titleEl = document.querySelector('#drawer-user .ivu-drawer-header-inner');
+    if (titleEl) titleEl.textContent = mode === 'create' ? '添加用户' : '修改密码';
+  }
+
+  function toggleUserDrawerFooter(mode) {
+    var createFooter = document.getElementById('user-drawer-footer-create');
+    var passwordFooter = document.getElementById('user-drawer-footer-password');
+    if (createFooter) createFooter.classList.toggle('proto-hidden', mode !== 'create');
+    if (passwordFooter) passwordFooter.classList.toggle('proto-hidden', mode !== 'updatePassword');
+  }
+
+  function fillCreateUserForm() {
+    var nameEl = document.getElementById('user-create-name');
+    var passwordEl = document.getElementById('user-create-password');
+    var confirmEl = document.getElementById('user-create-confirm');
+    if (nameEl) nameEl.value = '';
+    if (passwordEl) passwordEl.value = '';
+    if (confirmEl) confirmEl.value = '';
+  }
+
+  function fillUpdatePasswordForm(row) {
+    row = row || {};
+    var currentUser = Prototype.getUser();
+    var showOldPassword = row.user_name === currentUser.name;
+    var bodyEl = document.querySelector('#drawer-user .ivu-drawer-body');
+    if (bodyEl) bodyEl.innerHTML = UserUpsert.updatePasswordBody(row, showOldPassword);
+  }
+
+  function openUserDrawer(mode, filteredIndex) {
+    userState.drawerMode = mode;
+    userState.currentRow = null;
+    setUserDrawerTitle(mode);
+    toggleUserDrawerFooter(mode);
+    if (mode === 'create') {
+      var bodyEl = document.querySelector('#drawer-user .ivu-drawer-body');
+      if (bodyEl) bodyEl.innerHTML = UserUpsert.createUserBody();
+      fillCreateUserForm();
+    } else {
+      var row = userState.filteredRows[filteredIndex];
+      if (!row) return;
+      userState.currentRow = userState.rows[findUserRowIndex(row)] || row;
+      fillUpdatePasswordForm(userState.currentRow);
+    }
+    Prototype.openDrawer('drawer-user');
+  }
+
+  function renderUserTable() {
+    filterUserRows();
+    var totalPages = Math.max(1, Math.ceil(userState.filteredRows.length / userState.pageSize));
+    if (userState.currentPage > totalPages) userState.currentPage = totalPages;
+
+    document.getElementById('user-table').innerHTML = IvuUI.pageTable({
+      tableId: 'user-page-table',
+      columns: [
+        { title: '用户', key: 'user_name', minWidth: 160, searchable: true, sortable: true, searchPlaceholder: '请输入用户查询' },
+        {
+          title: '角色', key: 'is_admin', minWidth: 120,
+          render: function (row) { return UserUpsert.roleLabel(!!row.is_admin); }
+        },
+        {
+          title: '操作', key: 'action', width: 220,
+          render: function (row, rowIndex) {
+            var pageStart = (userState.currentPage - 1) * userState.pageSize;
+            return IvuUI.btn('修改密码', 'primary', 'small', '', 'data-user-password="' + (pageStart + rowIndex) + '"') + ' ' +
+              IvuUI.btn('删除', 'error', 'small', '', 'data-user-delete="' + (pageStart + rowIndex) + '"');
+          }
+        }
+      ],
+      rows: getUserPageRows(),
+      total: userState.filteredRows.length,
+      pageSize: userState.pageSize,
+      currentPage: userState.currentPage,
+      searchValues: userState.search
+    });
+
+    bindUserTableEvents();
+  }
+
+  function bindUserTableEvents() {
+    var tableRoot = document.getElementById('user-page-table');
+    if (!tableRoot) return;
+
+    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+      userState.search[key] = value;
+      userState.currentPage = 1;
+      renderUserTable();
+    });
+
+    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+      item.onclick = function () {
+        userState.currentPage = parseInt(item.getAttribute('data-page'), 10);
+        renderUserTable();
+      };
+    });
+
+    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+    if (sizeSelect) {
+      sizeSelect.onchange = function () {
+        userState.pageSize = parseInt(sizeSelect.value, 10);
+        userState.currentPage = 1;
+        renderUserTable();
+      };
+    }
+
+    var prevBtn = tableRoot.querySelector('.proto-page-prev');
+    if (prevBtn) {
+      prevBtn.onclick = function () {
+        if (userState.currentPage > 1) {
+          userState.currentPage -= 1;
+          renderUserTable();
+        }
+      };
+    }
+
+    var nextBtn = tableRoot.querySelector('.proto-page-next');
+    if (nextBtn) {
+      nextBtn.onclick = function () {
+        var totalPages = Math.max(1, Math.ceil(userState.filteredRows.length / userState.pageSize));
+        if (userState.currentPage < totalPages) {
+          userState.currentPage += 1;
+          renderUserTable();
+        }
+      };
+    }
+
+    tableRoot.querySelectorAll('[data-user-password]').forEach(function (btn) {
+      btn.onclick = function () {
+        openUserDrawer('updatePassword', parseInt(btn.getAttribute('data-user-password'), 10));
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-user-delete]').forEach(function (btn) {
+      btn.onclick = function () {
+        var index = parseInt(btn.getAttribute('data-user-delete'), 10);
+        var row = userState.filteredRows[index];
+        if (!row) return;
+        Prototype.confirm({
+          title: '信息提示',
+          content: '是否删除用户' + (row.user_name || '') + '?',
+          onOk: function () {
+            var rowIndex = findUserRowIndex(row);
+            if (rowIndex >= 0) userState.rows.splice(rowIndex, 1);
+            renderUserTable();
+            Prototype.toast('删除成功!');
+          },
+          onCancel: function () {
+            Prototype.toast('取消操作', 'info');
+          }
+        });
+      };
+    });
+  }
+
+  function renderTokenTable() {
+    var totalPages = Math.max(1, Math.ceil(tokenState.rows.length / tokenState.pageSize));
+    if (tokenState.currentPage > totalPages) tokenState.currentPage = totalPages;
+
+    document.getElementById('token-table').innerHTML = IvuUI.pageTable({
+      tableId: 'token-page-table',
+      columns: [
+        { title: '名称', key: 'name', minWidth: 180 },
+        {
+          title: 'scope', key: 'scope', minWidth: 140,
+          render: function (row) { return UserUpsert.scopeLabel(row.scope); }
+        },
+        {
+          title: '操作', key: 'action', width: 180,
+          render: function (row, rowIndex) {
+            var pageStart = (tokenState.currentPage - 1) * tokenState.pageSize;
+            return IvuUI.btn('详情', 'primary', 'small', '', 'data-token-detail="' + (pageStart + rowIndex) + '"') + ' ' +
+              IvuUI.btn('删除', 'error', 'small', '', 'data-token-delete="' + (pageStart + rowIndex) + '"');
+          }
+        }
+      ],
+      rows: getTokenPageRows(),
+      total: tokenState.rows.length,
+      pageSize: tokenState.pageSize,
+      currentPage: tokenState.currentPage
+    });
+
+    bindTokenTableEvents();
+  }
+
+  function bindTokenTableEvents() {
+    var tableRoot = document.getElementById('token-page-table');
+    if (!tableRoot) return;
+
+    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+      item.onclick = function () {
+        tokenState.currentPage = parseInt(item.getAttribute('data-page'), 10);
+        renderTokenTable();
+      };
+    });
+
+    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+    if (sizeSelect) {
+      sizeSelect.onchange = function () {
+        tokenState.pageSize = parseInt(sizeSelect.value, 10);
+        tokenState.currentPage = 1;
+        renderTokenTable();
+      };
+    }
+
+    var prevBtn = tableRoot.querySelector('.proto-page-prev');
+    if (prevBtn) {
+      prevBtn.onclick = function () {
+        if (tokenState.currentPage > 1) {
+          tokenState.currentPage -= 1;
+          renderTokenTable();
+        }
+      };
+    }
+
+    var nextBtn = tableRoot.querySelector('.proto-page-next');
+    if (nextBtn) {
+      nextBtn.onclick = function () {
+        var totalPages = Math.max(1, Math.ceil(tokenState.rows.length / tokenState.pageSize));
+        if (tokenState.currentPage < totalPages) {
+          tokenState.currentPage += 1;
+          renderTokenTable();
+        }
+      };
+    }
+
+    tableRoot.querySelectorAll('[data-token-detail]').forEach(function (btn) {
+      btn.onclick = function () {
+        var index = parseInt(btn.getAttribute('data-token-detail'), 10);
+        var row = tokenState.rows[index];
+        if (!row) return;
+        var bodyEl = document.querySelector('#drawer-token-detail .ivu-drawer-body');
+        if (bodyEl) bodyEl.innerHTML = UserUpsert.tokenDetailBody(row);
+        Prototype.openDrawer('drawer-token-detail');
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-token-delete]').forEach(function (btn) {
+      btn.onclick = function () {
+        var index = parseInt(btn.getAttribute('data-token-delete'), 10);
+        var row = tokenState.rows[index];
+        if (!row) return;
+        Prototype.confirm({
+          title: '信息提示',
+          content: '是否删除' + (row.name || '') + '?',
+          onOk: function () {
+            tokenState.rows.splice(index, 1);
+            renderTokenTable();
+            Prototype.toast('删除成功!');
+          },
+          onCancel: function () {
+            Prototype.toast('取消操作', 'info');
+          }
+        });
+      };
+    });
+  }
+
+  function fillCreateTokenForm() {
+    var nameEl = document.getElementById('token-create-name');
+    if (nameEl) nameEl.value = '';
+    document.querySelectorAll('input[name="token-scope"]').forEach(function (radio) {
+      radio.checked = false;
+    });
+  }
+
+  function openTokenCreateDrawer() {
+    var bodyEl = document.querySelector('#drawer-token-create .ivu-drawer-body');
+    if (bodyEl) bodyEl.innerHTML = UserUpsert.createTokenBody();
+    fillCreateTokenForm();
+    Prototype.openDrawer('drawer-token-create');
+  }
+
+  document.getElementById('btn-user-add').addEventListener('click', function () {
+    openUserDrawer('create');
+  });
+
+  document.getElementById('btn-token-add').addEventListener('click', function () {
+    openTokenCreateDrawer();
+  });
+
+  document.getElementById('btn-user-create-submit').addEventListener('click', function () {
+    var userName = (document.getElementById('user-create-name') || {}).value || '';
+    var password = (document.getElementById('user-create-password') || {}).value || '';
+    var confirmPass = (document.getElementById('user-create-confirm') || {}).value || '';
+    userName = userName.trim();
+    if (!userName) {
+      Prototype.toast('请输入用户名', 'error');
+      return;
+    }
+    if (!password) {
+      Prototype.toast('请输入密码', 'error');
+      return;
+    }
+    if (!confirmPass) {
+      Prototype.toast('请再次确认密码', 'error');
+      return;
+    }
+    if (password !== confirmPass) {
+      Prototype.toast('两次密码输入不一致，请重新输入', 'error');
+      return;
+    }
+    if (userState.rows.some(function (item) { return item.user_name === userName; })) {
+      Prototype.toast('用户名已存在', 'error');
+      return;
+    }
+    userState.rows.unshift({ user_name: userName, is_admin: true });
+    Prototype.closeDrawer('drawer-user');
+    renderUserTable();
+    Prototype.toast('添加成功！');
+  });
+
+  document.getElementById('btn-user-create-reset').addEventListener('click', function () {
+    fillCreateUserForm();
+  });
+
+  document.getElementById('btn-user-password-submit').addEventListener('click', function () {
+    var row = userState.currentRow;
+    if (!row) return;
+    var currentUser = Prototype.getUser();
+    var showOldPassword = row.user_name === currentUser.name;
+    var newPassword = (document.getElementById('user-password-new') || {}).value || '';
+    var confirmPass = (document.getElementById('user-password-confirm') || {}).value || '';
+    if (showOldPassword) {
+      var oldPassword = (document.getElementById('user-password-old') || {}).value || '';
+      if (!oldPassword) {
+        Prototype.toast('请输入原密码', 'error');
+        return;
+      }
+    }
+    if (!newPassword) {
+      Prototype.toast('请输入新密码', 'error');
+      return;
+    }
+    if (!confirmPass) {
+      Prototype.toast('请再次确认密码', 'error');
+      return;
+    }
+    if (newPassword !== confirmPass) {
+      Prototype.toast('两次密码输入不一致，请重新输入', 'error');
+      return;
+    }
+    Prototype.closeDrawer('drawer-user');
+    Prototype.toast('修改密码成功！');
+    if (showOldPassword) {
+      Prototype.confirm({
+        title: '提示',
+        content: '当前用户密码已修改请重新登录',
+        onOk: function () {
+          Prototype.removeUser();
+          location.href = '../login.html';
+        }
+      });
+    }
+  });
+
+  document.getElementById('btn-user-password-cancel').addEventListener('click', function () {
+    Prototype.closeDrawer('drawer-user');
+  });
+
+  document.getElementById('btn-token-create-submit').addEventListener('click', function () {
+    var name = ((document.getElementById('token-create-name') || {}).value || '').trim();
+    var scopeInput = document.querySelector('input[name="token-scope"]:checked');
+    if (!name) {
+      Prototype.toast('请输入名称', 'error');
+      return;
+    }
+    if (!scopeInput) {
+      Prototype.toast('请选择角色', 'error');
+      return;
+    }
+    if (tokenState.rows.some(function (item) { return item.name === name; })) {
+      Prototype.toast('名称已存在', 'error');
+      return;
+    }
+    tokenState.rows.unshift({
+      name: name,
+      scope: scopeInput.value,
+      token: 'mock-token-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now()
+    });
+    Prototype.closeDrawer('drawer-token-create');
+    renderTokenTable();
+    Prototype.toast('创建成功！');
+  });
+
+  document.getElementById('btn-token-create-reset').addEventListener('click', function () {
+    fillCreateTokenForm();
+  });
+
+  Prototype.bindDrawerClose();
+  renderUserTable();
+  renderTokenTable();
+});
+</script>
+</body>
+</html>

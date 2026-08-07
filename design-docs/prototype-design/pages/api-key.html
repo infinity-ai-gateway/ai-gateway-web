@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/APIKey.css" />
+  <link rel="stylesheet" href="../assets/font/iconfont.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/api-key-upsert.js"></script>
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/prototype.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: 'APIKey.list', basePath: '../' });
+  var listContent =
+    '<div class="title api-key-page">' +
+      IvuUI.btn('创建', 'primary', 'small', '', 'id="btn-api-add"') +
+    '</div>' +
+    '<div id="api-table"></div>';
+
+  root.innerHTML =
+    IvuUI.tabs([{ name: 'apikey', label: 'API-Key' }], IvuUI.tabPane('apikey', listContent, true)) +
+    ApiKeyUpsert.drawer('add', {}) +
+    ApiKeyUpsert.keyModal() +
+    ApiKeyUpsert.resetQuotaModal();
+
+  Prototype.initTabs(root);
+
+  var state = {
+    rows: cloneRows(MockData.apiKeys),
+    filteredRows: [],
+    search: { key: '', description: '', enabled: '', unlimited_quota: '', quota_plan: '', rate_limit_policy_enabled: '', entity: '' },
+    pageSize: 20,
+    currentPage: 1,
+    drawerMode: 'add',
+    currentRow: null,
+    currentId: ''
+  };
+
+  function cloneRows(list) {
+    return JSON.parse(JSON.stringify(list || []));
+  }
+
+  function filterRows() {
+    state.filteredRows = state.rows.filter(function (row) {
+      return Object.keys(state.search).every(function (key) {
+        var keyword = String(state.search[key] || '').trim().toUpperCase();
+        if (!keyword) return true;
+        if (key === 'key') return String(row.key || '').toUpperCase().indexOf(keyword) !== -1;
+        if (key === 'description') return String(row.description || '').toUpperCase().indexOf(keyword) !== -1;
+        if (key === 'entity') return String((row.entity && row.entity.name) || '').toUpperCase().indexOf(keyword) !== -1;
+        if (key === 'enabled') return String(!!row.enabled) === keyword;
+        if (key === 'unlimited_quota') return String(!!row.unlimited_quota) === keyword;
+        if (key === 'rate_limit_policy_enabled') {
+          var enabled = !!(row.rate_limit_policy && row.rate_limit_policy.enabled);
+          return String(enabled) === keyword;
+        }
+        if (key === 'quota_plan') return ApiKeyUpsert.formatQuota(row).toUpperCase().indexOf(keyword) !== -1;
+        return true;
+      });
+    });
+  }
+
+  function getPageRows() {
+    var start = (state.currentPage - 1) * state.pageSize;
+    return state.filteredRows.slice(start, start + state.pageSize);
+  }
+
+  function renderTable() {
+    filterRows();
+    var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+    if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+    document.getElementById('api-table').innerHTML = IvuUI.pageTable({
+      tableId: 'api-page-table',
+      columns: [
+        { title: 'Key标识', key: 'id', minWidth: 120, sortable: true },
+        {
+          title: 'Key值', key: 'key', minWidth: 160, searchable: true, searchPlaceholder: '请输入Key值查询',
+          render: function (row) {
+            return '<a href="#" class="proto-api-key-link" data-key="' + IvuUI.escapeHtml(row.key || '') + '" onclick="return false;">' +
+              ApiKeyUpsert.maskKey(row.key) + '</a>';
+          }
+        },
+        { title: '描述', key: 'description', minWidth: 180, searchable: true, searchPlaceholder: '请输入描述查询', sortable: true },
+        {
+          title: '状态', key: 'enabled', minWidth: 120, searchable: true, sortable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择状态',
+          searchFilters: [
+            { label: '启用', value: 'true' },
+            { label: '停用', value: 'false' }
+          ],
+          render: function (row) {
+            return IvuUI.tag(row.enabled ? '启用' : '停用', row.enabled ? 'success' : 'default');
+          }
+        },
+        {
+          title: '配额类型', key: 'unlimited_quota', minWidth: 120, searchable: true, sortable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择配额类型',
+          searchFilters: [
+            { label: '无限', value: 'true' },
+            { label: '有限', value: 'false' }
+          ],
+          render: function (row) {
+            return IvuUI.tag(row.unlimited_quota ? '无限' : '有限', row.unlimited_quota ? 'default' : 'primary');
+          }
+        },
+        { title: '配额', key: 'quota_plan', minWidth: 140, searchable: true, sortable: true, render: function (row) { return ApiKeyUpsert.formatQuota(row); } },
+        {
+          title: '限流状态', key: 'rate_limit_policy_enabled', minWidth: 120, searchable: true, sortable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择限流状态',
+          searchFilters: [
+            { label: '已启用', value: 'true' },
+            { label: '未启用', value: 'false' }
+          ],
+          render: function (row) {
+            var enabled = !!(row.rate_limit_policy && row.rate_limit_policy.enabled);
+            return IvuUI.tag(enabled ? '已启用' : '未启用', enabled ? 'success' : 'default');
+          }
+        },
+        {
+          title: '挂载Entity', key: 'entity', minWidth: 120, searchable: true, searchPlaceholder: '请输入挂载Entity查询', sortable: true,
+          render: function (row) { return (row.entity && row.entity.name) || '-'; }
+        },
+        {
+          title: '操作', key: 'action', width: 250,
+          render: function (row, rowIndex) {
+            var pageStart = (state.currentPage - 1) * state.pageSize;
+            var globalIndex = pageStart + rowIndex;
+            return IvuUI.btn('编辑', 'primary', 'small', '', 'data-api-edit="' + globalIndex + '"') + ' ' +
+              IvuUI.btn('删除', 'error', 'small', '', 'data-api-delete="' + globalIndex + '"');
+          }
+        }
+      ],
+      rows: getPageRows(),
+      total: state.filteredRows.length,
+      pageSize: state.pageSize,
+      currentPage: state.currentPage,
+      searchValues: state.search
+    });
+
+    bindTableEvents();
+  }
+
+  function bindTableEvents() {
+    var tableRoot = document.getElementById('api-page-table');
+    if (!tableRoot) return;
+
+    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+      state.search[key] = value;
+      state.currentPage = 1;
+      renderTable();
+    });
+
+    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+      item.onclick = function () {
+        state.currentPage = parseInt(item.getAttribute('data-page'), 10);
+        renderTable();
+      };
+    });
+
+    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+    if (sizeSelect) {
+      sizeSelect.onchange = function () {
+        state.pageSize = parseInt(sizeSelect.value, 10);
+        state.currentPage = 1;
+        renderTable();
+      };
+    }
+
+    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+      btn.onclick = function () {
+        if (state.currentPage > 1) { state.currentPage -= 1; renderTable(); }
+      };
+    });
+    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
+      btn.onclick = function () {
+        var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+        if (state.currentPage < totalPages) { state.currentPage += 1; renderTable(); }
+      };
+    });
+
+    tableRoot.querySelectorAll('.proto-api-key-link').forEach(function (link) {
+      link.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openKeyModal(link.getAttribute('data-key'));
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-api-edit]').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        openDrawer('edit', parseInt(btn.getAttribute('data-api-edit'), 10));
+      };
+    });
+
+    tableRoot.querySelectorAll('[data-api-delete]').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        var index = parseInt(btn.getAttribute('data-api-delete'), 10);
+        var row = state.rows[index];
+        Prototype.confirm({
+          content: Prototype.t('com.confirmDelX', {
+            obj: Prototype.t('nav.APIKeyManage') + ' ' + (row.description || '')
+          }),
+          onOk: function () {
+            state.rows.splice(index, 1);
+            renderTable();
+            Prototype.toast(Prototype.t('com.tipDelSucc'));
+          }
+        });
+      };
+    });
+
+    tableRoot.querySelectorAll('.show-iView-Table .ivu-table-tbody tr').forEach(function (tr, rowIndex) {
+      tr.style.cursor = 'pointer';
+      tr.onclick = function (e) {
+        if (e.target.closest('button') || e.target.closest('.proto-api-key-link')) return;
+        var pageStart = (state.currentPage - 1) * state.pageSize;
+        openDrawer('view', pageStart + rowIndex);
+      };
+    });
+  }
+
+  function mountDrawer(mode, data) {
+    var wrap = document.getElementById('drawer-api-key');
+    if (wrap) wrap.remove();
+    document.getElementById('product-body').insertAdjacentHTML('beforeend', ApiKeyUpsert.drawer(mode, data));
+    bindDrawerActions();
+  }
+
+  function openDrawer(mode, index) {
+    state.drawerMode = mode;
+    state.currentRow = typeof index === 'number' ? state.rows[index] : null;
+    state.currentId = state.currentRow ? state.currentRow.id : '';
+    mountDrawer(mode, state.currentRow || {});
+    Prototype.openDrawer('drawer-api-key');
+  }
+
+  function openKeyModal(key) {
+    var input = document.getElementById('modal-api-key-input');
+    if (input) input.value = key || '';
+    Prototype.openModal('modal-api-key-value');
+  }
+
+  function openResetQuotaModal() {
+    var plan = state.currentRow && state.currentRow.quota_plan;
+    var quotaInput = document.getElementById('modal-reset-quota-total');
+    var reasonInput = document.getElementById('modal-reset-quota-reason');
+    if (quotaInput) quotaInput.value = plan && plan.quota != null ? plan.quota : 0;
+    if (reasonInput) reasonInput.value = '';
+    Prototype.openModal('modal-api-reset-quota');
+  }
+
+  function confirmResetQuota() {
+    var quotaInput = document.getElementById('modal-reset-quota-total');
+    var newQuota = quotaInput ? parseInt(quotaInput.value, 10) : NaN;
+    if (!quotaInput || quotaInput.value === '' || isNaN(newQuota)) {
+      Prototype.toast('请输入配额总量');
+      return;
+    }
+    if (newQuota < 0) {
+      Prototype.toast('配额总量不能为负数');
+      return;
+    }
+    if (!state.currentRow) return;
+    if (!state.currentRow.quota_plan) state.currentRow.quota_plan = {};
+    state.currentRow.quota_plan.quota = newQuota;
+    state.currentRow.quota_plan.unlimited = false;
+    state.currentRow.unlimited_quota = false;
+    if (!state.currentRow.quota_plan.balance) state.currentRow.quota_plan.balance = {};
+    state.currentRow.quota_plan.balance.used = 0;
+    Prototype.closeModal('modal-api-reset-quota');
+    Prototype.toast('配额重置成功！');
+    mountDrawer('view', state.currentRow);
+    Prototype.openDrawer('drawer-api-key');
+    renderTable();
+  }
+
+  function bindDrawerActions() {
+    var cancelBtn = document.getElementById('btn-api-cancel');
+    var closeBtn = document.getElementById('btn-api-close');
+    var submitBtn = document.getElementById('btn-api-submit');
+    if (cancelBtn) cancelBtn.onclick = function () { Prototype.closeDrawer('drawer-api-key'); };
+    if (closeBtn) closeBtn.onclick = function () { Prototype.closeDrawer('drawer-api-key'); };
+    if (submitBtn) {
+      submitBtn.onclick = function () {
+        Prototype.closeDrawer('drawer-api-key');
+        Prototype.toast(state.drawerMode === 'add' ? '添加成功！' : '编辑成功！');
+      };
+    }
+    if (state.drawerMode !== 'view' && typeof ApiKeyUpsert.initUpsertForm === 'function') {
+      ApiKeyUpsert.initUpsertForm();
+    }
+    var resetBtn = document.getElementById('btn-api-reset-quota');
+    if (resetBtn) resetBtn.onclick = openResetQuotaModal;
+  }
+
+  document.getElementById('btn-api-add').addEventListener('click', function () {
+    openDrawer('add');
+  });
+
+  document.addEventListener('click', function (e) {
+    var confirmBtn = e.target.closest ? e.target.closest('#btn-api-reset-quota-confirm') : null;
+    if (confirmBtn) {
+      e.preventDefault();
+      confirmResetQuota();
+      return;
+    }
+    if (e.target.id === 'btn-api-copy-key') {
+      var val = document.getElementById('modal-api-key-input').value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(val).then(function () { Prototype.toast('文本已复制到粘贴板！'); });
+      } else {
+        Prototype.toast('文本已复制到粘贴板！');
+      }
+    }
+  });
+
+  Prototype.bindDrawerClose();
+  Prototype.bindModalClose();
+  bindDrawerActions();
+  renderTable();
+});
+</script>
+</body>
+</html>

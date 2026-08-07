@@ -34,10 +34,16 @@
 * @returns {boolean} - 返回检查结果，true表示符合规范，false表示不符合规范
 */
 export function ClustersNameRegCheck(value) {
-  // Define regex: must start with letter or digit, followed by letters, digits, hyphens, dots or underscores
-  const reg = /^[A-Za-z0-9][A-Za-z0-9-._]{1,}$/;
-  // Test input with regex and return result
-  return reg.test(value);
+  // ClusterName: 1-64 chars; letters, digits, _, -, .; cannot start/end with ., -, _; no whitespace
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 1 || trimmed.length > 64) {
+    return false;
+  }
+  const reg = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/;
+  return reg.test(trimmed);
 }
 
 export function BaseClustersNameRegCheck(value) {
@@ -143,14 +149,76 @@ export function VIpRegCheck(value) {
 }
 
 export function UserNameRegCheck(value) {
-  const reg = /^[a-zA-Z0-9\.@_-]*$/g;
-  return reg.test(value);
+  // UserName: 1-64 chars; letters, digits, _, -, .; cannot start/end with ., -, _; no whitespace; reserved names not allowed
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 1 || trimmed.length > 64) {
+    return false;
+  }
+  const reserved = ['admin', 'root', 'system'];
+  if (reserved.includes(trimmed.toLowerCase())) {
+    return false;
+  }
+  const reg = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/;
+  return reg.test(trimmed);
 }
 
-export function PasswordRegCheck(value) {
-  const reg =
-    /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*['"\-+=\.,~`!@#$%^&*();:])(.{3,})/;
-  return reg.test(value);
+export function TokenNameRegCheck(value) {
+  // TokenName: 1-64 chars; letters, digits, _, -, .; cannot start/end with ., -, _; no whitespace; reserved names not allowed
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 1 || trimmed.length > 64) {
+    return false;
+  }
+  const reserved = ['admin', 'system', 'default'];
+  if (reserved.includes(trimmed.toLowerCase())) {
+    return false;
+  }
+  const reg = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/;
+  return reg.test(trimmed);
+}
+
+export function PasswordRegCheck(value, userName) {
+  // Password: 8-128 chars; no whitespace; cannot equal userName or its reverse
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  if (value.length < 8 || value.length > 128) {
+    return false;
+  }
+  if (/\s/.test(value)) {
+    return false;
+  }
+  if (userName) {
+    const lowerValue = value.toLowerCase();
+    const lowerName = String(userName).toLowerCase();
+    if (lowerValue === lowerName || lowerValue === lowerName.split('').reverse().join('')) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function isHostname(value) {
+  // Hostname: RFC 1123 label or valid IPv4/IPv6; total length 2-255; each label 1-63; labels cannot start/end with '-'
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || trimmed.length > 255) {
+    return false;
+  }
+  // Allow valid IPv4/IPv6 addresses as hostnames
+  if (isIpv4Address(trimmed) || expandIpv6(trimmed) !== null) {
+    return true;
+  }
+  const labels = trimmed.split('.');
+  const labelReg = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+  return labels.every(label => labelReg.test(label));
 }
 
 export function NumRegCheck(value) {
