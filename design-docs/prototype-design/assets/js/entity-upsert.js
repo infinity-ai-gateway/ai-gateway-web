@@ -1,0 +1,296 @@
+window.EntityUpsert = {
+  formatNumber(num) {
+    return ApiKeyUpsert.formatNumber(num);
+  },
+
+  formatQuota(row) {
+    var plan = row.quota_plan || {};
+    if (plan.unlimited === true || plan.unlimited === 'true') return '-';
+    var used = (plan.balance && plan.balance.used) || 0;
+    var quota = plan.quota || 0;
+    return EntityUpsert.formatNumber(used) + ' / ' + EntityUpsert.formatNumber(quota);
+  },
+
+  formatTime(timestamp) {
+    if (!timestamp) return '-';
+    return new Date(Number(timestamp) * 1000).toLocaleString('zh-CN');
+  },
+
+  parentName(row, entities) {
+    if (!row || !row.parent_id) return '-';
+    var parent = (entities || []).find(function (item) {
+      return String(item.id) === String(row.parent_id);
+    });
+    return parent ? parent.name : '-';
+  },
+
+  formatModelsText(models) {
+    return ApiKeyUpsert.formatModelsText(models);
+  },
+
+  rowSpan2(content) {
+    return ApiKeyUpsert.rowSpan2(content);
+  },
+
+  col(content) {
+    return ApiKeyUpsert.col(content);
+  },
+
+  nativeSelect(id, values, selected, labels, disabled) {
+    return ApiKeyUpsert.nativeSelect(id, values, selected, labels, disabled);
+  },
+
+  renderQuotaDetails(plan, visible) {
+    plan = plan || {};
+    return '<div id="entity-quota-details"' + (visible ? '' : ' class="proto-hidden-inline"') + '>' +
+      EntityUpsert.rowSpan2(
+        EntityUpsert.col(IvuUI.formTopItem('配额不足时放行',
+          EntityUpsert.nativeSelect('entity-pass-no-quota', ['true', 'false'],
+            plan.pass_when_no_enough_quota === true || plan.pass_when_no_enough_quota === 'true' ? 'true' : 'false', ['是', '否']))) +
+        EntityUpsert.col(IvuUI.formTopItem('配额总量',
+          IvuUI.inputNumber(plan.quota || 1000000, 'id="entity-quota-total" style="width:100%"')))
+      ) +
+      EntityUpsert.rowSpan2(
+        EntityUpsert.col(IvuUI.formTopItem('配额单位',
+          EntityUpsert.nativeSelect('entity-quota-unit', ['total_token'], plan.unit || 'total_token', ['total_token']))) +
+        EntityUpsert.col(IvuUI.formTopItem('重置周期',
+          EntityUpsert.nativeSelect('entity-reset-period', ['never', 'weekly', 'monthly'], plan.reset_period || 'monthly', ['永不重置', '每周', '每月'])))
+      ) +
+    '</div>';
+  },
+
+  renderUpsertBody(data, isAdd, entityList) {
+    data = data || {};
+    entityList = entityList || [];
+    var plan = data.quota_plan || { unlimited: 'true', quota: 0, unit: 'total_token', reset_period: 'never', pass_when_no_enough_quota: 'false' };
+    var policy = data.rate_limit_policy || { enabled: 'false', rules: { max_concurrency: -1, tpm: [], rpm: [] } };
+    var rateEnabled = policy.enabled === true || policy.enabled === 'true';
+    var planLimited = plan.unlimited === false || plan.unlimited === 'false';
+    var maxConc = policy.rules && policy.rules.max_concurrency;
+    var maxMode = maxConc === 0 ? 'banned' : (maxConc > 0 ? 'limited' : 'unlimited');
+    var tpmRules = (policy.rules && policy.rules.tpm) || [];
+    var rpmRules = (policy.rules && policy.rules.rpm) || [];
+    var typeOptions = (MockData.entityTypes || []).map(function (t) { return t.type_name; });
+    var parentOptions = entityList.filter(function (item) {
+      return String(item.id) !== String(data.id);
+    });
+    var parentValues = [''].concat(parentOptions.map(function (item) { return String(item.id); }));
+    var parentLabels = ['无'].concat(parentOptions.map(function (item) { return item.name; }));
+    var allowModels = data.allow_models && data.allow_models.length ? data.allow_models.slice() : ['*'];
+    var blockModels = data.block_models && data.block_models.length ? data.block_models.slice() : [];
+
+    return '<form class="ivu-form ivu-form-label-top api-key-upsert-form">' +
+      IvuUI.card('基本信息',
+        IvuUI.formTopItem('名称',
+          '<div class="ivu-input-wrapper ivu-input-type-text">' +
+            '<input type="text" id="entity-name" class="ivu-input' + (isAdd ? '' : ' proto-field-disabled') + '"' +
+            (isAdd ? '' : ' readonly disabled') +
+            ' value="' + IvuUI.escapeHtml(data.name || '') + '" placeholder="请输入Entity名称" />' +
+          '</div>', true) +
+        EntityUpsert.rowSpan2(
+          EntityUpsert.col(IvuUI.formTopItem('类型',
+            EntityUpsert.nativeSelect('entity-type', typeOptions, data.type || typeOptions[0] || 'dep', typeOptions, !isAdd))) +
+          EntityUpsert.col(IvuUI.formTopItem('父Entity',
+            EntityUpsert.nativeSelect('entity-parent', parentValues,
+              data.parent_id != null && data.parent_id !== '' ? String(data.parent_id) : '', parentLabels) +
+            '<p class="form-tip">选择父Entity时，父Entity的级别必须小于当前类型的级别</p>'))
+        ) +
+        EntityUpsert.rowSpan2(
+          EntityUpsert.col(IvuUI.formTopItem('允许模型',
+            ApiKeyUpsert.renderModelsMultiSelect(allowModels, { rootId: 'entity-allow-models', placeholder: '选择允许访问的模型' }))) +
+          EntityUpsert.col(IvuUI.formTopItem('禁止模型',
+            ApiKeyUpsert.renderModelsMultiSelect(blockModels, {
+              rootId: 'entity-block-models',
+              includeAll: false,
+              placeholder: '选择禁止访问的模型'
+            })))
+        )
+      ) +
+      IvuUI.card('配额信息',
+        EntityUpsert.rowSpan2(
+          EntityUpsert.col(IvuUI.formTopItem('无限配额',
+            EntityUpsert.nativeSelect('entity-plan-unlimited', ['true', 'false'], planLimited ? 'false' : 'true', ['是', '否'])))
+        ) +
+        EntityUpsert.renderQuotaDetails(plan, planLimited)
+      ) +
+      IvuUI.card('限流配置',
+        EntityUpsert.rowSpan2(
+          EntityUpsert.col(IvuUI.formTopItem('启用限流',
+            EntityUpsert.nativeSelect('entity-rate-enabled', ['true', 'false'], rateEnabled ? 'true' : 'false', ['是', '否'])))
+        ) +
+        '<div id="entity-rate-details"' + (rateEnabled ? '' : ' class="proto-hidden-inline"') + '>' +
+          ApiKeyUpsert.renderRateLimitRules(tpmRules, rpmRules, maxMode, maxConc) +
+        '</div>'
+      ) +
+    '</form>';
+  },
+
+  renderViewBody(data, entityList) {
+    data = data || {};
+    var plan = data.quota_plan || {};
+    var policy = data.rate_limit_policy || {};
+    var used = (plan.balance && plan.balance.used) || 0;
+    var quota = plan.quota || 0;
+    var percent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
+    var planLimited = plan.unlimited === false || plan.unlimited === 'false';
+    var rateEnabled = policy.enabled === true || policy.enabled === 'true';
+    var maxConc = policy.rules && policy.rules.max_concurrency;
+    var tpmRules = (policy.rules && policy.rules.tpm) || [];
+    var rpmRules = (policy.rules && policy.rules.rpm) || [];
+
+    function infoRow(label, value) {
+      return '<div class="info-row"><span class="info-label">' + label + '</span><span class="info-value">' + value + '</span></div>';
+    }
+
+    var quotaCard = IvuUI.card('配额信息',
+      infoRow('无限配额', planLimited ? '否' : '是') +
+      (planLimited
+        ? infoRow('配额不足时放行', plan.pass_when_no_enough_quota ? '是' : '否') +
+          infoRow('配额总量', EntityUpsert.formatNumber(quota) + ' tokens') +
+          infoRow('已使用', EntityUpsert.formatNumber(used) + ' tokens (' + percent + '%)') +
+          infoRow('剩余', EntityUpsert.formatNumber(Math.max(0, quota - used)) + ' tokens') +
+          infoRow('配额单位', plan.unit || 'total_token') +
+          infoRow('重置周期', plan.reset_period === 'monthly' ? '每月' : (plan.reset_period === 'weekly' ? '每周' : '永不重置')) +
+          '<div class="quota-progress">' +
+            '<div class="progress-label">使用进度</div>' +
+            '<div class="proto-progress"><div class="proto-progress-inner" style="width:' + percent + '%"></div></div>' +
+          '</div>' +
+          '<div style="margin-top:16px;">' + IvuUI.btn('重置配额', 'primary', 'small', '', 'type="button" id="btn-entity-reset-quota"') + '</div>'
+        : '')
+    );
+
+    var rateCard = IvuUI.card('限流配置',
+      infoRow('限流状态', IvuUI.tag(rateEnabled ? '已启用' : '未启用', rateEnabled ? 'success' : 'default')) +
+      (rateEnabled
+        ? infoRow('最大并发', maxConc === 0 ? '封禁' : (maxConc > 0 ? String(maxConc) : '不限制')) +
+          (tpmRules.length ? ApiKeyUpsert.renderRulesDetail('TPM规则', tpmRules, 'tpm') : '') +
+          (rpmRules.length ? ApiKeyUpsert.renderRulesDetail('RPM规则', rpmRules, 'rpm') : '')
+        : '')
+    );
+
+    return '<div class="api-key-view">' +
+      IvuUI.card('基本信息',
+        infoRow('名称', IvuUI.escapeHtml(data.name || '-')) +
+        infoRow('类型', IvuUI.escapeHtml(data.type || '-')) +
+        infoRow('父Entity', IvuUI.escapeHtml(EntityUpsert.parentName(data, entityList))) +
+        infoRow('创建时间', EntityUpsert.formatTime(data.create_time)) +
+        infoRow('更新时间', EntityUpsert.formatTime(data.update_time)) +
+        infoRow('允许模型', EntityUpsert.formatModelsText(data.allow_models)) +
+        infoRow('禁止模型', (data.block_models && data.block_models.length) ? data.block_models.join(', ') : '-')
+      ) +
+      quotaCard +
+      rateCard +
+    '</div>';
+  },
+
+  renderTypeUpsertBody(data, isAdd) {
+    data = data || {};
+    var levelOptions = ['1', '2', '3', '4', '5'];
+    return '<form class="ivu-form ivu-form-label-top entity-type-form">' +
+      IvuUI.formTopItem('类型名',
+        '<div class="ivu-input-wrapper ivu-input-type-text">' +
+          '<input type="text" id="entity-type-name" class="ivu-input' + (isAdd ? '' : ' proto-field-disabled') + '"' +
+          (isAdd ? '' : ' readonly disabled') +
+          ' value="' + IvuUI.escapeHtml(data.type_name || '') + '" placeholder="例如：dep" />' +
+        '</div>' +
+        '<p class="form-tip">1-32字符，仅含小写字母、数字、下划线、连字符</p>', true) +
+      IvuUI.formTopItem('描述',
+        '<div class="ivu-input-wrapper ivu-input-type-text">' +
+          '<input type="text" id="entity-type-desc" class="ivu-input" value="' + IvuUI.escapeHtml(data.description || '') + '" placeholder="例如：一级部门" />' +
+        '</div>') +
+      IvuUI.formTopItem('级别',
+        EntityUpsert.nativeSelect('entity-type-level', levelOptions, String(data.level || 1), levelOptions) +
+        '<p class="form-tip">取值范围1-5，数字越小级别越高</p>') +
+    '</form>';
+  },
+
+  initUpsertForm() {
+    function toggle(el, show) {
+      if (!el) return;
+      el.classList.toggle('proto-hidden-inline', !show);
+    }
+
+    var planSelect = document.getElementById('entity-plan-unlimited');
+    if (planSelect) {
+      var syncQuota = function () {
+        toggle(document.getElementById('entity-quota-details'), planSelect.value === 'false');
+      };
+      planSelect.onchange = syncQuota;
+      syncQuota();
+    }
+
+    var rateSelect = document.getElementById('entity-rate-enabled');
+    if (rateSelect) {
+      var syncRate = function () {
+        toggle(document.getElementById('entity-rate-details'), rateSelect.value === 'true');
+      };
+      rateSelect.onchange = syncRate;
+      syncRate();
+    }
+
+    var maxModeSelect = document.getElementById('api-max-concurrency-mode');
+    if (maxModeSelect) {
+      var syncMaxConc = function () {
+        toggle(document.getElementById('api-max-concurrency-input'), maxModeSelect.value === 'limited');
+      };
+      maxModeSelect.onchange = syncMaxConc;
+      syncMaxConc();
+    }
+
+    ApiKeyUpsert.initModelsMultiSelect('entity-allow-models');
+    ApiKeyUpsert.initModelsMultiSelect('entity-block-models');
+  },
+
+  drawer(mode, data, entityList) {
+    var title = mode === 'add' ? '创建Entity' : (mode === 'view' ? 'Entity 详情' : '编辑Entity');
+    var body = mode === 'view'
+      ? EntityUpsert.renderViewBody(data, entityList)
+      : EntityUpsert.renderUpsertBody(data, mode === 'add', entityList);
+    var footer = mode === 'view'
+      ? '<div class="com-btn-box drawer-footer api-key-drawer-footer">' +
+          IvuUI.btn('关闭', 'default', 'default', '', 'id="btn-entity-close"') +
+        '</div>'
+      : '<div class="com-btn-box drawer-footer api-key-drawer-footer">' +
+          IvuUI.btn('取消', 'default', 'default', 'btn-box-del', 'id="btn-entity-cancel"') + ' ' +
+          IvuUI.btn('提交', 'primary', 'default', '', 'id="btn-entity-submit"') +
+        '</div>';
+    return IvuUI.drawer('drawer-entity', title, body, footer, '60%');
+  },
+
+  typeDrawer(mode, data) {
+    var title = mode === 'add' ? '创建类型' : '编辑类型';
+    var body = EntityUpsert.renderTypeUpsertBody(data, mode === 'add');
+    var footer =
+      '<div class="com-btn-box drawer-footer api-key-drawer-footer">' +
+        IvuUI.btn('取消', 'default', 'default', 'btn-box-del', 'id="btn-entity-type-cancel"') + ' ' +
+        IvuUI.btn('提交', 'primary', 'default', '', 'id="btn-entity-type-submit"') +
+      '</div>';
+    return IvuUI.drawer('drawer-entity-type', title, body, footer, '50%');
+  },
+
+  resetQuotaModal() {
+    return '<div id="modal-entity-reset-quota" class="ivu-modal-wrap proto-hidden">' +
+      '<div class="ivu-modal-mask" data-close-modal="modal-entity-reset-quota"></div>' +
+      '<div class="ivu-modal reset-quota-modal">' +
+        '<div class="ivu-modal-content">' +
+          '<div class="ivu-modal-header"><div class="ivu-modal-header-inner">重置配额</div></div>' +
+          '<div class="ivu-modal-body">' +
+            '<div class="modal-form-item">' +
+              '<div class="modal-label">新配额总量</div>' +
+              IvuUI.inputNumber(0, 'id="modal-entity-reset-quota-total" style="width:100%"') +
+            '</div>' +
+            '<p class="form-tip">设置后将重置已使用量为0，配额总量为新设置的值</p>' +
+            '<div class="modal-form-item" style="margin-top:16px;">' +
+              '<div class="modal-label">重置原因</div>' +
+              '<div class="ivu-input-wrapper ivu-input-type-textarea">' +
+                '<textarea id="modal-entity-reset-quota-reason" class="ivu-input" rows="3" placeholder="请输入重置原因（可选）"></textarea>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ivu-modal-footer">' +
+            IvuUI.btn('取消', 'default', 'default', '', 'data-close-modal="modal-entity-reset-quota"') + ' ' +
+            IvuUI.btn('确定', 'primary', 'default', '', 'id="btn-entity-reset-quota-confirm"') +
+          '</div>' +
+        '</div></div></div>';
+  }
+};

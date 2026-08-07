@@ -37,6 +37,7 @@
                     type="text"
                     :placeholder="$t('com.tipEnterX', { obj: $t('com.name') })"
                     class="com-create-input"
+                    :maxlength="64"
                 />
             </FormItem>
             <FormItem :label="$t('user.role')" prop="scope">
@@ -44,17 +45,6 @@
                     <Radio label="System">{{ $t('user.system') }}</Radio>
                     <Radio label="Support">{{ $t('user.support') }}</Radio>
                 </RadioGroup>
-            </FormItem>
-            <FormItem
-                v-if="formData.scope === 'Product'"
-                :label="$t('product.name')"
-                prop="product_name"
-            >
-                <Select v-model="formData.product_name">
-                    <Option v-for="item in productList" :value="item.name" :key="item.name">
-                        {{ item.name }}
-                    </Option>
-                </Select>
             </FormItem>
             <FormItem class="drawer-footer">
                 <Button size="small" type="primary" @click="onSubmit('formData')">
@@ -69,19 +59,16 @@
 </template>
 
 <script>
+import { TokenNameRegCheck } from '@/utils/const';
 export default {
-    props: {
-        productList: {
-            type: Array,
-            default() {
-                return [];
-            }
-        }
-    },
     data() {
         const validateName = (rule, value, callback) => {
             if (value === '') {
-                callback(new Error(this.$t('com.tipEnterX', { obj: this.$t('com.userName') })));
+                callback(new Error(this.$t('com.tipEnterX', { obj: this.$t('com.name') })));
+                return;
+            }
+            if (!TokenNameRegCheck(value)) {
+                callback(new Error(this.$t('user.tipTokenNameRule')));
                 return;
             }
             callback();
@@ -89,8 +76,7 @@ export default {
         return {
             formData: {
                 name: '',
-                scope: '',
-                product_name: ''
+                scope: ''
             },
             ruleValidate: {
                 name: [{ required: true, validator: validateName, trigger: 'blur' }],
@@ -100,23 +86,12 @@ export default {
                         message: this.$t('com.tipSelectX', { obj: this.$t('user.role') }),
                         trigger: 'change'
                     }
-                ],
-                product_name: [
-                    {
-                        required: true,
-                        message: this.$t('com.tipSelectX', { obj: this.$t('product.name') }),
-                        trigger: 'change'
-                    }
                 ]
             }
         };
     },
     methods: {
         onSubmit(name) {
-            if (this.formData.scope !== 'Product') {
-                this.$delete(this.formData, 'product_name');
-                this.$delete(this.ruleValidate, 'product_name');
-            }
             this.$refs[name].validate(valid => {
                 if (valid) {
                     this.$emit('submitData', this.formData);

@@ -38,6 +38,57 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [v0.0.6] - 2026-08-06
+
+### Added
+
+- Route Table module: unified route table management with Global/Entity/API-Key table types, list and detail views, enable/disable toggle, and inline edit mode for route rules
+- Weighted routing and fallback: multi-target clusters with weight allocation (weights must sum to 100), fallback cluster and model configuration, and transparent model transmission
+- Design documentation: added `design-docs` covering prototype pages, system design (architecture, modules, routing, state, i18n, components, OpenAPI mapping, build & deployment) and per-module detail documents
+- Stricter input validation: tightened cluster name, username, password, and token name rules (length limits, leading/trailing characters, reserved names) and added hostname validation utility
+- Expanded i18n coverage: added English and Chinese translations for route table, weighted routing, and validation hints
+
+### Changed
+
+- Route management refactor: aligned with the new OpenAPI; replaced legacy Default Route Rule and Advance Route Rule modules with the Route Table module, and updated router paths (`router`/`ai-rule` replaced by `route-tables`)
+- Cluster wizard alignment: unified default values and API payload formatting for basic config, timeout, and passive health check; health check host now defaults to the first instance in the instance pool when left blank
+- Instance pool restructure: instance entries now use address/port/weight with inline editing; weight range adjusted to 0-100; provider domain also accepts IP addresses; at least one instance must have a weight greater than 0
+- Session persistence simplified from instance/sub-cluster levels to a single session sticky toggle
+- `pageTable` sorting enhanced to support nested (dot-notation) field keys with immutable sorting
+- API Key form: entity selector is now clearable
+
+### Fixed
+
+- Fixed validation and interaction issues in route table rule forms (duplicate rule names, duplicated target/fallback cluster-model combinations)
+- Fixed interaction and formatting issues in cluster basic config and gateway config forms
+- Fixed sorting behavior in `pageTable` for nested field data
+
+## [v0.0.5] - 2026-07-24
+
+### Added
+
+- Reduced module scope: removed legacy modules including GSLB, Domains, SubClusters, AIClusters, and the old Instance Pool to streamline the product around AI gateway core workflows
+- List filtering: added filtering capabilities to key list views for easier data discovery
+- IPv6 CIDR support: enhanced utility functions to support IPv6 CIDR parsing, expansion, and comparison
+- Consumer management enhancements: improved Entity create/edit/view flows and hierarchical organization support
+- API Key enhancements: refined API Key list, detail, and upsert components with better quota and rate-limit handling
+- Expanded i18n coverage: updated English and Chinese translations for consumer, cluster, and route management
+
+### Changed
+
+- Navigation/sidebar reorganization: simplified sidebar navigation to focus on Resource, Route, Consumer, User, and AI Gateway Instance Pool
+- Router path updates: updated router paths; removed deprecated routes and set the default landing page to product.home
+- Component consolidation: merged and simplified cluster-related components (GatewayConfig, InstancePool, Review, Scheduler, etc.)
+- UI refresh: updated theme styles and sidebar layout
+- Code cleanup: removed deprecated modules and related assets
+
+### Fixed
+
+- Fixed multiple interaction issues in gateway configuration and route rule forms
+- Fixed request-layer error handling and response processing
+- Addressed UI rendering issues in pageTable and sidebar navigation
+- Fixed login and authorization edge cases
+
 ## [v0.0.4] - 2026-07-15
 
 ### Added
@@ -123,6 +174,8 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
+[v0.0.6]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.6
+[v0.0.5]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.5
 [v0.0.4]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.4
 [v0.0.3]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.3
 [v0.0.2]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.2

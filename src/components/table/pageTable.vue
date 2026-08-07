@@ -424,29 +424,66 @@ export default {
                     );
                 });
             } else {
-                this.showTableData.sort((a, b) => {
-                    const valA = a[data.key];
-                    const valB = b[data.key];
-                    if (typeof valA === 'object' || typeof valB === 'object') {
-                        return 0;
-                    } else if (typeof valA === 'number' && typeof valB === 'number') {
-                        if (data.order === 'asc') {
-                            return valA - valB;
-                        } else {
-                            return valB - valA;
-                        }
-                    } else if (data.order === 'asc') {
-                        return String(valA || '').localeCompare(String(valB || ''));
-                    } else {
-                        return String(valB || '').localeCompare(String(valA || ''));
-                    }
+                const sortedData = cloneDeep(this.showTableData).sort((a, b) => {
+                    return this.compareSortValues(
+                        this.getSortValue(a, data.key),
+                        this.getSortValue(b, data.key),
+                        data.order
+                    );
                 });
+                this.showTableData = sortedData;
             }
             if (this.page.currentPage !== 1) {
                 this.page.currentPage = 1;
             } else {
                 this.handlePageData(this.showTableData, this.page);
             }
+        },
+        getSortValue(row, key) {
+            if (!row || !key) {
+                return undefined;
+            }
+            return String(key).split('.').reduce((value, part) => {
+                if (value == null) {
+                    return undefined;
+                }
+                return value[part];
+            }, row);
+        },
+        compareSortValues(valA, valB, order) {
+            const asc = order === 'asc';
+            const normalize = value => {
+                if (value === null || value === undefined) {
+                    return null;
+                }
+                if (typeof value === 'object') {
+                    return null;
+                }
+                return value;
+            };
+            let a = normalize(valA);
+            let b = normalize(valB);
+
+            if (a === null && b === null) {
+                return 0;
+            }
+            if (a === null) {
+                return 1;
+            }
+            if (b === null) {
+                return -1;
+            }
+            if (typeof a === 'boolean' || typeof b === 'boolean') {
+                a = a === true ? 1 : 0;
+                b = b === true ? 1 : 0;
+                return asc ? a - b : b - a;
+            }
+            if (typeof a === 'number' && typeof b === 'number') {
+                return asc ? a - b : b - a;
+            }
+            const strA = String(a);
+            const strB = String(b);
+            return asc ? strA.localeCompare(strB) : strB.localeCompare(strA);
         },
         filterTable(arr, key) {
             this.$delete(this.filterMessage, key);

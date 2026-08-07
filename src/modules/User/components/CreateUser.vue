@@ -38,6 +38,7 @@
                         type="text"
                         :placeholder="$t('com.tipEnterX', { obj: $t('com.userName') })"
                         class="com-create-input"
+                        :maxlength="64"
                     />
                 </FormItem>
                 <FormItem :label="$t('com.password')" prop="password">
@@ -85,7 +86,7 @@ export default {
                 callback(new Error(this.$t('com.tipEnterX', { obj: this.$t('com.password') })));
                 return;
             }
-            if (!PasswordRegCheck(value)) {
+            if (!PasswordRegCheck(value, this.formItem.user_name)) {
                 callback(new Error(this.$t('user.tipPasswordRule')));
                 return;
             }

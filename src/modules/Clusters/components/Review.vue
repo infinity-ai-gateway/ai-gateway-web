@@ -52,24 +52,31 @@
                     <li class="value">{{ baseConfigData.connection['max_idle_conn_per_rs'] }}</li>
                 </ul>
                 <ul v-if="baseConfigData.sticky_sessions" class="clearFloat">
+                    <li class="title">{{ $t('cluster.stickySessionsEnabled') }} :</li>
+                    <li class="value">
+                        {{ baseConfigData.sticky_sessions['enabled'] === 'true' ? $t('com.enable') : $t('com.deactivate') }}
+                    </li>
+                </ul>
+                <ul
+                    v-if="
+                        baseConfigData.sticky_sessions &&
+                        baseConfigData.sticky_sessions['enabled'] === 'true'
+                    "
+                    class="clearFloat"
+                >
                     <li class="title">{{ $t('cluster.hashStrategy') }} :</li>
                     <li class="value">{{ baseConfigData.sticky_sessions['hash_strategy'] }}</li>
                 </ul>
                 <ul
                     v-if="
                         baseConfigData.sticky_sessions &&
+                        baseConfigData.sticky_sessions['enabled'] === 'true' &&
                         baseConfigData.sticky_sessions['hash_strategy'] !== 'CLIENT_IP_ONLY'
                     "
                     class="clearFloat"
                 >
                     <li class="title">{{ $t('cluster.hashHeader') }} :</li>
                     <li class="value">{{ baseConfigData.sticky_sessions['hash_header'] }}</li>
-                </ul>
-                <ul v-if="baseConfigData.sticky_sessions" class="clearFloat">
-                    <li class="title">{{ $t('cluster.stickySessions') }} :</li>
-                    <li class="value">
-                        {{ baseConfigData.sticky_sessions['session_sticky_type'] }}
-                    </li>
                 </ul>
                 <ul v-if="baseConfigData.buffers" class="clearFloat">
                     <li class="title">{{ $t('cluster.reqWriteBufferSize') }} :</li>
@@ -111,8 +118,8 @@
                     <li class="value">{{ baseConfigData.timeouts.timeout_write_client }}</li>
                 </ul>
                 <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.maxRetryInSubcluster') }} :</li>
-                    <li class="value">{{ baseConfigData.retries.max_retry_in_subcluster }}</li>
+                    <li class="title">{{ $t('cluster.maxRetryInCluster') }} :</li>
+                    <li class="value">{{ baseConfigData.retries.max_retry_in_cluster }}</li>
                 </ul>
             </div>
         </div>
@@ -121,23 +128,23 @@
             <div class="panel-body">
                 <ul class="clearFloat">
                     <li class="title">{{ $t('cluster.faultThreshold') }} :</li>
-                    <li class="value">{{ passiveHealthData['failnum'] }}</li>
+                    <li class="value">{{ displayPassiveHealthData.failnum }}</li>
                 </ul>
                 <ul class="clearFloat">
                     <li class="title">{{ $t('cluster.healthCheckInterval') }}:</li>
-                    <li class="value">{{ passiveHealthData['interval'] }}</li>
+                    <li class="value">{{ displayPassiveHealthData.interval }}</li>
                 </ul>
                 <ul class="clearFloat">
                     <li class="title">{{ $t('cluster.healthCheckHost') }}:</li>
-                    <li class="value">{{ passiveHealthData['host'] }}</li>
+                    <li class="value">{{ displayPassiveHealthData.host || '-' }}</li>
                 </ul>
                 <ul class="clearFloat">
                     <li class="title">{{ $t('cluster.healthCheckUri') }}:</li>
-                    <li class="value">{{ passiveHealthData['uri'] }}</li>
+                    <li class="value">{{ displayPassiveHealthData.uri }}</li>
                 </ul>
                 <ul class="clearFloat">
                     <li class="title">{{ $t('cluster.healthCheckStatuscode') }} :</li>
-                    <li class="value">{{ passiveHealthData['statuscode'] }}</li>
+                    <li class="value">{{ displayPassiveHealthData.statuscode }}</li>
                 </ul>
             </div>
         </div>
@@ -163,16 +170,8 @@
         <!-- 大模型 -->
         <div class="panel">
             <div class="panel-header">{{ $t('llmConfig.title') }}</div>
-            <div class="panel-body" v-if="llmConfigData && llmConfigData.model_endpoint">
+            <div class="panel-body" v-if="llmConfigData">
                 <ul class="clearFloat">
-                        <li class="title">{{ $t('llmConfig.serviceName') }}:</li>
-                        <li class="value">{{ llmConfigData.service_name }}</li>
-                    </ul>
-                    <ul class="clearFloat">
-                        <li class="title">{{ $t('llmConfig.group') }}:</li>
-                        <li class="value">{{ llmConfigData.group }}</li>
-                    </ul>
-                    <ul class="clearFloat">
                         <li class="title">{{ $t('gatewayConfig.modelServiceProvider') }}:</li>
                         <li class="value">{{ providerTypeText }}</li>
                     </ul>
@@ -180,8 +179,7 @@
                         <li class="title">{{ $t('gatewayConfig.modelListEndpoint') }}:</li>
                         <li class="value">
                             <p>
-                                {{ llmConfigData.model_endpoint.schema }}://{{ ipStr
-                                }}{{ llmConfigData.model_endpoint.uri }}
+                                {{ endpointSchema }}://{{ ipStr }}{{ endpointUri }}
                             </p>
                             <p>header: {{ displayEndpointHeaders }}</p>
                         </li>
@@ -214,8 +212,8 @@
                                         v-for="(item, index) in displayModelMappings"
                                         :key="index"
                                     >
-                                        <td>{{ item.key }}</td>
-                                        <td>{{ item.value }}</td>
+                                        <td>{{ item.source_model }}</td>
+                                        <td>{{ item.target_model }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -232,7 +230,8 @@
 </template>
 <script>
 import pageTable from '@/components/table/pageTable';
-import { parseInstancePool, detectInstanceMode } from './InstancePool';
+import { parseInstancePool, detectInstanceMode, getInstanceEndpointHosts } from './InstancePool';
+import { formatPassiveHealthCheckForApi } from './PassiveHealthCheck';
 import { maskSecretKey } from '@/utils/const';
 export default {
     name: 'Review',
@@ -290,14 +289,9 @@ export default {
                 );
                 this.instanceMode = mode;
                 this.providerDomain = domain;
-                this.ipStr = this.instancePoolUsed
-                    .map(instance => {
-                        const port = instance.ports && instance.ports.Default != null
-                            ? instance.ports.Default
-                            : 80;
-                        return `${instance.ip}:${port}`;
-                    })
-                    .join('\n');
+                this.ipStr = getInstanceEndpointHosts(
+                    this.instancePoolUsed.length ? this.instancePoolUsed : pool
+                ).join('\n');
             },
             immediate: true,
             deep: true
@@ -340,17 +334,28 @@ export default {
             return [
                 {
                     title: this.$t('instancePool.ipAddress'),
-                    key: 'ip'
+                    key: 'addr'
                 },
                 {
                     title: this.$t('instancePool.port'),
-                    key: 'port',
-                    render(h, params) {
-                        const ports = params.row.ports || {};
-                        return h('span', ports.Default != null ? String(ports.Default) : '-');
-                    }
+                    key: 'port'
+                },
+                {
+                    title: this.$t('instancePool.weight'),
+                    key: 'weight'
                 }
             ];
+        },
+        displayPassiveHealthData() {
+            return formatPassiveHealthCheckForApi(this.passiveHealthData);
+        },
+        endpointSchema() {
+            const endpoint = this.llmConfigData && this.llmConfigData.model_endpoint;
+            return (endpoint && endpoint.schema) || 'https';
+        },
+        endpointUri() {
+            const endpoint = this.llmConfigData && this.llmConfigData.model_endpoint;
+            return (endpoint && endpoint.uri) || '/v1/models';
         },
         displayModels() {
             const models = this.llmConfigData && this.llmConfigData.models;
@@ -371,7 +376,7 @@ export default {
             if (!Array.isArray(mappings)) {
                 return [];
             }
-            return mappings.filter(item => item && (item.key || item.value));
+            return mappings.filter(item => item && (item.source_model || item.target_model));
         },
         maskedServiceAuthKey() {
             const key = this.llmConfigData && this.llmConfigData.key;
@@ -407,12 +412,15 @@ export default {
     methods: {
         getProviders() {
             this.$request({
-                url: 'model-providers',
+                url: 'model-provider-types',
                 method: 'get',
                 openapi: true
             }).then(data => {
                 if (data.status === 200) {
-                    this.providers = data.data.Data || [];
+                    this.providers = (data.data.Data || []).map(item => ({
+                        id: item,
+                        name: item
+                    }));
                 }
             });
         },
