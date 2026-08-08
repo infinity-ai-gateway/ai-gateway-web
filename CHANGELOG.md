@@ -1,5 +1,5 @@
 <!--
- Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+ Copyright(c) 2026 The Infinity AI Gateway Authors. 
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -174,9 +174,9 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
-[v0.0.6]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.6
-[v0.0.5]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.5
-[v0.0.4]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.4
-[v0.0.3]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.3
-[v0.0.2]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.2
-[v0.0.1]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.1
+[v0.0.6]: https://github.com/infinity-ai-gateway/ai-gateway-web/releases/tag/v0.0.6
+[v0.0.5]: https://github.com/infinity-ai-gateway/ai-gateway-web/releases/tag/v0.0.5
+[v0.0.4]: https://github.com/infinity-ai-gateway/ai-gateway-web/releases/tag/v0.0.4
+[v0.0.3]: https://github.com/infinity-ai-gateway/ai-gateway-web/releases/tag/v0.0.3
+[v0.0.2]: https://github.com/infinity-ai-gateway/ai-gateway-web/releases/tag/v0.0.2
+[v0.0.1]: https://github.com/infinity-ai-gateway/ai-gateway-web/releases/tag/v0.0.1

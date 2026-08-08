@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 The Infinity AI Gateway Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ module.exports = {
     env: {
       NODE_ENV: '"development"',
     },
-    port: 8085,
+    port: 8088,
     assetsSubDirectory: 'static',
     assetsPublicPath: '/',
     proxyTable: proxyTable,
