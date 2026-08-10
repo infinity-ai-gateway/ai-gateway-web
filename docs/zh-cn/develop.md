@@ -11,8 +11,9 @@
 │   ├── dev-client.js
 │   ├── devProxy.js         // 本地开发时API Server端口号设置
 ├── docs                    // 项目文档
-│   ├── images              // 文档截图
 │   └── zh-cn               // 中文文档
+│       ├── images          // 文档截图
+│       └── *.md            // 用户手册章节 + 部署/开发文档
 ├── index.html
 └── src
     ├── main.js
