@@ -4,7 +4,7 @@
 
 产出的获取有多种方式
 
-- 方式一：通过源码编译： clone [yf-networks/ai-gateway-web](https://github.com/infinity-ai-gateway/ai-gateway-web), 仓库后进入项目根目录，确保node为v20+版本, 执行 `sh build.sh`， output 文件夹就是静态文件
+- 方式一：通过源码编译： clone [infinity-ai-gateway/ai-gateway-web](https://github.com/infinity-ai-gateway/ai-gateway-web), 仓库后进入项目根目录，确保node为v20+版本, 执行 `sh build.sh`， output 文件夹就是静态文件
 - 方式二：直接进入 [ai-gateway-web/releases](https://github.com/infinity-ai-gateway/ai-gateway-web/releases) 页面下载相应的编译产出
 
 若想进行二次开发或者提交PR，请参考 [项目开发指南](./develop.md)。

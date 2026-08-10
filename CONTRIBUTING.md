@@ -2,7 +2,7 @@
 
 You are welcome to contribute to the AI Gateway ecosystem.
 To contribute, you need to agree to the
-[Contributor License Agreement](https://cla-assistant.io/yf-networks/ai-gateway-web).
+[Contributor License Agreement](https://cla-assistant.io/infinity-ai-gateway/ai-gateway-web).
 
 We sincerely appreciate your contribution. This document explains the suggested workflow and code review expectations.
 

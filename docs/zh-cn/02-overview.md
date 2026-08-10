@@ -1,6 +1,6 @@
 # 02 概览：控制台布局与导航
 
-登录成功后进入控制台，整体布局为「左侧导航 + 右侧内容区」。首次使用建议先浏览本章，再跟做 [08 场景实战](08-scenarios.md)。
+登录成功后进入控制台，整体布局为「左侧导航 + 右侧内容区」。首次使用建议先浏览本章，再跟做 [09 场景实战](09-scenarios.md)。
 
 ## 2.1 导航结构
 
@@ -26,9 +26,9 @@ AI 网关
 
 ## 2.3 三级路由优先级
 
-请求进入数据面后按 **API-Key > Entity > Global** 顺序匹配路由表：先查该 Key 的专属表，未命中再查 Key 挂载组织的表，最后回落 Global。详见 [07 章](07-route.md)。
+请求进入数据面后按 **API-Key > Entity > Global** 顺序匹配路由表：先查该 Key 的专属表，未命中再查 Key 挂载组织的表，最后回落 Global。详见 [08 章](08-route.md)。
 
 ## 2.4 下一步
 
-- 首次配置请跟做 [08 场景实战](08-scenarios.md)；
-- 字段级说明见各模块章节：[实例池](02-ai-gateway-pool.md)、[业务集群](03-ai-business-cluster.md)、[Entity 组织](05-entity.md)、[API Key](06-api-key.md)、[路由管理](07-route.md)。
+- 首次配置请跟做 [09 场景实战](09-scenarios.md)；
+- 字段级说明见各模块章节：[实例池](03-ai-gateway-pool.md)、[业务集群](04-ai-business-cluster.md)、[Entity 组织](06-entity.md)、[API Key](07-api-key.md)、[路由管理](08-route.md)。
