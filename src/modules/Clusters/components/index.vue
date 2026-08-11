@@ -125,7 +125,8 @@ import BaseConfig from './BaseConfig';
 import Timeout from './Timeout';
 import InstancePool, {
     getClusterInstancePool,
-    formatInstancePoolForApi
+    formatInstancePoolForApi,
+    syncInstancePoolPortBySchema
 } from './InstancePool';
 import PassiveHealthCheck, {
     formatPassiveHealthCheckForApi
@@ -401,6 +402,17 @@ export default {
             } else {
                 this[data.topic] = data.data;
             }
+            if (data.topic === 'llmConfigData') {
+                const schema =
+                    (this.llmConfigData &&
+                        this.llmConfigData.model_endpoint &&
+                        this.llmConfigData.model_endpoint.schema) ||
+                    'https';
+                this.instancePoolData = syncInstancePoolPortBySchema(
+                    this.instancePoolData,
+                    schema
+                );
+            }
             this.submitName = this.baseConfigData.name;
 
             if (this.currentStepIndex < this.reviewStepIndex) {
@@ -408,11 +420,16 @@ export default {
             }
         },
         handelData() {
+            const schema =
+                (this.llmConfigData &&
+                    this.llmConfigData.model_endpoint &&
+                    this.llmConfigData.model_endpoint.schema) ||
+                'https';
             let data = {
                 name: this.baseConfigData.name,
                 description: this.baseConfigData.description,
                 basic: formatBasicForApi(this.baseConfigData),
-                instance_pool: formatInstancePoolForApi(this.instancePoolData),
+                instance_pool: formatInstancePoolForApi(this.instancePoolData, schema),
                 sticky_sessions: formatStickySessionsForApi(this.baseConfigData.sticky_sessions),
                 passive_health_check: formatPassiveHealthCheckForApi(this.passiveHealthData),
                 llm_config: formatLlmConfigForApi(this.llmConfigData)
