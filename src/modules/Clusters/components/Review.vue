@@ -284,14 +284,11 @@ export default {
             handler(v) {
                 const pool = Array.isArray(v) ? v : parseInstancePool(v);
                 this.instancePoolUsed = parseInstancePool(pool);
-                const { mode, domain } = detectInstanceMode(
-                    this.instancePoolUsed.length ? this.instancePoolUsed : pool
-                );
+                const source = this.instancePoolUsed.length ? this.instancePoolUsed : pool;
+                const { mode, domain } = detectInstanceMode(source);
                 this.instanceMode = mode;
                 this.providerDomain = domain;
-                this.ipStr = getInstanceEndpointHosts(
-                    this.instancePoolUsed.length ? this.instancePoolUsed : pool
-                ).join('\n');
+                this.ipStr = getInstanceEndpointHosts(source).join('\n');
             },
             immediate: true,
             deep: true

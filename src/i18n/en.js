@@ -181,7 +181,7 @@ export default {
     eppDomainInfo: 'EPP Domain Info',
     eppIpList: 'EPP IP List',
     portName: 'Port Name',
-    protValue: 'Port Number',
+    portValue: 'Port Number',
     instanceMode: 'Instance Type',
     modeIp: 'IP',
     modeDomain: 'Provider Domain',

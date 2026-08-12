@@ -173,7 +173,9 @@
             @on-focus="onKeyInputFocus"
             @on-change="onKeyInputChange"
           />
-          <p v-if="hasExistingKey" class="form-tip">{{ $t('gatewayConfig.serviceAuthKeyEditTip') }}</p>
+          <p v-if="hasExistingKey" class="form-tip">
+            {{ $t('gatewayConfig.serviceAuthKeyEditTip') }}
+          </p>
         </FormItem>
       </div>
     </Form>
@@ -183,7 +185,11 @@
 <script>
 import { cloneDeep, isEmpty } from 'lodash';
 import { maskSecretKey } from '@/utils/const';
-import { getInstanceEndpointHosts, detectInstanceMode } from './InstancePool';
+import {
+    getInstanceEndpointHosts,
+    syncInstancePoolPortBySchema,
+    detectInstanceMode
+} from './InstancePool';
 export default {
     components: {},
     props: {
@@ -369,7 +375,11 @@ export default {
     },
     computed: {
         endpointHostDisplay() {
-            const hosts = getInstanceEndpointHosts(this.instancePoolData);
+            const schema =
+                (this.formData.model_endpoint && this.formData.model_endpoint.schema) || 'https';
+            const hosts = getInstanceEndpointHosts(
+                syncInstancePoolPortBySchema(this.instancePoolData, schema)
+            );
             if (!hosts.length) {
                 return '';
             }
@@ -689,14 +699,21 @@ export default {
             this.getModels('query');
         },
         getModels(val) {
-            const ipPort = [...new Set(getInstanceEndpointHosts(this.instancePoolData))];
+            const schema = this.formData.model_endpoint.schema || 'https';
+            const ipPort = [
+                ...new Set(
+                    getInstanceEndpointHosts(
+                        syncInstancePoolPortBySchema(this.instancePoolData, schema)
+                    )
+                )
+            ];
             this.modelsList = [];
             this.btnLoading = true;
             this.$request({
                 url: 'tools/get-models-from-provider',
                 method: 'post',
                 data: {
-                    schema: this.formData.model_endpoint.schema,
+                    schema,
                     uri: this.formData.model_endpoint.uri,
                     hosts: ipPort,
                     headers: this.prepareHeadersForSubmit(),

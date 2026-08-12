@@ -150,6 +150,10 @@ import { isHostname, NumRegCheck } from '@/utils/const';
 const DOMAIN_PORT = 443;
 const DOMAIN_WEIGHT = 100;
 
+export function getDefaultPortBySchema(schema) {
+    return String(schema || '').toLowerCase() === 'http' ? 80 : 443;
+}
+
 function createEmptyInstance() {
     return {
         addr: '',
@@ -226,20 +230,40 @@ export function formatInstanceForApi(instance) {
     return payload;
 }
 
-export function formatInstancePoolForApi(instances) {
-    const list = instances || [];
-    return list.map(item => formatInstanceForApi(item));
+export function syncInstancePoolPortBySchema(instances, schema) {
+    const list = parseInstancePool(instances);
+    const modeInfo = detectInstanceMode(list);
+    if (modeInfo.mode !== 'domain' || schema == null || schema === '') {
+        return list;
+    }
+    const domainPort = getDefaultPortBySchema(schema);
+    return list.map((item, index) =>
+        index === 0
+            ? {
+                  ...item,
+                  port: domainPort
+              }
+            : item
+    );
+}
+
+export function formatInstancePoolForApi(instances, schema) {
+    return syncInstancePoolPortBySchema(instances, schema).map(item =>
+        formatInstanceForApi(item)
+    );
 }
 
 export function getInstanceEndpointHosts(instances) {
-    return parseInstancePool(instances).map(instance => {
-        const addr = String(instance.addr || '').trim();
-        if (!addr) {
-            return '';
-        }
-        const port = instance.port != null ? instance.port : 80;
-        return `${addr}:${port}`;
-    }).filter(Boolean);
+    return parseInstancePool(instances)
+        .map(instance => {
+            const addr = String(instance.addr || '').trim();
+            if (!addr) {
+                return '';
+            }
+            const port = instance.port != null ? instance.port : 80;
+            return `${addr}:${port}`;
+        })
+        .filter(Boolean);
 }
 
 function buildDomainInstance(domain) {
