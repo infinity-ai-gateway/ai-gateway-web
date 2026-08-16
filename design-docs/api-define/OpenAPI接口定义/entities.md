@@ -126,12 +126,12 @@
         "rules": [
             {
                 "name": "entity-default",
-                "Cond": "default_t()",
+                "cond": "default_t()",
                 "targets": [
                     {
-                        "ClusterName": "cluster_entity",
-                        "Model": "",
-                        "Weight": 100
+                        "cluster_name": "cluster_entity",
+                        "model": "",
+                        "weight": 100
                     }
                 ],
                 "fallbacks": []
@@ -190,12 +190,12 @@
             "rules": [
                 {
                     "name": "entity-default",
-                    "Cond": "default_t()",
+                    "cond": "default_t()",
                     "targets": [
                         {
-                            "ClusterName": "cluster_entity",
-                            "Model": "",
-                            "Weight": 100
+                            "cluster_name": "cluster_entity",
+                            "model": "",
+                            "weight": 100
                         }
                     ],
                     "fallbacks": []
@@ -296,12 +296,12 @@
                     "rules": [
                         {
                             "name": "entity-default",
-                            "Cond": "default_t()",
+                            "cond": "default_t()",
                             "targets": [
                                 {
-                                    "ClusterName": "cluster_entity",
-                                    "Model": "",
-                                    "Weight": 100
+                                    "cluster_name": "cluster_entity",
+                                    "model": "",
+                                    "weight": 100
                                 }
                             ]
                         }
@@ -558,7 +558,7 @@ Data为null。
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
-| quota | number | 重置后的配额总量 | N | 若传入则更新quota并同步重置balance；若不传则按当前quota重置 | 非负数；`unit=total_token` 时必须为整数；`unit=RMB` 时小数位不超过 8 位 |
+| quota | number | 重置后的配额总量 | N | 若传入则更新quota并同步重置balance；若不传则按当前quota重置 | 非负数；`unit=total_token` 时必须为整数；`unit=RMB` 时取值范围 0 ~ 90000000.00（9000 万元），小数位不超过 8 位 |
 | reason | string | 重置原因 | N | 用于审计 | - |
 
 **执行逻辑**

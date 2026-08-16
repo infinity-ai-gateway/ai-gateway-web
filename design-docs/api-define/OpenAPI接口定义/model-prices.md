@@ -25,8 +25,8 @@
     "source": "https://platform.deepseek.com/pricing",
     "notes": "DeepSeek V3"
   },
-  "created_at": 1716883200,
-  "updated_at": 1716883200
+  "create_time": 1716883200,
+  "update_time": 1716883200
 }
 ```
 
@@ -45,8 +45,8 @@
 | `prices` | object | 价格对象 | 必填；至少包含一个价格字段；所有价格字段必须为非负数；键名应为枚举值 |
 | `price_currency` | string | 价格货币 | 固定为 `RMB`，请求体中无需传入 |
 | `metadata` | object | 元数据 | 默认空对象；键名应为枚举值 |
-| `created_at` | int64 | 创建时间 | Unix 时间戳（秒） |
-| `updated_at` | int64 | 更新时间 | Unix 时间戳（秒） |
+| `create_time` | int64 | 创建时间 | Unix 时间戳（秒） |
+| `update_time` | int64 | 更新时间 | Unix 时间戳（秒） |
 
 **枚举值定义**
 
@@ -329,7 +329,7 @@ models:
 
 **输入参数（Body）**
 
-字段同 [1. 数据模型](#1-数据模型)，但请求体中无需传入 `id`、`price_currency`、`created_at`、`updated_at`。
+字段同 [1. 数据模型](#1-数据模型)，但请求体中无需传入 `id`、`price_currency`、`create_time`、`update_time`。
 
 **HTTP BODY参数示例**
 
@@ -359,7 +359,7 @@ models:
 
 **返回数据（Data内容）**
 
-返回完整记录，含生成的 `id`、`price_currency`（固定 `RMB`）、`created_at`、`updated_at`。
+返回完整记录，含生成的 `id`、`price_currency`（固定 `RMB`）、`create_time`、`update_time`。
 
 ---
 
@@ -459,7 +459,7 @@ models:
 
 **输入参数（Body）**
 
-字段同 [1. 数据模型](#1-数据模型)，仅传需修改字段，未传入字段保持原值。请求体中无需传入 `id`、`price_currency`、`created_at`、`updated_at`。
+字段同 [1. 数据模型](#1-数据模型)，仅传需修改字段，未传入字段保持原值。请求体中无需传入 `id`、`price_currency`、`create_time`、`update_time`。
 
 **返回数据（Data内容）**
 
@@ -488,7 +488,7 @@ models:
 
 **输入参数（Body）**
 
-字段同 [1. 数据模型](#1-数据模型)，仅传需修改字段，未传入字段保持原值。请求体中无需传入 `price_currency`、`created_at`、`updated_at`。
+字段同 [1. 数据模型](#1-数据模型)，仅传需修改字段，未传入字段保持原值。请求体中无需传入 `price_currency`、`create_time`、`update_time`。
 
 **返回数据（Data内容）**
 

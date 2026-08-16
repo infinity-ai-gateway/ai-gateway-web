@@ -77,7 +77,9 @@
             "retry_backoff_max": 5000
         },
         "provider_type": "deepseek",
-        "provider": "deepseek"
+        "provider": "deepseek",
+        "match_prefix": "deepseek/",
+        "strip_prefix": true
     }
 }
 ```
@@ -155,6 +157,8 @@
 | key_policy| object |  Key 路由策略 | N | 多 Key 时的选择策略、重试与退避配置 | 非必填；默认见下方 表：Key 路由策略；`strategy` 本版仅支持 `weighted_random` |
 | provider_type| string |  AI模型提供商类型 | N | 取值如：deepseek、openai、qwen 等。数据来自 `/model-provider-types` | 非必填；若传入，须为 `/model-provider-types` 中已存在的类型 |
 | provider| string |  该 cluster 在 `model_prices` 中对应的 provider | N | 用于 InnerAPI 自动填充 `AIConf.ModelTable`；为空时 `ModelTable` 为空列表 | 非必填；默认空字符串；OpenAPI 可读写 |
+| match_prefix| string |  需要匹配的 provider/model 前缀 | N | 例如 `openrouter/`；用于 OpenRouter 等聚合 provider 场景；必须以 `/` 结尾 | 非必填；`strip_prefix=true` 时必填 |
+| strip_prefix| bool |  是否裁剪 `match_prefix` 指定前缀 | N | `true` 时转发给下游前会从请求 `model` 字段中去掉该前缀；`false` 时仅用于路由标识，不裁剪 | 非必填；默认 `false` |
 
 > **说明**：`model_endpoint.headers` 中的 `${API_KEY}` 占位符，当 `keys` 非空时由当前选中的 Key 替换；当 `keys` 为空时，不允许出现该占位符，否则在校验阶段返回 `422`。
 >
@@ -213,6 +217,9 @@
 - `llm_config.model_endpoint.headers` 中若包含 `${API_KEY}` 占位符，则 `keys` 不能为空，否则返回 `422`。
 - `llm_config.provider_type` 若传入，须为 `/model-provider-types` 中已存在的类型。
 - `llm_config.provider` 若传入，表示该 cluster 在 `model_prices` 中对应的 provider；为空时 InnerAPI 下发的 `AIConf.ModelTable` 为空列表。
+- `llm_config.match_prefix` / `strip_prefix`：
+  - `strip_prefix=true` 时，`match_prefix` 必填且非空；
+  - `match_prefix` 若传入，必须以 `/` 结尾。
 - `llm_config.model_table` 不在 OpenAPI `/clusters` 端点中展示，调用方传入时忽略或返回 `422`；该字段由 InnerAPI 根据 `provider` 自动填充后下发给 BFE。
 - `basic`、`sticky_sessions`、`passive_health_check` 若未传则使用 AI 网关场景默认值。
 - `basic.protocol` 有效值为 `http`、`https`。
