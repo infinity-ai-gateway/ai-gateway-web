@@ -50,7 +50,9 @@
       </div>
       <div class="info-row">
         <span class="info-label">{{ $t('apiKey.quotaCheck') }}</span>
-        <Tag :color="isTrue(displayData.unlimited_quota) ? 'default' : 'success'">
+        <Tag
+          :color="isTrue(displayData.unlimited_quota) ? 'default' : 'success'"
+        >
           {{ isTrue(displayData.unlimited_quota) ? $t('apiKey.no') : $t('apiKey.yes') }}
         </Tag>
       </div>
@@ -93,14 +95,18 @@
       <div v-if="!quotaPlanUnlimited">
         <div class="info-row">
           <span class="info-label">{{ $t('apiKey.quotaTotal') }}</span>
-          <span class="info-value"
-            >{{ formatNumber(quotaPlanQuota) }} tokens</span
+          <span
+            class="info-value"
+            >{{ isRMB ? '¥' + formatNumber(quotaPlanQuota) : formatNumber(quotaPlanQuota) + ' tokens' }}</span
           >
         </div>
         <div class="info-row">
           <span class="info-label">{{ $t('apiKey.used') }}</span>
           <span class="info-value"
-            >{{ formatNumber(quotaPlanUsed) }} tokens ({{ quotaPercent
+            >{{ isRMB ? '¥' + formatNumber(quotaPlanUsed) : formatNumber(quotaPlanUsed) + ' tokens' }}
+            ({{ quotaPercent
+
+
 
 
 
@@ -114,8 +120,9 @@
         </div>
         <div class="info-row">
           <span class="info-label">{{ $t('apiKey.remaining') }}</span>
-          <span class="info-value"
-            >{{ formatNumber(quotaPlanRemaining) }} tokens</span
+          <span
+            class="info-value"
+            >{{ isRMB ? '¥' + formatNumber(quotaPlanRemaining) : formatNumber(quotaPlanRemaining) + ' tokens' }}</span
           >
         </div>
         <div class="info-row">
@@ -152,7 +159,8 @@
         <span class="info-label">{{ $t('apiKey.maxConcurrency') }}</span>
         <span
           class="info-value"
-        >{{ formatMaxConcurrency(rateLimitMaxConcurrency) }}</span>
+          >{{ formatMaxConcurrency(rateLimitMaxConcurrency) }}</span
+        >
       </div>
 
       <div
@@ -176,10 +184,18 @@
 
 
 
+
+
+
+
             }}：{{ rule.model === '*' ? $t('apiKey.allModelsText') : rule.model }}
           </div>
           <div>
             {{ $t('apiKey.timeWindow') }}：{{ rule.window_minutes
+
+
+
+
 
 
 
@@ -191,6 +207,10 @@
           <div>{{ $t('apiKey.maxTokens') }}：{{ rule.max_tokens }}</div>
           <div>
             {{ $t('apiKey.stepMinutes') }}：{{ rule.step_minutes
+
+
+
+
 
 
 
@@ -223,10 +243,18 @@
 
 
 
+
+
+
+
             }}：{{ rule.model === '*' ? $t('apiKey.allModelsText') : rule.model }}
           </div>
           <div>
             {{ $t('apiKey.timeWindow') }}：{{ rule.window_minutes
+
+
+
+
 
 
 
@@ -256,8 +284,8 @@
           v-model="newQuota"
           :min="0"
           :max="INT64_MAX"
-          :precision="0"
-          :step="1"
+          :precision="isRMB ? 4 : 0"
+          :step="isRMB ? 0.0001 : 1"
           style="width: 100%;"
         ></InputNumber>
       </div>
@@ -350,6 +378,14 @@ export default {
             }
             return this.isTrue(this.displayData.unlimited_quota);
         },
+        quotaPlanUnit() {
+            return this.displayData.quota_plan && this.displayData.quota_plan.unit
+                ? this.displayData.quota_plan.unit
+                : 'total_token';
+        },
+        isRMB() {
+            return this.quotaPlanUnit === 'RMB';
+        },
         quotaPlanQuota() {
             return this.displayData.quota_plan ? this.displayData.quota_plan.quota || 0 : 0;
         },
@@ -437,8 +473,14 @@ export default {
             const date = new Date(timestamp * 1000);
             return date.toLocaleString('zh-CN');
         },
-        formatNumber(num) {
-            return num.toLocaleString();
+        formatNumber(num, decimals = null) {
+            const value = Number(num);
+            if (Number.isNaN(value)) return '-';
+            const fractionDigits = decimals !== null ? decimals : (this.isRMB ? 4 : 0);
+            return value.toLocaleString('zh-CN', {
+                minimumFractionDigits: fractionDigits,
+                maximumFractionDigits: fractionDigits
+            });
         },
         getResetPeriodText(period) {
             const map = {
@@ -459,15 +501,23 @@ export default {
                 this.$Message.error(this.$t('apiKey.quotaRequired'));
                 return;
             }
-            if (!Number.isInteger(this.newQuota)) {
-                this.$Message.error(this.$t('apiKey.quotaMustBeNonNegative'));
-                return;
-            }
-            if (this.newQuota < 0) {
+            const value = Number(this.newQuota);
+            if (Number.isNaN(value) || value < 0) {
                 this.$Message.error(this.$t('apiKey.quotaRangeError'));
                 return;
             }
-            if (this.newQuota > INT64_MAX) {
+            if (!this.isRMB && !Number.isInteger(value)) {
+                this.$Message.error(this.$t('apiKey.quotaMustBeNonNegative'));
+                return;
+            }
+            if (this.isRMB) {
+                const decimalStr = String(this.newQuota).split('.')[1] || '';
+                if (decimalStr.length > 4) {
+                    this.$Message.error(this.$t('apiKey.quotaRmbPrecisionError'));
+                    return;
+                }
+            }
+            if (value > INT64_MAX) {
                 this.$Message.error(this.$t('apiKey.quotaMaxError'));
                 return;
             }

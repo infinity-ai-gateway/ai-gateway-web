@@ -1,4 +1,4 @@
-# 瑛菲AI网关 - OpenAPI接口定义
+# OpenAPI接口定义
 
 本目录包含 OpenAPI v1 的接口定义，按模块拆分为独立文件。
 

@@ -16,7 +16,17 @@
 <template>
   <div class="route-table">
     <div v-if="!detailVisible" class="list-view">
-      <pageTable :columns="columns" :tableData="tableData" :loading="loading" />
+      <pageTable
+        :columns="columns"
+        :tableData="tableData"
+        :loading="loading"
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="total"
+        server-pagination
+        @on-page-change="onPageChange"
+        @on-search-change="onSearchChange"
+      />
     </div>
 
     <div v-else class="detail-view">
@@ -58,6 +68,10 @@ export default {
     const that = this;
     return {
       loading: false,
+      currentPage: 1,
+      pageSize: 20,
+      total: 0,
+      searchParams: {},
       detailVisible: false,
       currentType: '',
       currentOwner: '',
@@ -192,18 +206,62 @@ export default {
       this.$request({
         url: 'route-tables',
         method: 'get',
-        openapi: true
+        openapi: true,
+        params: {
+          page: this.currentPage,
+          page_size: this.pageSize,
+          ...this.searchParams
+        }
       })
         .then(res => {
           if (res.status === 200) {
             const data = res.data.Data || {};
             const list = Array.isArray(data.list) ? data.list : [];
             this.tableData = list;
+            const pagination = data.pagination || {};
+            this.total = pagination.total != null ? pagination.total : list.length;
+            if (pagination.page != null) {
+              this.currentPage = pagination.page;
+            }
+            if (pagination.page_size != null) {
+              this.pageSize = pagination.page_size;
+            }
           }
         })
         .finally(() => {
           this.loading = false;
         });
+    },
+
+    onPageChange({ page, pageSize }) {
+      this.currentPage = page;
+      this.pageSize = pageSize;
+      this.fetchData();
+    },
+
+    onSearchChange(filters) {
+      this.searchParams = this.buildSearchParams(filters);
+      this.currentPage = 1;
+      this.fetchData();
+    },
+
+    buildSearchParams(filters) {
+      const params = {};
+      if (!filters) {
+        return params;
+      }
+      if (filters.type) {
+        params.type = filters.type === 'apikey' ? 'api_key' : filters.type;
+      }
+      if (filters.owner) {
+        params.owner = filters.owner;
+      }
+      if (filters.enabled === 'true' || filters.enabled === true) {
+        params.enabled = true;
+      } else if (filters.enabled === 'false' || filters.enabled === false) {
+        params.enabled = false;
+      }
+      return params;
     },
 
     fetchEntityNames() {
@@ -341,11 +399,11 @@ export default {
           if (res.status === 200) {
             return res.data.Data || { enabled: false, rules: [] };
           }
-          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+          this.$Message.error(this.$t('route.loadFailed'));
           return { enabled: false, rules: [] };
         }).catch(err => {
           console.error('加载 Global 路由规则失败:', err);
-          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+          this.$Message.error(this.$t('route.loadFailed'));
           return { enabled: false, rules: [] };
         });
       }
@@ -359,11 +417,11 @@ export default {
           const data = res.data.Data || {};
           return data.route_rules || { enabled: false, rules: [] };
         }
-        this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+        this.$Message.error(this.$t('route.loadFailed'));
         return { enabled: false, rules: [] };
       }).catch(err => {
         console.error('加载路由规则失败:', err);
-        this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+        this.$Message.error(this.$t('route.loadFailed'));
         return { enabled: false, rules: [] };
       });
     },

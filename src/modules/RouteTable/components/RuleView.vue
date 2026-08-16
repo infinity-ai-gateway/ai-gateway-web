@@ -32,6 +32,15 @@
         <span v-if="!(rule.targets || []).length">-</span>
       </span>
     </div>
+    <div class="info-row">
+      <span class="info-label">{{ $t('route.fallbackClusterAndModel') }}</span>
+      <span class="info-value">
+        <Tag v-for="(f, index) in rule.fallbacks || []" :key="`fallback-${index}`">
+          {{ f.ClusterName }}/{{ f.Model || '' }}
+        </Tag>
+        <span v-if="!(rule.fallbacks || []).length">-</span>
+      </span>
+    </div>
   </div>
 </template>
 

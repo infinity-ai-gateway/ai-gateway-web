@@ -317,12 +317,12 @@ export default {
               this.refreshRuleIndex();
               this.applyInitialFilter();
             } else {
-              this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+              this.$Message.error(this.$t('route.loadFailed'));
             }
           })
           .catch(err => {
             console.error('加载 Global 路由规则失败:', err);
-            this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+            this.$Message.error(this.$t('route.loadFailed'));
           })
           .finally(() => {
             this.loading = false;
@@ -344,12 +344,12 @@ export default {
             this.refreshRuleIndex();
             this.applyInitialFilter();
           } else {
-            this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+            this.$Message.error(this.$t('route.loadFailed'));
           }
         })
         .catch(err => {
           console.error('加载路由规则失败:', err);
-          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+          this.$Message.error(this.$t('route.loadFailed'));
         })
         .finally(() => {
           this.loading = false;
@@ -400,7 +400,8 @@ export default {
       this.currentRule = {
         name: '',
         Cond: '',
-        targets: [{ ClusterName: '', Model: '', Weight: 100 }]
+        targets: [{ ClusterName: '', Model: '', Weight: 100 }],
+        fallbacks: []
       };
       this.ruleDrawerTitle = this.$t('com.createX', { obj: this.$t('route.rule') });
       this.ruleDrawerVisible = true;
@@ -480,7 +481,9 @@ export default {
         delete clean.index;
         delete clean._index;
         delete clean._rowKey;
-        delete clean.fallbacks;
+        if (!Array.isArray(clean.fallbacks)) {
+          clean.fallbacks = [];
+        }
         return clean;
       });
       if (this.type === 'global') {

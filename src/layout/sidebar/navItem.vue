@@ -1,33 +1,19 @@
-/**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. * * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */ /** *
+Copyright (c) 2021 The BFE Authors. * * Licensed under the Apache License,
+Version 2.0 (the "License"); * you may not use this file except in compliance
+with the License. * You may obtain a copy of the License at * *
+http://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable law
+or agreed to in writing, software * distributed under the License is distributed
+on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 <template>
   <div v-if="!node.children" class="navItem">
     <MenuItem :name="node.id"
@@ -58,20 +44,43 @@ export default {
         return {
             navIcon: {
                 'AIGatewayInstancePool.list': 'iconfont icon-instancePool',
+                'AIGatewayInstancePoolManage': 'iconfont icon-instancePool',
 
                 'certs.list': 'iconfont icon-cert',
+                'CertsManage': 'iconfont icon-cert',
+                'CertificateManage': 'iconfont icon-cert',
+
                 'user.list': 'iconfont icon-user',
+                'UserManage': 'iconfont icon-user',
 
                 'APIKey.list': 'ivu-icon-ios-key',
+                'APIKeyManage': 'ivu-icon-ios-key',
+
                 'QuotaControl.list': 'ivu-icon-md-apps',
+
                 'ai_route.list.admin': 'iconfont icon-zhuanfa',
+
                 'Entity.list': 'ivu-icon-ios-settings',
+                'EntityManage': 'ivu-icon-ios-settings',
 
                 'consumer.admin.list': 'ivu-icon-md-people',
+                'ConsumerManage': 'ivu-icon-md-people',
+
                 'route.admin.list': 'ivu-icon-ios-cube',
+                'RouteManage': 'ivu-icon-ios-cube',
+
                 'resource.admin.list': 'ivu-icon-md-appstore',
+                'ResourceManage': 'ivu-icon-md-appstore',
+
                 'AICluster.list': 'iconfont icon-jiqun',
-                'AdvanceRouteRule.list': 'iconfont icon-zhuanfa'
+                'AIClusterManage': 'iconfont icon-jiqun',
+                'AIGatewayClusterManage': 'iconfont icon-jiqun',
+
+                'AdvanceRouteRule.list': 'iconfont icon-zhuanfa',
+                'AdvanceRouteRuleManage': 'iconfont icon-zhuanfa',
+                'RouteTableManage': 'iconfont icon-zhuanfa',
+
+                'ModelPrice.list': 'ivu-icon-logo-yen',
             }
         };
     },

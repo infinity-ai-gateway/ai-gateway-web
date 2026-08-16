@@ -58,8 +58,26 @@
         "model_mappings": [
             {"source_model": "gpt-4", "target_model": "deepseek-chat"}
         ],
-        "key": "sk-xxxxxxxxxxxx",
-        "provider_type": "deepseek"
+        "keys": [
+            {
+                "name": "key-primary",
+                "key": "sk-aaaaaaaaaaaa",
+                "weight": 70
+            },
+            {
+                "name": "key-secondary",
+                "key": "sk-bbbbbbbbbbbb",
+                "weight": 30
+            }
+        ],
+        "key_policy": {
+            "strategy": "weighted_random",
+            "max_retries": 3,
+            "retry_backoff_initial": 500,
+            "retry_backoff_max": 5000
+        },
+        "provider_type": "deepseek",
+        "provider": "deepseek"
     }
 }
 ```
@@ -133,10 +151,33 @@
 | model_endpoint| object |  模型列表端点配置 | N | 用于调用第三方AI模型提供商的模型列表接口，具体字段见下方 表：Endpoint；未设置时使用默认值 | 非必填；未设置时默认 `schema=https`、`uri=/v1/models` |
 | models| []string |  支持的模型名称列表 | Y | 指定该集群支持的AI模型名称 | 必填；至少1个元素；每个模型名非空；元素不能重复 |
 | model_mappings| []object |  模型名称映射 | N | 用于将用户请求的模型名映射为后端实际使用的模型名，具体字段见下方 表：模型映射 | 非必填；元素须满足 模型映射 结构约束 |
-| key| string |  服务认证密钥 | N | 用于后端AI服务的认证 | 非必填；若传入，长度 0-512 字符 |
+| keys| []APIKey |  API-Key 列表 | N | 一个 cluster 支持配置多个 Key，按权重做路由；为空数组表示不配置 API-Key | 非必填；默认值为空数组 `[]`；元素须满足 表：API-Key 结构 |
+| key_policy| object |  Key 路由策略 | N | 多 Key 时的选择策略、重试与退避配置 | 非必填；默认见下方 表：Key 路由策略；`strategy` 本版仅支持 `weighted_random` |
 | provider_type| string |  AI模型提供商类型 | N | 取值如：deepseek、openai、qwen 等。数据来自 `/model-provider-types` | 非必填；若传入，须为 `/model-provider-types` 中已存在的类型 |
+| provider| string |  该 cluster 在 `model_prices` 中对应的 provider | N | 用于 InnerAPI 自动填充 `AIConf.ModelTable`；为空时 `ModelTable` 为空列表 | 非必填；默认空字符串；OpenAPI 可读写 |
 
+> **说明**：`model_endpoint.headers` 中的 `${API_KEY}` 占位符，当 `keys` 非空时由当前选中的 Key 替换；当 `keys` 为空时，不允许出现该占位符，否则在校验阶段返回 `422`。
+>
+> **注意：** `model_table` 不在 OpenAPI `/clusters` 端点中展示，仅通过 InnerAPI 根据 `provider` 自动填充后下发给 BFE。
+>
 > **注意：** `enable` 字段已移除，设置 `llm_config` 时默认开启 AI 网关能力。
+
+**表：API-Key 结构（`llm_config.keys` 元素）**
+
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | -  | - | - | - | - |
+| name | string | Key 名称/标识 | Y | 用于日志、监控、运维识别 | 必填；长度 1-128 字符；同一 `keys` 数组内唯一 |
+| key | string | API-Key 值 | Y | 实际用于后端认证的密钥 | 必填；非空；长度 1-512 字符 |
+| weight | int | 权重 | Y | 用于加权随机选择，范围 `[0,100]` | 必填；取值范围 `[0,100]`；`0` 表示该 Key 不接收流量（等效于禁用） |
+
+**表：Key 路由策略（`llm_config.key_policy`）**
+
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | -  | - | - | - | - |
+| strategy | string | Key 选择策略 | N | 多 Key 时的选择算法 | 非必填；默认 `weighted_random`；本版仅支持 `weighted_random` |
+| max_retries | int | 总额外重试次数 | N | 该 cluster 在当前请求内的总重试次数；不是单个 Key 的重试次数 | 非必填；默认 `0`；须为 `>=0` 的整数 |
+| retry_backoff_initial | int (ms) | 初始退避时间 | N | 首次重试的退避时间，单位毫秒 | 非必填；默认 `500`；须为 `>=0` 的整数 |
+| retry_backoff_max | int (ms) | 最大退避时间 | N | 退避时间上限，单位毫秒 | 非必填；默认 `5000`；须为 `>=0` 的整数，且须 `>= retry_backoff_initial` |
 
 **表：Endpoint**
 
@@ -160,7 +201,19 @@
 - `instance_pool` 必填，至少包含1个实例；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0`。
 - 每个实例的 `name` 选填，若传入长度须为 1-128 字符，未传入时默认与 `addr` 相同；`addr` 必填且类型为 [Hostname](./00-common.md#1-主机名hostname)；`weight` 取值范围 [0,100]，`port` 必填且类型为 [Port](./00-common.md#3-网络端口port)。
 - `llm_config` 必填，`models` 至少包含1个非空模型名且不能重复；`model_mappings` 中 `source_model` 不能重复。
+- `llm_config.keys` 非必填，默认值为空数组 `[]`；若非空：
+  - 每个元素 `key` 必填且非空，长度 1-512；
+  - 每个元素 `name` 必填，长度 1-128，同一 `keys` 数组内唯一；
+  - 每个元素 `weight` ∈ `[0,100]`；
+  - 所有 Key 的 `weight` 之和必须等于 `100`。
+- `llm_config.key_policy` 若传入：
+  - `strategy` 仅允许 `weighted_random`；
+  - `max_retries` 须为 `>=0` 的整数；
+  - `retry_backoff_initial`、`retry_backoff_max` 须为 `>=0` 的整数，且 `retry_backoff_max >= retry_backoff_initial`。
+- `llm_config.model_endpoint.headers` 中若包含 `${API_KEY}` 占位符，则 `keys` 不能为空，否则返回 `422`。
 - `llm_config.provider_type` 若传入，须为 `/model-provider-types` 中已存在的类型。
+- `llm_config.provider` 若传入，表示该 cluster 在 `model_prices` 中对应的 provider；为空时 InnerAPI 下发的 `AIConf.ModelTable` 为空列表。
+- `llm_config.model_table` 不在 OpenAPI `/clusters` 端点中展示，调用方传入时忽略或返回 `422`；该字段由 InnerAPI 根据 `provider` 自动填充后下发给 BFE。
 - `basic`、`sticky_sessions`、`passive_health_check` 若未传则使用 AI 网关场景默认值。
 - `basic.protocol` 有效值为 `http`、`https`。
 - `basic.connection.max_idle_conn_per_rs` 须为 >=0 的整数。
@@ -273,8 +326,60 @@
                 "target_model": "deepseek-chat"
             }
         ],
-        "key": "sk-xxxxxxxxxxxx",
-        "provider_type": "deepseek"
+        "keys": [
+            {
+                "name": "key-prod-01",
+                "key": "sk-aaaaaaaaaaaa",
+                "weight": 70
+            },
+            {
+                "name": "key-prod-02",
+                "key": "sk-bbbbbbbbbbbb",
+                "weight": 30
+            }
+        ],
+        "key_policy": {
+            "strategy": "weighted_random",
+            "max_retries": 3,
+            "retry_backoff_initial": 500,
+            "retry_backoff_max": 5000
+        },
+        "provider_type": "deepseek",
+        "provider": "deepseek"
+    }
+}
+```
+
+**HTTP BODY参数示例（不配置 API-Key）**
+
+```json
+{
+    "name": "internal-cluster",
+    "description": "内部集群，无需 API-Key",
+    "instance_pool": [
+        {
+            "name": "backend-1",
+            "addr": "10.0.0.1",
+            "weight": 100,
+            "port": 8080
+        }
+    ],
+    "llm_config": {
+        "model_endpoint": {
+            "schema": "http",
+            "uri": "/v1/models"
+        },
+        "models": ["deepseek-chat"],
+        "model_mappings": [],
+        "keys": [],
+        "key_policy": {
+            "strategy": "weighted_random",
+            "max_retries": 0,
+            "retry_backoff_initial": 500,
+            "retry_backoff_max": 5000
+        },
+        "provider_type": "deepseek",
+        "provider": "deepseek"
     }
 }
 ```
@@ -386,7 +491,9 @@
 **输入参数（Body）**
 可修改字段含义同创建接口。若传入 `instance_pool` 字段，系统会自动同步更新对应的实例池；其中每个实例的 `addr` 必填，`name` 选填（未传入时默认与 `addr` 相同），`port` 必填。
 
-> **注意：** `sub_clusters` 与 `scheduler` 为系统内部自动生成，更新时不支持手动修改，请通过 `instance_pool` 调整实例。
+> **注意：**
+> - `sub_clusters` 与 `scheduler` 为系统内部自动生成，更新时不支持手动修改，请通过 `instance_pool` 调整实例。
+> - `llm_config.keys` 作为数组，按**全量替换**处理，即调用方需传入完整的最新 Key 列表。这与当前 `instance_pool`、`model_mappings` 的 PATCH 语义保持一致。
 
 **HTTP BODY参数示例**
 
@@ -440,7 +547,26 @@
             "uri": "/v1/models"
         },
         "models": ["deepseek-chat"],
-        "provider_type": "deepseek"
+        "keys": [
+            {
+                "name": "key-prod-01",
+                "key": "sk-aaaaaaaaaaaa",
+                "weight": 50
+            },
+            {
+                "name": "key-prod-02",
+                "key": "sk-bbbbbbbbbbbb",
+                "weight": 50
+            }
+        ],
+        "key_policy": {
+            "strategy": "weighted_random",
+            "max_retries": 3,
+            "retry_backoff_initial": 500,
+            "retry_backoff_max": 5000
+        },
+        "provider_type": "deepseek",
+        "provider": "deepseek"
     }
 }
 ```

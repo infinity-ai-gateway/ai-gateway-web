@@ -110,6 +110,7 @@ classDiagram
         +string name
         +string Cond
         +[]AiRouteTarget targets
+        +[]AiRouteFallback fallbacks
     }
 
     class AiRouteTarget {
@@ -118,9 +119,15 @@ classDiagram
         +int Weight
     }
 
+    class AiRouteFallback {
+        +string ClusterName
+        +string Model
+    }
+
     GlobalRouteTable "1" --> "1" RouteRules : route_rules
     RouteRules "1" --> "*" AiRouteRule : rules
     AiRouteRule "1" --> "*" AiRouteTarget : targets
+    AiRouteRule "1" --> "*" AiRouteFallback : fallbacks
 
     APIKey "0..1" --> "0..1" Entity : entity_id挂载
     APIKey "1" --> "1" QuotaPlan : quota_plan
@@ -154,7 +161,7 @@ classDiagram
 - **QuotaPlan的balance字段**：为只读字段，反映对应QuotaBalance的used和remaining。`GET /api-keys` 和 `GET /api-keys/{id}` 的返回中 `quota_plan` 已包含 `balance`；独立查询接口（`/api-keys/{id}/quota-plan`、`/entities/{id}/quota-plan`）也返回完整balance。
 - **RateLimitPolicy → Rules**：一个RateLimitPolicy包含一组Rules，Rules中可配置tpm（最多3个）、rpm（最多3个）和max_concurrency（默认-1，表示不限制）。
 - **运行时层级生效逻辑**：API-Key挂载到Entity后，运行时生效的QuotaPlan和RateLimitPolicy为该API-Key自身直接拥有的 + 该Entity直接拥有的 + 该Entity所有祖先Entity直接拥有的（去重）。
-- **GlobalRouteTable → RouteRules → AiRouteRule → AiRouteTarget**：Global路由表通过嵌套的 RouteRules 管理规则，每条规则包含转发目标（targets）。
+- **GlobalRouteTable → RouteRules → AiRouteRule → AiRouteTarget/AiRouteFallback**：Global路由表通过嵌套的 RouteRules 管理规则，每条规则包含转发目标（targets）和降级目标（fallbacks）。
 - **Cluster → LLMConfig**：一个Cluster包含1个LLMConfig，用于描述AI服务接入信息（provider_type、models、key、model_endpoint、model_mappings）。设置LLMConfig即开启AI网关能力。
 
 

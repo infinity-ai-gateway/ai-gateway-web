@@ -1,103 +1,89 @@
-/**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. * * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */ /** *
+Copyright (c) 2021 The BFE Authors. * * Licensed under the Apache License,
+Version 2.0 (the "License"); * you may not use this file except in compliance
+with the License. * You may obtain a copy of the License at * *
+http://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable law
+or agreed to in writing, software * distributed under the License is distributed
+on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 <template>
-    <div class="clusters">
-        <Button type="primary" size="small" @click="onAdd">{{
+  <div class="clusters">
+    <Button type="primary" size="small" @click="onAdd">{{
             $t('com.createX', { obj: $t('cluster.name') })
-        }}</Button>
-        <pageTable :tableData="tableData" :columns="columns" :loading="tableLoading" />
+    }}</Button>
+    <pageTable
+      :tableData="tableData"
+      :columns="columns"
+      :loading="tableLoading"
+    />
 
-        <Drawer
-            :title="
+    <Drawer
+      :title="
                 isAdd
                     ? $t('com.createX', { obj: $t('cluster.name') })
                     : $t('com.editX', { obj: $t('cluster.name') })
             "
-            v-model="upsertVisible"
-            :mask-closable="false"
-            width="80"
-        >
-            <Upsert
-                v-if="upsertVisible"
-                :currentCluster="currentCluster"
-                :clusterNames="clusterNames"
-                :isAdd="isAdd"
-                @submit="upsertSubmit"
-            />
-        </Drawer>
+      v-model="upsertVisible"
+      :mask-closable="false"
+      width="60"
+    >
+      <Upsert
+        v-if="upsertVisible"
+        :currentCluster="currentCluster"
+        :clusterNames="clusterNames"
+        :isAdd="isAdd"
+        @submit="upsertSubmit"
+      />
+    </Drawer>
 
-        <Drawer :title="$t('com.detail')" v-model="infoVisible" width="80">
-            <Review
-                :showFooter="false"
-                :baseConfigData="baseConfigData"
-                :instancePoolData="instancePoolData"
-                :passiveHealthData="passiveHealthData"
-                :llmConfigData="llmConfigData"
-                :originalLlmConfigKey="originalLlmConfigKey"
-                :originalLlmConfigHeaders="originalLlmConfigHeaders"
-            />
-        </Drawer>
+    <Drawer :title="$t('com.detail')" v-model="infoVisible" width="80">
+      <Review
+        :showFooter="false"
+        :baseConfigData="baseConfigData"
+        :instancePoolData="instancePoolData"
+        :passiveHealthData="passiveHealthData"
+        :llmConfigData="llmConfigData"
+        :originalLlmConfigKey="originalLlmConfigKey"
+        :originalLlmConfigHeaders="originalLlmConfigHeaders"
+      />
+    </Drawer>
 
-        <Modal
-            v-model="deleteErrorVisible"
-            :mask-closable="false"
-            width="560"
+    <Modal v-model="deleteErrorVisible" :mask-closable="false" width="560">
+      <div slot="header" class="delete-error-title">
+        <Icon type="ios-close-circle" color="#ed4014" :size="22" />
+        <span>{{ $t('cluster.deleteFailed') }}</span>
+      </div>
+      <div class="delete-error-content">
+        <p
+          v-for="(ref, index) in deleteErrorRefs"
+          :key="index"
+          class="delete-error-line"
         >
-            <div slot="header" class="delete-error-title">
-                <Icon type="ios-close-circle" color="#ed4014" :size="22" />
-                <span>{{ $t('cluster.deleteFailed') }}</span>
-            </div>
-            <div class="delete-error-content">
-                <p
-                    v-for="(ref, index) in deleteErrorRefs"
-                    :key="index"
-                    class="delete-error-line"
-                >
-                    {{
+          {{
                         $t('cluster.deleteBlockedByRule', {
                             cluster: deleteErrorCluster,
                             table: buildRouteTableLabel(ref),
                             rule: ref.ruleName
                         })
-                    }}
-                    <a @click="goToRouteTable(ref)">{{ $t('cluster.goToHandle') }}</a>
-                </p>
-            </div>
-            <div slot="footer">
-                <Button type="primary" @click="deleteErrorVisible = false">{{
+          }}
+          <a @click="goToRouteTable(ref)">{{ $t('cluster.goToHandle') }}</a>
+        </p>
+      </div>
+      <div slot="footer">
+        <Button type="primary" @click="deleteErrorVisible = false">{{
                     $t('com.confirm')
-                }}</Button>
-            </div>
-        </Modal>
-    </div>
+        }}</Button>
+      </div>
+    </Modal>
+  </div>
 </template>
 <script>
 import pageTable from '@/components/table/pageTable';

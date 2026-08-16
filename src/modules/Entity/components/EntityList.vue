@@ -1,18 +1,11 @@
-/**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. * * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */
 <template>
   <div>
     <div class="title">
@@ -128,9 +121,14 @@ export default {
                         const quotaPlan = params.row.quota_plan || {};
                         let text = '-';
                         if (!quotaPlan.unlimited) {
+                            const isRMB = quotaPlan.unit === 'RMB';
+                            const decimals = isRMB ? 4 : 0;
+                            const unitText = isRMB ? '¥' : ' tokens';
                             const used = quotaPlan.balance && quotaPlan.balance.used || 0;
                             const quota = quotaPlan.quota || 0;
-                            text = `${that.formatNumber(used)} / ${that.formatNumber(quota)}`;
+                            const usedText = isRMB ? '¥' + that.formatNumber(used, decimals) : that.formatNumber(used, decimals) + unitText;
+                            const quotaText = isRMB ? '¥' + that.formatNumber(quota, decimals) : that.formatNumber(quota, decimals) + unitText;
+                            text = `${usedText} / ${quotaText}`;
                         }
                         return h('span', text);
                     }
@@ -243,8 +241,13 @@ export default {
         this.fetchData();
     },
     methods: {
-        formatNumber(num) {
-            return num.toLocaleString();
+        formatNumber(num, decimals = 0) {
+            const value = Number(num);
+            if (Number.isNaN(value)) return '-';
+            return value.toLocaleString('zh-CN', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
         },
         onViewSubmit() {
             this.isHiden = false;

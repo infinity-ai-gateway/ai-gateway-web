@@ -1,18 +1,11 @@
-/**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. * * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */
 <template>
   <div>
     <Form
@@ -167,10 +160,10 @@
                   v-model="formData.quota_plan.quota"
                   :min="0"
                   :max="INT64_MAX"
-                  :precision="0"
-                  :step="1"
-                  :formatter="formatNumberInput"
-                  :parser="parseNumberInput"
+                  :precision="quotaPrecision"
+                  :step="quotaStep"
+                  :formatter="isRMB ? null : formatNumberInput"
+                  :parser="isRMB ? null : parseNumberInput"
                   style="width: 100%"
                 ></InputNumber>
               </FormItem>
@@ -181,6 +174,7 @@
               <FormItem :label="$t('apiKey.quotaUnit')">
                 <Select v-model="formData.quota_plan.unit" style="width: 100%">
                   <Option value="total_token">total_token</Option>
+                  <Option value="RMB">RMB</Option>
                 </Select>
               </FormItem>
             </Col>
@@ -571,13 +565,21 @@ export default {
           callback(new Error(this.$t("apiKey.quotaRequired")));
           return;
         }
-        if (!Number.isInteger(value)) {
+        if (Number.isNaN(Number(value)) || value < 0) {
+          callback(new Error(this.$t("apiKey.quotaRangeError")));
+          return;
+        }
+        const isRMB = that.formData.quota_plan.unit === 'RMB';
+        if (!isRMB && !Number.isInteger(value)) {
           callback(new Error(this.$t("apiKey.quotaMustBeNonNegative")));
           return;
         }
-        if (value < 0) {
-          callback(new Error(this.$t("apiKey.quotaRangeError")));
-          return;
+        if (isRMB) {
+          const decimals = (String(value).split('.')[1] || '').length;
+          if (decimals > 4) {
+            callback(new Error(this.$t("apiKey.quotaRmbPrecisionError") || 'RMB 配额最多保留 4 位小数'));
+            return;
+          }
         }
         if (value > INT64_MAX) {
           callback(new Error(this.$t("apiKey.quotaMaxError")));
@@ -767,6 +769,15 @@ export default {
     },
     descriptionLength() {
       return (this.formData.description || "").length;
+    },
+    isRMB() {
+      return this.formData.quota_plan && this.formData.quota_plan.unit === 'RMB';
+    },
+    quotaPrecision() {
+      return this.isRMB ? 4 : 0;
+    },
+    quotaStep() {
+      return this.isRMB ? 0.0001 : 1;
     },
     maxConcurrencyCustomRules() {
       return [
@@ -1375,9 +1386,12 @@ export default {
             submitData.quota_plan.pass_when_no_enough_quota =
               submitData.quota_plan.pass_when_no_enough_quota === "true";
             if (!submitData.quota_plan.unlimited) {
-              submitData.quota_plan.quota = Math.trunc(
-                submitData.quota_plan.quota
-              );
+              // RMB 模式保留 4 位小数，total_token 模式截断为整数
+              if (submitData.quota_plan.unit !== 'RMB') {
+                submitData.quota_plan.quota = Math.trunc(
+                  submitData.quota_plan.quota
+                );
+              }
             }
             submitData.rate_limit_policy.enabled =
               submitData.rate_limit_policy.enabled === "true";
