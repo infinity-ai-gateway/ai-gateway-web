@@ -22,9 +22,9 @@ language governing permissions and * limitations under the License. */
         />
       </FormItem>
 
-      <FormItem :label="$t('route.expression')" prop="Cond">
+      <FormItem :label="$t('route.expression')" prop="cond">
         <Expression
-          :expression="formData.Cond"
+          :expression="formData.cond"
           :readonly="readonly"
           @expressionChanged="onExpressionChanged"
         />
@@ -43,12 +43,12 @@ language governing permissions and * limitations under the License. */
           <Col span="2" class="field-label">{{ $t('route.cluster') }}</Col>
           <Col span="5">
             <FormItem
-              :prop="`targets.${index}.ClusterName`"
+              :prop="`targets.${index}.cluster_name`"
               :rules="targetClusterRules"
               class="inline-form-item"
             >
               <Select
-                v-model="target.ClusterName"
+                v-model="target.cluster_name"
                 :disabled="readonly"
                 :placeholder="$t('route.selectTargetCluster')"
                 filterable
@@ -66,12 +66,12 @@ language governing permissions and * limitations under the License. */
           <Col span="2" class="field-label">{{ $t('route.model') }}</Col>
           <Col span="9">
             <FormItem
-              :prop="`targets.${index}.Model`"
+              :prop="`targets.${index}.model`"
               :rules="targetModelRules"
               class="inline-form-item"
             >
               <Select
-                v-model="target.Model"
+                v-model="target.model"
                 :disabled="readonly"
                 :placeholder="$t('route.modelTransparent')"
                 filterable
@@ -79,7 +79,7 @@ language governing permissions and * limitations under the License. */
                 clearable
               >
                 <Option
-                  v-for="model in getModelsByCluster(target.ClusterName, index, 'target')"
+                  v-for="model in getModelsByCluster(target.cluster_name, index, 'target')"
                   :key="model"
                   :value="model"
                   :label="model"
@@ -90,12 +90,12 @@ language governing permissions and * limitations under the License. */
           <Col span="2" class="field-label">{{ $t('route.weight') }}</Col>
           <Col span="2">
             <FormItem
-              :prop="`targets.${index}.Weight`"
-              :rules="targetWeightRules"
+              :prop="`targets.${index}.weight`"
+              :rules="targetweightRules"
               class="inline-form-item"
             >
               <InputNumber
-                v-model="target.Weight"
+                v-model="target.weight"
                 :disabled="readonly"
                 :min="0"
                 :max="100"
@@ -140,12 +140,12 @@ language governing permissions and * limitations under the License. */
           <Col span="2" class="field-label">{{ $t('route.cluster') }}</Col>
           <Col span="7">
             <FormItem
-              :prop="`fallbacks.${index}.ClusterName`"
+              :prop="`fallbacks.${index}.cluster_name`"
               :rules="fallbackClusterRules"
               class="inline-form-item"
             >
               <Select
-                v-model="fallback.ClusterName"
+                v-model="fallback.cluster_name"
                 :disabled="readonly"
                 :placeholder="$t('route.selectTargetCluster')"
                 filterable
@@ -163,12 +163,12 @@ language governing permissions and * limitations under the License. */
           <Col span="2" class="field-label">{{ $t('route.model') }}</Col>
           <Col span="11">
             <FormItem
-              :prop="`fallbacks.${index}.Model`"
+              :prop="`fallbacks.${index}.model`"
               :rules="fallbackModelRules"
               class="inline-form-item"
             >
               <Select
-                v-model="fallback.Model"
+                v-model="fallback.model"
                 :disabled="readonly"
                 :placeholder="$t('route.modelTransparent')"
                 filterable
@@ -176,7 +176,7 @@ language governing permissions and * limitations under the License. */
                 clearable
               >
                 <Option
-                  v-for="model in getModelsByCluster(fallback.ClusterName, index, 'fallback')"
+                  v-for="model in getModelsByCluster(fallback.cluster_name, index, 'fallback')"
                   :key="model"
                   :value="model"
                   :label="model"
@@ -223,8 +223,8 @@ language governing permissions and * limitations under the License. */
 import Expression from '@/components/Expression';
 import { cloneDeep } from 'lodash';
 
-const defaultTarget = { ClusterName: '', Model: '', Weight: 0 };
-const defaultFallback = { ClusterName: '', Model: '' };
+const defaultTarget = { cluster_name: '', model: '', weight: 0 };
+const defaultFallback = { cluster_name: '', model: '' };
 
 export default {
   name: 'RuleForm',
@@ -282,7 +282,7 @@ export default {
           trigger: 'change'
         }
       ],
-      targetWeightRules: [
+      targetweightRules: [
         {
           validator: (rule, value, callback) => {
             if (value === '' || value === null || value === undefined) {
@@ -330,7 +330,7 @@ export default {
             trigger: 'blur'
           }
         ],
-        Cond: [
+        cond: [
           {
             required: true,
             validator: validateCond,
@@ -364,9 +364,9 @@ export default {
 
   methods: {
     onExpressionChanged(data) {
-      this.formData.Cond = data.expression;
+      this.formData.cond = data.expression;
       this.formData.condErrmsg = data.errmsg || '';
-      this.$refs.formData.validateField('Cond');
+      this.$refs.formData.validateField('cond');
     },
 
     addTarget() {
@@ -388,15 +388,15 @@ export default {
       this.formData.fallbacks.splice(index, 1);
     },
 
-    validateWeight() {
-      const sum = (this.formData.targets || []).reduce((acc, t) => acc + (Number(t.Weight) || 0), 0);
+    validateweight() {
+      const sum = (this.formData.targets || []).reduce((acc, t) => acc + (Number(t.weight) || 0), 0);
       this.weightError = sum !== 100;
       return !this.weightError;
     },
 
     validateDuplicate() {
       const targets = this.formData.targets || [];
-      const targetKeys = targets.map(t => `${t.ClusterName || ''}|${t.Model || ''}`);
+      const targetKeys = targets.map(t => `${t.cluster_name || ''}|${t.model || ''}`);
       const targetDup = targetKeys.find((key, idx) => targetKeys.indexOf(key) !== idx);
       if (targetDup) {
         this.$Message.error(this.$t('route.targetDuplicate'));
@@ -407,7 +407,7 @@ export default {
 
     validateFallbackDuplicate() {
       const fallbacks = this.formData.fallbacks || [];
-      const fallbackKeys = fallbacks.map(f => `${f.ClusterName || ''}|${f.Model || ''}`);
+      const fallbackKeys = fallbacks.map(f => `${f.cluster_name || ''}|${f.model || ''}`);
       const fallbackDup = fallbackKeys.find((key, idx) => fallbackKeys.indexOf(key) !== idx);
       if (fallbackDup) {
         this.$Message.error(this.$t('route.fallbackDuplicate'));
@@ -417,7 +417,7 @@ export default {
     },
 
     getClusters(/* currentIndex, type */) {
-      // Allow selecting the same cluster for multiple targets as long as (ClusterName, Model) is unique
+      // Allow selecting the same cluster for multiple targets as long as (cluster_name, model) is unique
       return this.clusters || [];
     },
 
@@ -450,24 +450,24 @@ export default {
     onTargetClusterChange(index) {
       const target = this.formData.targets[index];
       if (target) {
-        target.Model = '';
+        target.model = '';
       }
     },
 
     onFallbackClusterChange(index) {
       const fallback = this.formData.fallbacks[index];
       if (fallback) {
-        fallback.Model = '';
+        fallback.model = '';
       }
     },
 
     getTargetModelIndex(field) {
-      const match = field.match(/targets\.(\d+)\.Model/);
+      const match = field.match(/targets\.(\d+)\.model/);
       return match ? parseInt(match[1], 10) : -1;
     },
 
     getFallbackModelIndex(field) {
-      const match = field.match(/fallbacks\.(\d+)\.Model/);
+      const match = field.match(/fallbacks\.(\d+)\.model/);
       return match ? parseInt(match[1], 10) : -1;
     },
 
@@ -490,30 +490,30 @@ export default {
         return;
       }
       const current = this.formData.targets[index];
-      if (!current || !current.ClusterName) {
+      if (!current || !current.cluster_name) {
         callback();
         return;
       }
-      const currentKey = `${current.ClusterName}|${value || ''}`;
+      const currentKey = `${current.cluster_name}|${value || ''}`;
 
       // 与其他目标比较
       const duplicateTarget = this.formData.targets.find((item, idx) => {
         if (idx === index) return false;
-        if (!item.ClusterName) return false;
-        return `${item.ClusterName}|${item.Model || ''}` === currentKey;
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
       });
       if (duplicateTarget) {
-        callback(new Error(this.getDuplicateErrorMessage(duplicateTarget.ClusterName, duplicateTarget.Model, 'target', 'target')));
+        callback(new Error(this.getDuplicateErrorMessage(duplicateTarget.cluster_name, duplicateTarget.model, 'target', 'target')));
         return;
       }
 
       // 与备用集群比较
       const duplicateFallback = (this.formData.fallbacks || []).find(item => {
-        if (!item.ClusterName) return false;
-        return `${item.ClusterName}|${item.Model || ''}` === currentKey;
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
       });
       if (duplicateFallback) {
-        callback(new Error(this.getDuplicateErrorMessage(duplicateFallback.ClusterName, duplicateFallback.Model, 'target', 'fallback')));
+        callback(new Error(this.getDuplicateErrorMessage(duplicateFallback.cluster_name, duplicateFallback.model, 'target', 'fallback')));
         return;
       }
 
@@ -527,30 +527,30 @@ export default {
         return;
       }
       const current = this.formData.fallbacks[index];
-      if (!current || !current.ClusterName) {
+      if (!current || !current.cluster_name) {
         callback();
         return;
       }
-      const currentKey = `${current.ClusterName}|${value || ''}`;
+      const currentKey = `${current.cluster_name}|${value || ''}`;
 
       // 与其他备用比较
       const duplicateFallback = this.formData.fallbacks.find((item, idx) => {
         if (idx === index) return false;
-        if (!item.ClusterName) return false;
-        return `${item.ClusterName}|${item.Model || ''}` === currentKey;
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
       });
       if (duplicateFallback) {
-        callback(new Error(this.getDuplicateErrorMessage(duplicateFallback.ClusterName, duplicateFallback.Model, 'fallback', 'fallback')));
+        callback(new Error(this.getDuplicateErrorMessage(duplicateFallback.cluster_name, duplicateFallback.model, 'fallback', 'fallback')));
         return;
       }
 
       // 与目标集群比较
       const duplicateTarget = (this.formData.targets || []).find(item => {
-        if (!item.ClusterName) return false;
-        return `${item.ClusterName}|${item.Model || ''}` === currentKey;
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
       });
       if (duplicateTarget) {
-        callback(new Error(this.getDuplicateErrorMessage(duplicateTarget.ClusterName, duplicateTarget.Model, 'fallback', 'target')));
+        callback(new Error(this.getDuplicateErrorMessage(duplicateTarget.cluster_name, duplicateTarget.model, 'fallback', 'target')));
         return;
       }
 
@@ -563,7 +563,7 @@ export default {
           this.$Message.error(this.$t('com.tipValidateError'));
           return;
         }
-        if (!this.validateWeight()) {
+        if (!this.validateweight()) {
           this.$Message.error(this.$t('route.weightSumError'));
           return;
         }

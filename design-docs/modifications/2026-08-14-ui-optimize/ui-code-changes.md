@@ -3,7 +3,7 @@
 > **对照**：[openapi-doc-diff.md](./openapi-doc-diff.md)
 > **接口**：`design-docs/api-define/OpenAPI接口定义/`
 > **核对日期**：2026-08-14
-> **状态**：实施中
+> **状态**：已实施
 
 ---
 

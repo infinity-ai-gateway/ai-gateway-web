@@ -33,7 +33,7 @@ permissions and * limitations under the License. */
             "
       v-model="upsertVisible"
       :mask-closable="false"
-      width="60"
+      width="65"
     >
       <Upsert
         v-if="upsertVisible"

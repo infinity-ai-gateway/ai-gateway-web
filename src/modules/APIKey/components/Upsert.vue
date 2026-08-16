@@ -159,7 +159,7 @@ language governing permissions and * limitations under the License. */
                 <InputNumber
                   v-model="formData.quota_plan.quota"
                   :min="0"
-                  :max="INT64_MAX"
+                  :max="isRMB ? RMB_QUOTA_MAX : INT64_MAX"
                   :precision="quotaPrecision"
                   :step="quotaStep"
                   :formatter="isRMB ? null : formatNumberInput"
@@ -515,6 +515,7 @@ import { isCidr, isCidrEqual, isCidrContained } from "@/utils/const";
 import { getModelGroupsFromServices } from "@/utils/model";
 
 const INT64_MAX = 9223372036854775807;
+const RMB_QUOTA_MAX = 90000000;
 const INT_MAX = 2147483647;
 const DESCRIPTION_MAX_LENGTH = 512;
 
@@ -580,6 +581,10 @@ export default {
             callback(new Error(this.$t("apiKey.quotaRmbPrecisionError") || 'RMB 配额最多保留 4 位小数'));
             return;
           }
+        }
+        if (that.isRMB && value > RMB_QUOTA_MAX) {
+          callback(new Error(this.$t("apiKey.quotaRmbMaxError") || 'RMB 配额不能超过 9000 万元'));
+          return;
         }
         if (value > INT64_MAX) {
           callback(new Error(this.$t("apiKey.quotaMaxError")));
@@ -694,6 +699,7 @@ export default {
 
     return {
       INT64_MAX,
+      RMB_QUOTA_MAX,
       INT_MAX,
       DESCRIPTION_MAX_LENGTH,
       neverExpire: true,
@@ -957,7 +963,8 @@ export default {
       })
         .then((data) => {
           if (data.status === 200) {
-            this.entityList = data.data.Data.list || data.data.Data || [];
+            const result = data.data.Data || {};
+            this.entityList = Array.isArray(result.list) ? result.list : (Array.isArray(result) ? result : []);
           }
         })
         .catch(() => {

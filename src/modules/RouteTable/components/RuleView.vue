@@ -21,13 +21,13 @@
     </div>
     <div class="info-row">
       <span class="info-label">{{ $t('route.expression') }}</span>
-      <span class="info-value expression-value">{{ rule.Cond || '-' }}</span>
+      <span class="info-value expression-value">{{ rule.cond || '-' }}</span>
     </div>
     <div class="info-row">
       <span class="info-label">{{ $t('route.targetClusterAndModel') }}</span>
       <span class="info-value">
         <Tag v-for="(t, index) in rule.targets || []" :key="`target-${index}`">
-          {{ t.ClusterName }}/{{ t.Model || '' }}: {{ t.Weight }}%
+          {{ t.cluster_name }}/{{ t.model || '' }}: {{ t.weight }}%
         </Tag>
         <span v-if="!(rule.targets || []).length">-</span>
       </span>
@@ -36,7 +36,7 @@
       <span class="info-label">{{ $t('route.fallbackClusterAndModel') }}</span>
       <span class="info-value">
         <Tag v-for="(f, index) in rule.fallbacks || []" :key="`fallback-${index}`">
-          {{ f.ClusterName }}/{{ f.Model || '' }}
+          {{ f.cluster_name }}/{{ f.model || '' }}
         </Tag>
         <span v-if="!(rule.fallbacks || []).length">-</span>
       </span>

@@ -54,6 +54,39 @@ language governing permissions and * limitations under the License. */
             </span>
             <Input v-model="formData.provider" />
           </FormItem>
+          <FormItem prop="strip_prefix">
+            <span slot="label" class="provider-label">
+              {{ $t('gatewayConfig.stripPrefix') }}
+              <Tooltip placement="top" transfer max-width="320">
+                <div slot="content" class="provider-tip-content">
+                  {{ $t('gatewayConfig.stripPrefixTip') }}
+                </div>
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="provider-help-icon"
+                />
+              </Tooltip>
+            </span>
+            <i-switch v-model="formData.strip_prefix" />
+          </FormItem>
+          <FormItem v-if="formData.strip_prefix" prop="match_prefix">
+            <span slot="label" class="provider-label">
+              {{ $t('gatewayConfig.matchPrefix') }}
+              <Tooltip placement="top" transfer max-width="320">
+                <div slot="content" class="provider-tip-content">
+                  {{ $t('gatewayConfig.matchPrefixTip') }}
+                </div>
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="provider-help-icon"
+                />
+              </Tooltip>
+            </span>
+            <Input
+              v-model="formData.match_prefix"
+              :placeholder="$t('gatewayConfig.matchPrefixPlaceholder')"
+            />
+          </FormItem>
           <FormItem
             :label="$t('gatewayConfig.modelListEndpoint')"
             prop="model_endpoint"
@@ -314,7 +347,7 @@ language governing permissions and * limitations under the License. */
           <Row :gutter="24">
             <Col span="12">
               <FormItem
-                :label="$t('gatewayConfig.keyPolicyRetryBackoffInitial') || '初始退避时间 (ms)'"
+                :label="$t('gatewayConfig.keyPolicyRetryBackoffInitial')"
                 prop="key_policy.retry_backoff_initial"
               >
                 <InputNumber
@@ -328,7 +361,7 @@ language governing permissions and * limitations under the License. */
             </Col>
             <Col span="12">
               <FormItem
-                :label="$t('gatewayConfig.keyPolicyRetryBackoffMax') || '最大退避时间 (ms)'"
+                :label="$t('gatewayConfig.keyPolicyRetryBackoffMax')"
                 prop="key_policy.retry_backoff_max"
               >
                 <InputNumber
@@ -536,6 +569,12 @@ export default {
                         validator: this.validateRetryBackoffMax,
                         trigger: 'change'
                     }
+                ],
+                match_prefix: [
+                    {
+                        validator: this.validateMatchPrefix,
+                        trigger: 'blur'
+                    }
                 ]
             },
             selectData: [],
@@ -569,6 +608,8 @@ export default {
             formData: {
                 provider_type: '',
                 provider: '',
+                match_prefix: '',
+                strip_prefix: false,
                 model_endpoint: {
                     schema: 'https',
                     uri: '/v1/models',
@@ -616,6 +657,11 @@ export default {
         }
     },
     watch: {
+        'formData.strip_prefix'(val) {
+            if (!val) {
+                this.formData.match_prefix = '';
+            }
+        },
         reportFlag: {
             handler(v) {
                 this.handleSubmit('formData');
@@ -665,6 +711,8 @@ export default {
             this.formData = {
                 provider_type: '',
                 provider: '',
+                match_prefix: '',
+                strip_prefix: false,
                 model_endpoint: {
                     schema: 'https',
                     uri: '/v1/models',
@@ -776,6 +824,23 @@ export default {
             callback();
         },
 
+        validateMatchPrefix(rule, value, callback) {
+            const prefix = String(value || '').trim();
+            if (!prefix) {
+                if (this.formData.strip_prefix) {
+                    callback(new Error(this.$t('gatewayConfig.matchPrefixRequiredWhenStrip') || '开启裁剪前缀时，模型前缀匹配必填'));
+                    return;
+                }
+                callback();
+                return;
+            }
+            if (!prefix.endsWith('/')) {
+                callback(new Error(this.$t('gatewayConfig.matchPrefixMustEndWithSlash') || '模型前缀匹配必须以 / 结尾'));
+                return;
+            }
+            callback();
+        },
+
         onRetryBackoffInitialChange() {
             this.$nextTick(() => {
                 if (this.$refs.formData) {
@@ -824,6 +889,8 @@ export default {
             }
 
             this.formData.provider = this.formData.provider || '';
+            this.formData.match_prefix = this.formData.match_prefix || '';
+            this.formData.strip_prefix = !!this.formData.strip_prefix;
 
             this.mergeSelectedModelsIntoList();
             this.validateKeysState();
@@ -1097,6 +1164,12 @@ export default {
                 delete tmpData.group;
                 if (!tmpData.provider_type) {
                     delete tmpData.provider_type;
+                }
+                if (!tmpData.match_prefix) {
+                    delete tmpData.match_prefix;
+                }
+                if (!tmpData.strip_prefix) {
+                    delete tmpData.strip_prefix;
                 }
 
                 this.$emit('submitData', {

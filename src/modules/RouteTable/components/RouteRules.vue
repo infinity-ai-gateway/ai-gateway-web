@@ -225,11 +225,11 @@ export default {
         },
         {
           title: that.$t('route.expression'),
-          key: 'Cond',
+          key: 'cond',
           sortable: 'custom',
           searchable: true,
           render(h, params) {
-            return <span>{params.row.Cond || '-'}</span>;
+            return <span>{params.row.cond || '-'}</span>;
           }
         },
         {
@@ -240,13 +240,13 @@ export default {
           render(h, params) {
             const targets = params.row.targets || [];
             return h('div', targets.map(t => {
-              const text = `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`;
+              const text = `${t.cluster_name}/${t.model || ''}: ${t.weight}%`;
               return h('Tooltip', {
                 props: { content: text, transfer: true, maxWidth: 600 },
                 style: 'display: block; width: 100%; margin-bottom: 4px;'
               }, [
                 h('Tag', {
-                  key: `${t.ClusterName}-${t.Model}`,
+                  key: `${t.cluster_name}-${t.model}`,
                   style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
                 }, text)
               ]);
@@ -399,8 +399,8 @@ export default {
       this.currentRuleIndex = -1;
       this.currentRule = {
         name: '',
-        Cond: '',
-        targets: [{ ClusterName: '', Model: '', Weight: 100 }],
+        cond: '',
+        targets: [{ cluster_name: '', model: '', weight: 100 }],
         fallbacks: []
       };
       this.ruleDrawerTitle = this.$t('com.createX', { obj: this.$t('route.rule') });

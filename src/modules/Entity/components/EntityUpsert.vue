@@ -157,7 +157,7 @@ language governing permissions and * limitations under the License. */
               <InputNumber
                 v-model="formData.quota_plan.quota"
                 :min="0"
-                :max="INT64_MAX"
+                :max="isRMB ? RMB_QUOTA_MAX : INT64_MAX"
                 :precision="quotaPrecision"
                 :step="quotaStep"
                 :formatter="isRMB ? null : formatNumberInput"
@@ -502,6 +502,7 @@ import { cloneDeep } from 'lodash';
 import { getModelGroupsFromServices } from '@/utils/model';
 
 const INT64_MAX = 9223372036854775807;
+const RMB_QUOTA_MAX = 90000000;
 const INT_MAX = 2147483647;
 
 export default {
@@ -578,6 +579,10 @@ export default {
                         return;
                     }
                 }
+                if (isRMB && value > RMB_QUOTA_MAX) {
+                    callback(new Error(this.$t('entity.quotaRmbMaxError') || 'RMB 配额不能超过 9000 万元'));
+                    return;
+                }
                 if (value > INT64_MAX) {
                     callback(new Error(this.$t('entity.quotaMaxError')));
                     return;
@@ -625,6 +630,7 @@ export default {
 
         return {
             INT64_MAX,
+            RMB_QUOTA_MAX,
             INT_MAX,
             maxConcurrencyMode: 'limited',
             entityTypeList: [],
