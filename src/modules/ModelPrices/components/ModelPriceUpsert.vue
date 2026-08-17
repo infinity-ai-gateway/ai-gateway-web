@@ -92,7 +92,7 @@
                 >
                     <Row :gutter="8">
                         <Col span="10">
-                            <el-select v-model="entry.key" style="width: 100%;" size="small" filterable clearable placeholder="价格字段">
+                            <el-select v-model="entry.key" style="width: 100%;" size="small" filterable clearable placeholder="价格项">
                                 <el-option v-for="item in priceKeyOptions" :key="item" :value="item" :label="item" />
                             </el-select>
                         </Col>

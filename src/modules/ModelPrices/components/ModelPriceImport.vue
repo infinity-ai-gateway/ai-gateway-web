@@ -44,17 +44,6 @@ language governing permissions and * limitations under the License. */
         <p v-if="selectedFile" class="file-name">{{ selectedFile.name }}</p>
       </FormItem>
     </Form>
-    <div class="drawer-footer">
-      <Button
-        type="primary"
-        size="small"
-        :loading="uploading"
-        :disabled="!selectedFile"
-        @click="submitImport"
-      >
-        {{ $t('com.submit') }}
-      </Button>
-    </div>
     <div v-if="importResult" class="result-section">
       <p>
         {{ $t('modelPrices.importedCount') }}:
@@ -78,7 +67,7 @@ language governing permissions and * limitations under the License. */
 </template>
 
 <script>
-import yaml from 'js-yaml';
+import { load } from 'js-yaml';
 
 export default {
     name: 'ModelPriceImport',
@@ -87,8 +76,7 @@ export default {
         return {
             importMode: 'replace',
             selectedFile: null,
-            importResult: null,
-            uploading: false
+            importResult: null
         };
     },
 
@@ -125,9 +113,9 @@ export default {
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
-                        const doc = yaml.load(e.target.result);
+                        const doc = load(e.target.result);
                         if (!doc || typeof doc !== 'object') {
-                            reject(new Error(this.$t('modelPrices.parseYamlFailed')));
+                            reject(new Error(`${this.$t('modelPrices.parseYamlFailed')}：${this.$t('modelPrices.yamlTopLevelMustBeObject')}`));
                             return;
                         }
                         if (!doc.version) {
@@ -140,7 +128,7 @@ export default {
                         }
                         resolve();
                     } catch (err) {
-                        reject(new Error(this.$t('modelPrices.parseYamlFailed')));
+                        reject(new Error(`${this.$t('modelPrices.parseYamlFailed')}：${err.message || ''}`));
                     }
                 };
                 reader.onerror = () => {
@@ -151,7 +139,6 @@ export default {
         },
 
         onUploadSuccess(response) {
-            this.uploading = false;
             if (response && response.ErrNum === 200) {
                 this.importResult = response.Data || {};
                 this.$Message.success(this.$t('modelPrices.importSucc'));
@@ -159,11 +146,12 @@ export default {
             } else {
                 const msg = response && response.ErrMsg ? response.ErrMsg : this.$t('modelPrices.importFailed');
                 this.$Message.error(msg);
+                this.$emit('error');
             }
         },
 
         onUploadError(error) {
-            this.uploading = false;
+            this.$emit('error');
             console.error('YAML 导入失败:', error);
             this.$Message.error(this.$t('modelPrices.importFailed'));
         },
@@ -171,15 +159,15 @@ export default {
         submitImport() {
             if (!this.selectedFile) {
                 this.$Message.error(this.$t('modelPrices.yamlFileRequired'));
+                this.$emit('error');
                 return;
             }
-            this.uploading = true;
             this.validateYaml(this.selectedFile).then(() => {
                 if (this.$refs.upload) {
                     this.$refs.upload.post(this.selectedFile);
                 }
             }).catch(err => {
-                this.uploading = false;
+                this.$emit('error');
                 this.$Message.error(err.message || this.$t('modelPrices.importFailed'));
             });
         }
@@ -200,11 +188,6 @@ export default {
 
     .error-text {
         color: #ed4014;
-    }
-
-    .drawer-footer {
-        margin-top: 16px;
-        text-align: right;
     }
 }
 </style>

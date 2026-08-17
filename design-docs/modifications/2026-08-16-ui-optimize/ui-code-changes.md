@@ -213,7 +213,7 @@
 
 | 模块 | 问题 | 影响 | 建议修复 |
 | -------- | -------- | -------- | -------- |
-| 文档 | model-prices 时间字段描述仍为旧字段名 | 文档与代码不一致 | 按 5.2 节更新旧文档描述 |
+| 文档 | model-prices 时间字段描述已对齐为 `create_time` / `update_time` | 文档与代码一致 | 已按 5.2 节更新 2026-08-14 变更记录 |
 
 ---
 
@@ -245,8 +245,8 @@
 
 ### 7.4 model-prices 时间字段
 
-- [x] 详情页读取 `create_time` / `update_time`
-- [x] 列表页读取 `create_time` / `update_time`
+- [x] 详情页读取并展示 `create_time` / `update_time`
+- [x] 列表页数据返回 `create_time` / `update_time`（列表表格未展示时间列）
 
 ---
 

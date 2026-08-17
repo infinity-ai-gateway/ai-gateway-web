@@ -392,7 +392,7 @@
 **至少包含**：
 
 1. **列表页** `index.vue`
-   - 表格字段：`provider`、`model`、`base_model`、`mode`、`createdAt`、`updatedAt`、`operation`
+   - 表格字段：`provider`、`model`、`base_model`、`mode`、`operation`
    - 分页：已实现
    - 筛选：列上标记 `searchable: true`，但 `fetchData` 未将搜索关键词作为查询参数提交，筛选未真正生效
    - 操作列：详情、编辑、删除
@@ -405,7 +405,7 @@
      - limits（键值对表格）
      - prices（键值对表格）
      - metadata（source、notes）
-     - created_at、updated_at
+     - create_time、update_time
    - **字段名说明**：接口实际返回 `create_time` / `update_time`，详情页按此字段读取
 
 3. **创建/编辑页** `components/ModelPriceUpsert.vue`
@@ -448,7 +448,7 @@
 | 模块             | 问题                                     | 影响                     | 建议修复                                                            |
 | ---------------- | ---------------------------------------- | ------------------------ | ------------------------------------------------------------------- |
 | RouteTable 列表  | 路由表列表改为服务端分页，文档未说明     | 无功能影响，但文档不完整 | 已在 2.3 节补充 RouteTable/index.vue 和 pageTable.vue 变更说明      |
-| ModelPrices 列表 | 列数超出文档要求（7 列 vs 4 列）         | 与文档不一致             | 确认是否保留 7 列，或按文档精简                                     |
+| ModelPrices 列表 | 列数超出文档要求（5 列 vs 4 列）         | 与设计文档不一致             | 确认是否保留 5 列，或按设计文档精简                                     |
 
 ---
 
@@ -515,8 +515,8 @@
 
 ### 9.5 model-prices（新建模块）
 
-- [x] 列表页：展示 provider / model / base_model / mode / createdAt / updatedAt / operation 列，分页正常（列表按 provider / model / mode 筛选不实现）
-- [x] 详情页：展示全部字段（capabilities、supported_parameters、limits、prices、metadata、created_at、updated_at）
+- [x] 列表页：展示 provider / model / base_model / mode / operation 列，分页正常（列表按 provider / model / mode 筛选不实现）
+- [x] 详情页：展示全部字段（capabilities、supported_parameters、limits、prices、metadata、create_time、update_time）
 - [x] 创建/编辑：provider / model / base_model / mode 必填校验
 - [x] prices 至少包含一个字段，所有价格值为非负数
 - [x] limits 键名为枚举值，值为非负整数

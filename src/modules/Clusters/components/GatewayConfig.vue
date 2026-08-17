@@ -743,7 +743,7 @@ export default {
             if (!Array.isArray(this.formData.keys)) {
                 this.$set(this.formData, 'keys', []);
             }
-            this.formData.keys.push({ name: '', key: '', weight: 100 });
+            this.formData.keys.push({ name: '', key: '', weight: 0 });
             this.$nextTick(() => {
                 this.validateKeysState();
             });

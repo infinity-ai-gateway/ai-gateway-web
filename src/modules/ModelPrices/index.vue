@@ -64,11 +64,12 @@ language governing permissions and * limitations under the License. */
         v-if="importVisible"
         ref="importRef"
         @submit="onImportSubmit"
+        @error="onImportError"
       />
       <div slot="footer">
         <Button @click="importVisible = false">{{ $t('com.cancel') }}</Button>
         <Button type="primary" :loading="importLoading" @click="confirmImport">
-          {{ $t('com.submit') }}
+          {{ $t('modelPrices.import') }}
         </Button>
       </div>
     </Modal>
@@ -265,14 +266,20 @@ export default {
         },
 
         confirmImport() {
+            this.importLoading = true;
             if (this.$refs.importRef) {
                 this.$refs.importRef.submitImport();
             }
         },
 
         onImportSubmit() {
+            this.importLoading = false;
             this.importVisible = false;
             this.fetchData();
+        },
+
+        onImportError() {
+            this.importLoading = false;
         }
     }
 };
