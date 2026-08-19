@@ -13,7 +13,7 @@ AI Gateway Web 为 AI 网关的用户提供图形化操作界面，用于管理�
 
 ### 适用环境
 
-**本文档的配置步骤、示例命名（如集群/实例池名称）以及截图，基于 [ai-gateway-demo](https://github.com/yf-networks/ai-gateway-demo) 提供的 K8S 演示环境整理。**
+**本文档的配置步骤、示例命名（如集群/实例池名称）以及截图，基于 [ai-gateway-demo](https://github.com/rainway-ai-gateway/ai-gateway-demo) 提供的 K8S 演示环境整理。**
 
 如使用自建环境/生产环境（域名、端口、Service 名称、网络策略等不同），界面字段与配置值请以实际部署为准。
 
@@ -29,8 +29,8 @@ AI Gateway Web 为 AI 网关的用户提供图形化操作界面，用于管理�
 
 ## 参考资料
 
-- 演示环境（K8S）：[ai-gateway-demo](https://github.com/yf-networks/ai-gateway-demo)
-- AI Gateway API：[ai-gateway-api](https://github.com/yf-networks/ai-gateway-api)
+- 演示环境（K8S）：[ai-gateway-demo](https://github.com/rainway-ai-gateway/ai-gateway-demo)
+- AI Gateway API：[ai-gateway-api](https://github.com/rainway-ai-gateway/ai-gateway-api)
 
 ## 社区贡献
 
