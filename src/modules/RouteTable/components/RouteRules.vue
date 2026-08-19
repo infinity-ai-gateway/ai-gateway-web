@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The rainway-ai-gateway Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -225,11 +225,11 @@ export default {
         },
         {
           title: that.$t('route.expression'),
-          key: 'Cond',
+          key: 'cond',
           sortable: 'custom',
           searchable: true,
           render(h, params) {
-            return <span>{params.row.Cond || '-'}</span>;
+            return <span>{params.row.cond || '-'}</span>;
           }
         },
         {
@@ -240,13 +240,13 @@ export default {
           render(h, params) {
             const targets = params.row.targets || [];
             return h('div', targets.map(t => {
-              const text = `${t.ClusterName}/${t.Model || ''}: ${t.Weight}%`;
+              const text = `${t.cluster_name}/${t.model || ''}: ${t.weight}%`;
               return h('Tooltip', {
                 props: { content: text, transfer: true, maxWidth: 600 },
                 style: 'display: block; width: 100%; margin-bottom: 4px;'
               }, [
                 h('Tag', {
-                  key: `${t.ClusterName}-${t.Model}`,
+                  key: `${t.cluster_name}-${t.model}`,
                   style: 'max-width: calc(100% - 5px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;'
                 }, text)
               ]);
@@ -317,12 +317,12 @@ export default {
               this.refreshRuleIndex();
               this.applyInitialFilter();
             } else {
-              this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+              this.$Message.error(this.$t('route.loadFailed'));
             }
           })
           .catch(err => {
             console.error('加载 Global 路由规则失败:', err);
-            this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+            this.$Message.error(this.$t('route.loadFailed'));
           })
           .finally(() => {
             this.loading = false;
@@ -344,12 +344,12 @@ export default {
             this.refreshRuleIndex();
             this.applyInitialFilter();
           } else {
-            this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+            this.$Message.error(this.$t('route.loadFailed'));
           }
         })
         .catch(err => {
           console.error('加载路由规则失败:', err);
-          this.$Message.error(this.$t('route.loadFailed') || '加载路由规则失败');
+          this.$Message.error(this.$t('route.loadFailed'));
         })
         .finally(() => {
           this.loading = false;
@@ -399,8 +399,9 @@ export default {
       this.currentRuleIndex = -1;
       this.currentRule = {
         name: '',
-        Cond: '',
-        targets: [{ ClusterName: '', Model: '', Weight: 100 }]
+        cond: '',
+        targets: [{ cluster_name: '', model: '', weight: 100 }],
+        fallbacks: []
       };
       this.ruleDrawerTitle = this.$t('com.createX', { obj: this.$t('route.rule') });
       this.ruleDrawerVisible = true;
@@ -480,7 +481,9 @@ export default {
         delete clean.index;
         delete clean._index;
         delete clean._rowKey;
-        delete clean.fallbacks;
+        if (!Array.isArray(clean.fallbacks)) {
+          clean.fallbacks = [];
+        }
         return clean;
       });
       if (this.type === 'global') {

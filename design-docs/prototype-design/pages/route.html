@@ -1,639 +1,932 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="../assets/static/css/app.css" />
-  <link rel="stylesheet" href="../assets/static/css/ai-rule.css" />
-  <link rel="stylesheet" href="../assets/font/iconfont.css" />
-  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
-  <style>
-    .route-editor-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-    .route-owner-label { color:#515a6e; font-size:14px; }
-    .route-target-list, .route-fallback-list { margin-bottom:8px; }
-    .route-target-row, .route-fallback-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-    .route-target-row select, .route-fallback-row select { height:32px; border:1px solid #dcdee2; border-radius:4px; padding:0 8px; }
-    .route-target-row input[type="text"], .route-fallback-row input[type="text"] { height:32px; border:1px solid #dcdee2; border-radius:4px; padding:0 8px; flex:1; }
-    .route-target-row input[type="number"] { width:80px; height:32px; border:1px solid #dcdee2; border-radius:4px; padding:0 8px; }
-    .route-list-empty { color:#808695; font-size:12px; padding:8px 0; }
-    .route-view-list { color:#515a6e; font-size:14px; line-height:1.8; }
-    .route-view-list .route-view-item { padding:4px 0; border-bottom:1px dashed #e8eaec; }
-    .route-view-list .route-view-item:last-child { border-bottom:none; }
-  </style>
-  <script src="../assets/js/mock-data.js"></script>
-  <script src="../assets/js/ivu-ui.js"></script>
-  <script src="../assets/js/layout.js"></script>
-  <script src="../assets/js/prototype.js"></script>
-</head>
-<body>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  function getQueryParam(name) {
-    var match = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
-    return match ? decodeURIComponent(match[1]) : '';
-  }
-
-  var tableType = getQueryParam('type') || 'global';
-  var tableOwner = getQueryParam('owner') || 'global';
-  var TYPE_LABELS = { global: 'Global', entity: 'Entity', api_key: 'API-Key' };
-
-  function getOwnerLabel() {
-    if (tableType === 'global') return 'Global';
-    if (tableType === 'entity') {
-      var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(tableOwner); });
-      return entity ? entity.name : tableOwner;
-    }
-    if (tableType === 'api_key') {
-      var key = (MockData.apiKeys || []).find(function (k) { return k.id === tableOwner; });
-      return key ? (key.description || key.id) : tableOwner;
-    }
-    return tableOwner;
-  }
-
-  function findRouteConfig() {
-    if (tableType === 'global') return MockData.globalRouteRules;
-    if (tableType === 'entity') {
-      var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(tableOwner); });
-      return entity ? entity.route_rules : null;
-    }
-    if (tableType === 'api_key') {
-      var key = (MockData.apiKeys || []).find(function (k) { return k.id === tableOwner; });
-      return key ? key.route_rules : null;
-    }
-    return null;
-  }
-
-  var routeConfig = findRouteConfig();
-  if (!routeConfig) {
-    routeConfig = { enabled: false, rules: [] };
-  }
-
-  var pageTitle = '路由规则 - ' + (TYPE_LABELS[tableType] || tableType) + ' / ' + getOwnerLabel();
-  var root = Layout.render({ pageId: 'AdvanceRouteRule.list', basePath: '../', breadcrumb: pageTitle });
-
-  root.innerHTML =
-    '<div class="routes">' +
-      '<div class="route-editor-header" id="route-header"></div>' +
-      '<div style="margin-bottom:16px;">' +
-        IvuUI.formItem('启用路由表',
-          '<div class="ivu-select ivu-select-single" style="width:160px;">' +
-            '<div class="ivu-select-selection">' +
-              '<select id="route-table-enabled" class="proto-ivu-select-native" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;-webkit-appearance:none;">' +
-                '<option value="true">启用</option>' +
-                '<option value="false">停用</option>' +
-              '</select>' +
-              '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
-            '</div>' +
-          '</div>') +
-      '</div>' +
-      '<div>' +
-        IvuUI.btn('添加规则', 'primary', 'small', '', 'id="btn-route-add"') +
-        '<div id="route-table" class="forwardRule"></div>' +
-      '</div>' +
-    '</div>' +
-    drawerRoute();
-
-  document.getElementById('route-table-enabled').value = routeConfig.enabled ? 'true' : 'false';
-
-  var state = {
-    mode: 'view',
-    rows: cloneRules(routeConfig.rules),
-    originalRows: null,
-    filteredRows: [],
-    search: { name: '', Cond: '', targetsText: '', fallbacksText: '' },
-    pageSize: 20,
-    currentPage: 1,
-    drawerMode: 'view',
-    editIndex: -1,
-    editTargets: [],
-    editFallbacks: []
-  };
-
-  function cloneRules(list) {
-    return JSON.parse(JSON.stringify(list || []));
-  }
-
-  function clusterOptions() {
-    return (MockData.clusters || []).map(function (c) { return c.name; });
-  }
-
-  function formatTargets(targets) {
-    if (!targets || !targets.length) return '-';
-    return targets.map(function (t) {
-      var model = t.Model || '透传';
-      return IvuUI.escapeHtml(t.ClusterName) + ' / ' + IvuUI.escapeHtml(model) + ' (' + (t.Weight || 0) + '%)';
-    }).join('<br>');
-  }
-
-  function formatFallbacks(fallbacks) {
-    if (!fallbacks || !fallbacks.length) return '-';
-    return fallbacks.map(function (f) {
-      var model = f.Model || '透传';
-      return IvuUI.escapeHtml(f.ClusterName) + ' / ' + IvuUI.escapeHtml(model);
-    }).join('<br>');
-  }
-
-  function renderHeader() {
-    var html = '<div class="route-owner-label">当前路由表：<strong>' + IvuUI.escapeHtml(TYPE_LABELS[tableType] || tableType) +
-      '</strong> / ' + IvuUI.escapeHtml(getOwnerLabel()) + '</div>';
-    if (state.mode === 'view') {
-      html += IvuUI.btn('进入编辑模式', 'primary', 'small', '', 'id="btn-route-edit-mode"');
-    } else {
-      html += IvuUI.btn('退出编辑模式', 'default', 'small', '', 'id="btn-route-exit-edit"') + ' ' +
-        IvuUI.btn('提交并生效', 'primary', 'small', 'submit', 'id="btn-route-submit"');
-    }
-    document.getElementById('route-header').innerHTML = html;
-    bindHeaderActions();
-  }
-
-  function updateAddButtonVisibility() {
-    var btn = document.getElementById('btn-route-add');
-    if (btn) btn.style.display = state.mode === 'view' ? 'none' : 'inline-block';
-  }
-
-  function updateEnableSelect() {
-    var select = document.getElementById('route-table-enabled');
-    if (select) select.disabled = state.mode === 'view';
-  }
-
-  function enterEditMode() {
-    state.mode = 'edit';
-    state.originalRows = cloneRules(state.rows);
-    renderHeader();
-    updateAddButtonVisibility();
-    updateEnableSelect();
-    renderTable();
-  }
-
-  function exitEditMode() {
-    state.mode = 'view';
-    if (state.originalRows) {
-      state.rows = state.originalRows;
-      state.originalRows = null;
-    }
-    var select = document.getElementById('route-table-enabled');
-    if (select) select.value = routeConfig.enabled ? 'true' : 'false';
-    renderHeader();
-    updateAddButtonVisibility();
-    updateEnableSelect();
-    renderTable();
-  }
-
-  function submitAndExit() {
-    routeConfig.enabled = document.getElementById('route-table-enabled').value === 'true';
-    routeConfig.rules = cloneRules(state.rows);
-    state.originalRows = null;
-    state.mode = 'view';
-    renderHeader();
-    updateAddButtonVisibility();
-    updateEnableSelect();
-    renderTable();
-    Prototype.toast('提交并生效成功！');
-  }
-
-  function bindHeaderActions() {
-    var editModeBtn = document.getElementById('btn-route-edit-mode');
-    if (editModeBtn) editModeBtn.onclick = enterEditMode;
-    var submitBtn = document.getElementById('btn-route-submit');
-    if (submitBtn) submitBtn.onclick = submitAndExit;
-    var exitBtn = document.getElementById('btn-route-exit-edit');
-    if (exitBtn) exitBtn.onclick = exitEditMode;
-  }
-
-  function filterRows() {
-    state.filteredRows = state.rows.filter(function (row) {
-      return Object.keys(state.search).every(function (key) {
-        var keyword = String(state.search[key] || '').trim().toUpperCase();
-        if (!keyword) return true;
-        if (key === 'name') return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
-        if (key === 'Cond') return String(row.Cond || '').toUpperCase().indexOf(keyword) !== -1;
-        if (key === 'targetsText') {
-          return (row.targets || []).some(function (t) {
-            return (t.ClusterName || '').toUpperCase().indexOf(keyword) !== -1 || (t.Model || '').toUpperCase().indexOf(keyword) !== -1;
-          });
-        }
-        if (key === 'fallbacksText') {
-          return (row.fallbacks || []).some(function (f) {
-            return (f.ClusterName || '').toUpperCase().indexOf(keyword) !== -1 || (f.Model || '').toUpperCase().indexOf(keyword) !== -1;
-          });
-        }
-        return true;
-      });
-    });
-  }
-
-  function getPageRows() {
-    var start = (state.currentPage - 1) * state.pageSize;
-    return state.filteredRows.slice(start, start + state.pageSize);
-  }
-
-  function findRowIndex(row) {
-    if (!row) return -1;
-    return state.rows.findIndex(function (item) {
-      return item === row || (item.name === row.name && item.Cond === row.Cond);
-    });
-  }
-
-  function getRowFromFilteredIndex(index) {
-    var filteredRow = state.filteredRows[index];
-    if (!filteredRow) return null;
-    var rowIndex = findRowIndex(filteredRow);
-    return rowIndex >= 0 ? state.rows[rowIndex] : filteredRow;
-  }
-
-  function renderTable() {
-    filterRows();
-    var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
-    if (state.currentPage > totalPages) state.currentPage = totalPages;
-
-    document.getElementById('route-table').innerHTML = IvuUI.pageTable({
-      tableId: 'route-page-table',
-      columns: [
-        { title: '规则名称', key: 'name', searchable: true, searchPlaceholder: '请输入规则名称查询' },
-        { title: '表达式', key: 'Cond', searchable: true, searchPlaceholder: '请输入表达式查询' },
-        { title: '目标集群和模型', key: 'targetsText', searchable: true, searchPlaceholder: '请输入目标集群或模型',
-          render: function (row) { return formatTargets(row.targets); }
-        },
-        { title: '备用集群和模型', key: 'fallbacksText', searchable: true, searchPlaceholder: '请输入备用集群或模型',
-          render: function (row) { return formatFallbacks(row.fallbacks); }
-        },
-        {
-          title: '操作',
-          key: 'action',
-          render: function (row, rowIndex) {
-            var pageStart = (state.currentPage - 1) * state.pageSize;
-            var globalIndex = pageStart + rowIndex;
-            if (state.mode === 'view') {
-              return IvuUI.btn('查看', 'primary', 'small', '', 'data-route-view="' + globalIndex + '"');
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../assets/static/css/app.css" />
+    <link rel="stylesheet" href="../assets/static/css/ai-rule.css" />
+    <link rel="stylesheet" href="../assets/font/iconfont.css" />
+    <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+    <style>
+      .route-editor-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+      .route-owner-label { color:#515a6e; font-size:14px; }
+      .route-header-actions { display:flex; align-items:center; }
+      .route-target-list, .route-fallback-list { margin-bottom:8px; }
+      .route-target-row, .route-fallback-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+      .route-target-row select, .route-fallback-row select { height:32px; border:1px solid #dcdee2; border-radius:4px; padding:0 8px; }
+      .route-target-row input[type="text"], .route-fallback-row input[type="text"] { height:32px; border:1px solid #dcdee2; border-radius:4px; padding:0 8px; flex:1; }
+      .route-target-row input[type="number"] { width:80px; height:32px; border:1px solid #dcdee2; border-radius:4px; padding:0 8px; }
+      .route-list-empty { color:#808695; font-size:12px; padding:8px 0; }
+      .route-view-list { color:#515a6e; font-size:14px; line-height:1.8; }
+      .route-view-list .route-view-item { padding:4px 0; border-bottom:1px dashed #e8eaec; }
+      .route-view-list .route-view-item:last-child { border-bottom:none; }
+      #route-table .ivu-table-sort { display: inline-block; height: 12px; margin-left: 4px; vertical-align: middle; width: 14px; }
+      #route-table .ivu-table-sort i { color: #c5c8ce; display: block; font-size: 14px; height: 6px; line-height: 6px; overflow: hidden; }
+      .route-model-input-wrap { position: relative; flex: 1; }
+      .route-model-input-wrap input { width: 100%; height: 32px; border: 1px solid #dcdee2; border-radius: 4px; padding: 0 8px; box-sizing: border-box; }
+      .route-model-datalist { position: absolute; top: 34px; left: 0; right: 0; max-height: 200px; overflow-y: auto; background: #fff; border: 1px solid #dcdee2; border-radius: 4px; z-index: 100; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+      .route-model-datalist.is-open { display: block; }
+      .route-model-option { padding: 6px 10px; cursor: pointer; font-size: 13px; color: #515a6e; }
+      .route-model-option:hover { background: #f7f8fa; }
+      .route-model-group-label { padding: 4px 10px; font-size: 12px; color: #999; background: #f7f8fa; font-weight: bold; }
+      .route-target-tag-list { line-height: 1.8; }
+      .route-target-tag-list .ivu-tag { margin-right: 4px; margin-bottom: 4px; }
+    </style>
+    <script src="../assets/js/mock-data.js"></script>
+    <script src="../assets/js/ivu-ui.js"></script>
+    <script src="../assets/js/layout.js"></script>
+    <script src="../assets/js/prototype.js"></script>
+  </head>
+  <body>
+    <script>
+          document.addEventListener('DOMContentLoaded', function () {
+            function getQueryParam(name) {
+              var match = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+              return match ? decodeURIComponent(match[1]) : '';
             }
-            return IvuUI.btn('编辑', 'primary', 'small', '', 'data-route-edit="' + globalIndex + '"') + ' ' +
-              IvuUI.btn('删除', 'error', 'small', '', 'data-route-delete="' + globalIndex + '"');
-          }
-        }
-      ],
-      rows: getPageRows(),
-      total: state.filteredRows.length,
-      pageSize: state.pageSize,
-      currentPage: state.currentPage,
-      searchValues: state.search
-    });
 
-    bindTableEvents();
-  }
+            var tableType = getQueryParam('type') || 'global';
+            var tableOwner = getQueryParam('owner') || 'global';
+            var TYPE_LABELS = { global: 'Global', entity: 'Entity', api_key: 'API-Key' };
+            var NAME_REGEX = /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/;
 
-  function bindTableEvents() {
-    var tableRoot = document.getElementById('route-page-table');
-    if (!tableRoot) return;
+            function getOwnerLabel() {
+              if (tableType === 'global') return 'Global';
+              if (tableType === 'entity') {
+                var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(tableOwner); });
+                return entity ? entity.name : tableOwner;
+              }
+              if (tableType === 'api_key') {
+                var key = (MockData.apiKeys || []).find(function (k) { return k.id === tableOwner; });
+                return key ? (key.description || key.id) : tableOwner;
+              }
+              return tableOwner;
+            }
 
-    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
-      state.search[key] = value;
-      state.currentPage = 1;
-      renderTable();
-    });
+            function findRouteConfig() {
+              if (tableType === 'global') return MockData.globalRouteRules;
+              if (tableType === 'entity') {
+                var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(tableOwner); });
+                return entity ? entity.route_rules : null;
+              }
+              if (tableType === 'api_key') {
+                var key = (MockData.apiKeys || []).find(function (k) { return k.id === tableOwner; });
+                return key ? key.route_rules : null;
+              }
+              return null;
+            }
 
-    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
-      item.onclick = function () {
-        state.currentPage = parseInt(item.getAttribute('data-page'), 10);
-        renderTable();
-      };
-    });
+            var routeConfig = findRouteConfig();
+            if (!routeConfig) {
+              routeConfig = { enabled: false, rules: [] };
+            }
 
-    var sizeSelect = tableRoot.querySelector('.proto-page-size');
-    if (sizeSelect) {
-      sizeSelect.onchange = function () {
-        state.pageSize = parseInt(sizeSelect.value, 10);
-        state.currentPage = 1;
-        renderTable();
-      };
-    }
+            var pageTitle = '路由规则 - ' + (TYPE_LABELS[tableType] || tableType) + ' / ' + getOwnerLabel();
+            var root = Layout.render({ pageId: 'AdvanceRouteRule.list', basePath: '../', breadcrumb: '路由表' });
+            document.title = pageTitle + ' - AI网关';
+            // 面包屑改为两级：路由表 / 路由规则 - Type / Owner
+            var breadcrumbEl = document.querySelector('.bfe-breadcrumb');
+            if (breadcrumbEl) {
+              breadcrumbEl.innerHTML =
+                '<span class="ivu-breadcrumb-item-link" style="cursor:pointer;color:#2d8cf0;" id="breadcrumb-back">路由表</span>' +
+                '<span class="ivu-breadcrumb-item-separator" style="margin:0 8px;color:#dcdee2;">/</span>' +
+                '<span><span class="ivu-breadcrumb-item-link">' + IvuUI.escapeHtml(pageTitle) + '</span></span>';
+            }
 
-    var prevBtn = tableRoot.querySelector('.proto-page-prev');
-    if (prevBtn) {
-      prevBtn.onclick = function () {
-        if (state.currentPage > 1) { state.currentPage -= 1; renderTable(); }
-      };
-    }
+            root.innerHTML =
+              '<div class="routes">' +
+                '<div class="route-editor-header" id="route-header"></div>' +
+                '<div style="margin-bottom:16px;">' +
+                  IvuUI.formItem('启用路由表',
+                    '<div class="ivu-select ivu-select-single" style="width:160px;">' +
+                      '<div class="ivu-select-selection">' +
+                        '<select id="route-table-enabled" class="proto-ivu-select-native" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;-webkit-appearance:none;">' +
+                          '<option value="true">启用</option>' +
+                          '<option value="false">停用</option>' +
+                        '</select>' +
+                        '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
+                      '</div>' +
+                    '</div>') +
+                '</div>' +
+                '<div>' +
+                  IvuUI.btn('添加规则', 'primary', 'small', '', 'id="btn-route-add"') +
+                  '<div id="route-table" class="forwardRule"></div>' +
+                '</div>' +
+              '</div>' +
+              drawerRoute();
 
-    var nextBtn = tableRoot.querySelector('.proto-page-next');
-    if (nextBtn) {
-      nextBtn.onclick = function () {
-        var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
-        if (state.currentPage < totalPages) { state.currentPage += 1; renderTable(); }
-      };
-    }
+            document.getElementById('route-table-enabled').value = routeConfig.enabled ? 'true' : 'false';
 
-    tableRoot.querySelectorAll('[data-route-view]').forEach(function (btn) {
-      btn.onclick = function () {
-        openDrawer('view', parseInt(btn.getAttribute('data-route-view'), 10));
-      };
-    });
+            var state = {
+              mode: 'view',
+              rows: cloneRules(routeConfig.rules),
+              originalRows: null,
+              filteredRows: [],
+              search: { name: '', cond: '', targetsText: '' },
+              pageSize: 20,
+              currentPage: 1,
+              sortKey: '',
+              sortOrder: '',
+              drawerMode: 'view',
+              editIndex: -1,
+              editTargets: [],
+              editFallbacks: []
+            };
 
-    tableRoot.querySelectorAll('[data-route-edit]').forEach(function (btn) {
-      btn.onclick = function () {
-        openDrawer('edit', parseInt(btn.getAttribute('data-route-edit'), 10));
-      };
-    });
+            function cloneRules(list) {
+              return JSON.parse(JSON.stringify(list || []));
+            }
 
-    tableRoot.querySelectorAll('[data-route-delete]').forEach(function (btn) {
-      btn.onclick = function () {
-        var index = parseInt(btn.getAttribute('data-route-delete'), 10);
-        var row = state.filteredRows[index];
-        if (!row) return;
-        Prototype.confirm({
-          title: '提示',
-          content: '确认删除该规则？',
-          onOk: function () {
-            var rowIndex = findRowIndex(row);
-            if (rowIndex >= 0) state.rows.splice(rowIndex, 1);
+            function clusterOptions() {
+              return (MockData.clusters || []).map(function (c) { return c.name; });
+            }
+
+            function allModelOptions() {
+              var all = [];
+              (MockData.modelGroups || []).forEach(function (g) {
+                (g.models || []).forEach(function (m) { all.push(m); });
+              });
+              return all;
+            }
+
+            function formatTargets(targets) {
+              if (!targets || !targets.length) return '-';
+              return '<div class="route-target-tag-list">' + targets.map(function (t) {
+                var model = t.model || '透传';
+                var label = IvuUI.escapeHtml(t.cluster_name) + ' / ' + IvuUI.escapeHtml(model) + ' (' + (t.weight || 0) + '%)';
+                return IvuUI.tag(label, 'primary');
+              }).join('') + '</div>';
+            }
+
+            // ======= Header =======
+            function renderHeader() {
+              var html = '<div class="route-owner-label">当前路由表：<strong>' + IvuUI.escapeHtml(TYPE_LABELS[tableType] || tableType) +
+                '</strong> / ' + IvuUI.escapeHtml(getOwnerLabel()) + '</div>';
+              var actions = IvuUI.btn('< 返回', 'default', 'small', '', 'id="btn-route-back" style="margin-right:8px;"') + ' ';
+              if (state.mode === 'view') {
+                actions += IvuUI.btn('进入编辑模式', 'primary', 'small', '', 'id="btn-route-edit-mode"');
+              } else {
+                actions += IvuUI.btn('退出编辑模式', 'default', 'small', '', 'id="btn-route-exit-edit" style="margin-right:8px;"') + ' ' +
+                  IvuUI.btn('提交并生效', 'primary', 'small', 'submit', 'id="btn-route-submit"');
+              }
+              html += '<div class="route-header-actions">' + actions + '</div>';
+              document.getElementById('route-header').innerHTML = html;
+              bindHeaderActions();
+            }
+
+            function updateAddButtonVisibility() {
+              var btn = document.getElementById('btn-route-add');
+              if (btn) btn.style.display = state.mode === 'view' ? 'none' : 'inline-block';
+            }
+
+            function updateEnableSelect() {
+              var select = document.getElementById('route-table-enabled');
+              if (select) select.disabled = state.mode === 'view';
+            }
+
+            function hasUnsavedChanges() {
+              if (state.mode !== 'edit') return false;
+              if (!state.originalRows) return false;
+              if (state.originalRows.length !== state.rows.length) return true;
+              return JSON.stringify(state.originalRows) !== JSON.stringify(state.rows);
+            }
+
+            function enterEditMode() {
+              state.mode = 'edit';
+              state.originalRows = cloneRules(state.rows);
+              renderHeader();
+              updateAddButtonVisibility();
+              updateEnableSelect();
+              renderTable();
+            }
+
+            function exitEditMode() {
+              if (hasUnsavedChanges() && !confirm('当前有未保存的修改，确定要退出编辑模式吗？')) {
+                return;
+              }
+              state.mode = 'view';
+              if (state.originalRows) {
+                state.rows = state.originalRows;
+                state.originalRows = null;
+              }
+              var select = document.getElementById('route-table-enabled');
+              if (select) select.value = routeConfig.enabled ? 'true' : 'false';
+              renderHeader();
+              updateAddButtonVisibility();
+              updateEnableSelect();
+              renderTable();
+            }
+
+            function submitAndExit() {
+              routeConfig.enabled = document.getElementById('route-table-enabled').value === 'true';
+              routeConfig.rules = cloneRules(state.rows);
+              state.originalRows = null;
+              state.mode = 'view';
+              renderHeader();
+              updateAddButtonVisibility();
+              updateEnableSelect();
+              renderTable();
+              Prototype.toast('提交并生效成功！');
+            }
+
+            function bindHeaderActions() {
+              var backBtn = document.getElementById('btn-route-back');
+              if (backBtn) backBtn.onclick = function () { window.location.href = 'route-tables.html'; };
+              var editModeBtn = document.getElementById('btn-route-edit-mode');
+              if (editModeBtn) editModeBtn.onclick = enterEditMode;
+              var submitBtn = document.getElementById('btn-route-submit');
+              if (submitBtn) submitBtn.onclick = submitAndExit;
+              var exitBtn = document.getElementById('btn-route-exit-edit');
+              if (exitBtn) exitBtn.onclick = exitEditMode;
+              var breadcrumbBack = document.getElementById('breadcrumb-back');
+              if (breadcrumbBack) breadcrumbBack.onclick = function () { window.location.href = 'route-tables.html'; };
+            }
+
+            // ======= Sort =======
+            function getSortValue(row, key) {
+              if (key === 'name') return row.name || '';
+              if (key === 'cond') return row.cond || '';
+              if (key === 'targetsText') {
+                return (row.targets || []).map(function (t) {
+                  return (t.cluster_name || '') + '/' + (t.model || '');
+                }).join(',');
+              }
+              return row[key] != null ? row[key] : '';
+            }
+
+            function sortRows(rows) {
+              if (!state.sortKey || !state.sortOrder) return rows;
+              var arr = rows.slice();
+              var order = state.sortOrder;
+              var key = state.sortKey;
+              arr.sort(function (a, b) {
+                var va = getSortValue(a, key);
+                var vb = getSortValue(b, key);
+                var sa = String(va);
+                var sb = String(vb);
+                return order === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
+              });
+              return arr;
+            }
+
+            // ======= Filter & Page =======
+            function filterRows() {
+              state.filteredRows = state.rows.filter(function (row) {
+                return Object.keys(state.search).every(function (key) {
+                  var keyword = String(state.search[key] || '').trim().toUpperCase();
+                  if (!keyword) return true;
+                  if (key === 'name') return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
+                  if (key === 'cond') return String(row.cond || '').toUpperCase().indexOf(keyword) !== -1;
+                  if (key === 'targetsText') {
+                    return (row.targets || []).some(function (t) {
+                      return (t.cluster_name || '').toUpperCase().indexOf(keyword) !== -1 || (t.model || '').toUpperCase().indexOf(keyword) !== -1;
+                    });
+                  }
+                  return true;
+                });
+              });
+            }
+
+            function getPageRows() {
+              var sorted = sortRows(state.filteredRows);
+              var start = (state.currentPage - 1) * state.pageSize;
+              return sorted.slice(start, start + state.pageSize);
+            }
+
+            function findRowIndex(row) {
+              if (!row) return -1;
+              return state.rows.findIndex(function (item) {
+                return item === row || (item.name === row.name && item.cond === row.cond);
+              });
+            }
+
+            function getRowFromFilteredIndex(index) {
+              var filteredRow = state.filteredRows[index];
+              if (!filteredRow) return null;
+              var rowIndex = findRowIndex(filteredRow);
+              return rowIndex >= 0 ? state.rows[rowIndex] : filteredRow;
+            }
+
+            function highlightSortIcons() {
+              var tableRoot = document.getElementById('route-page-table');
+              if (!tableRoot) return;
+              var sortKeys = ['name', 'cond', 'targetsText'];
+              var ths = tableRoot.querySelectorAll('th');
+              sortKeys.forEach(function (key, idx) {
+                var th = ths[idx];
+                if (!th) return;
+                var sortIcons = th.querySelectorAll('.ivu-table-sort i');
+                if (sortIcons.length < 2) return;
+                sortIcons[0].style.color = '#c5c8ce';
+                sortIcons[1].style.color = '#c5c8ce';
+                if (state.sortKey === key) {
+                  if (state.sortOrder === 'asc') sortIcons[0].style.color = '#2d8cf0';
+                  else if (state.sortOrder === 'desc') sortIcons[1].style.color = '#2d8cf0';
+                }
+              });
+            }
+
+            // ======= Table =======
+            function renderTable() {
+              filterRows();
+              var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+              if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+              document.getElementById('route-table').innerHTML = IvuUI.pageTable({
+                tableId: 'route-page-table',
+                columns: [
+                  { title: '规则名称', key: 'name', sortable: true, searchable: true, searchPlaceholder: '请输入规则名称查询' },
+                  { title: '表达式', key: 'cond', sortable: true, searchable: true, searchPlaceholder: '请输入表达式查询' },
+                  { title: '目标集群和模型', key: 'targetsText', sortable: true, searchable: true, searchPlaceholder: '请输入目标集群或模型',
+                    render: function (row) { return formatTargets(row.targets); }
+                  },
+                  {
+                    title: '操作',
+                    key: 'action',
+                    render: function (row, rowIndex) {
+                      var pageStart = (state.currentPage - 1) * state.pageSize;
+                      var globalIndex = pageStart + rowIndex;
+                      if (state.mode === 'view') {
+                        return IvuUI.btn('查看', 'primary', 'small', '', 'data-route-view="' + globalIndex + '"');
+                      }
+                      return IvuUI.btn('编辑', 'primary', 'small', '', 'data-route-edit="' + globalIndex + '"') + ' ' +
+                        IvuUI.btn('删除', 'error', 'small', '', 'data-route-delete="' + globalIndex + '"');
+                    }
+                  }
+                ],
+                rows: getPageRows(),
+                total: state.filteredRows.length,
+                pageSize: state.pageSize,
+                currentPage: state.currentPage,
+                searchValues: state.search
+              });
+
+              bindTableEvents();
+              highlightSortIcons();
+            }
+
+            function bindTableEvents() {
+              var tableRoot = document.getElementById('route-page-table');
+              if (!tableRoot) return;
+
+              Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+                state.search[key] = value;
+                state.currentPage = 1;
+                renderTable();
+              });
+
+              var sortKeys = ['name', 'cond', 'targetsText'];
+              tableRoot.querySelectorAll('th').forEach(function (th, idx) {
+                if (sortKeys[idx] != null) {
+                  th.style.cursor = 'pointer';
+                  th.onclick = function () {
+                    var key = sortKeys[idx];
+                    if (state.sortKey === key) {
+                      if (state.sortOrder === 'asc') state.sortOrder = 'desc';
+                      else if (state.sortOrder === 'desc') { state.sortKey = ''; state.sortOrder = ''; }
+                      else state.sortOrder = 'asc';
+                    } else {
+                      state.sortKey = key;
+                      state.sortOrder = 'asc';
+                    }
+                    state.currentPage = 1;
+                    renderTable();
+                  };
+                }
+              });
+
+              tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+                item.onclick = function () {
+                  state.currentPage = parseInt(item.getAttribute('data-page'), 10);
+                  renderTable();
+                };
+              });
+
+              var sizeSelect = tableRoot.querySelector('.proto-page-size');
+              if (sizeSelect) {
+                sizeSelect.onchange = function () {
+                  state.pageSize = parseInt(sizeSelect.value, 10);
+                  state.currentPage = 1;
+                  renderTable();
+                };
+              }
+
+              var prevBtn = tableRoot.querySelector('.proto-page-prev');
+              if (prevBtn) {
+                prevBtn.onclick = function () {
+                  if (state.currentPage > 1) { state.currentPage -= 1; renderTable(); }
+                };
+              }
+
+              var nextBtn = tableRoot.querySelector('.proto-page-next');
+              if (nextBtn) {
+                nextBtn.onclick = function () {
+                  var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+                  if (state.currentPage < totalPages) { state.currentPage += 1; renderTable(); }
+                };
+              }
+
+              tableRoot.querySelectorAll('[data-route-view]').forEach(function (btn) {
+                btn.onclick = function () {
+                  openDrawer('view', parseInt(btn.getAttribute('data-route-view'), 10));
+                };
+              });
+
+              tableRoot.querySelectorAll('[data-route-edit]').forEach(function (btn) {
+                btn.onclick = function () {
+                  openDrawer('edit', parseInt(btn.getAttribute('data-route-edit'), 10));
+                };
+              });
+
+              tableRoot.querySelectorAll('[data-route-delete]').forEach(function (btn) {
+                btn.onclick = function () {
+                  var index = parseInt(btn.getAttribute('data-route-delete'), 10);
+                  var row = state.filteredRows[index];
+                  if (!row) return;
+                  Prototype.confirm({
+                    title: '提示',
+                    content: '确认删除该规则？',
+                    onOk: function () {
+                      var rowIndex = findRowIndex(row);
+                      if (rowIndex >= 0) state.rows.splice(rowIndex, 1);
+                      renderTable();
+                      Prototype.toast('删除成功!');
+                    },
+                    onCancel: function () {
+                      Prototype.toast('取消删除', 'info');
+                    }
+                  });
+                };
+              });
+            }
+
+            // ======= View =======
+            function viewTargetsHtml(targets) {
+              if (!targets || !targets.length) return '<div class="route-list-empty">暂无目标集群</div>';
+              return '<div class="route-view-list">' + targets.map(function (t) {
+                var model = t.model || '透传';
+                return '<div class="route-view-item">集群：' + IvuUI.escapeHtml(t.cluster_name) +
+                  ' / 模型：' + IvuUI.escapeHtml(model) +
+                  ' / 权重：' + (t.weight || 0) + '%</div>';
+              }).join('') + '</div>';
+            }
+
+            function viewFallbacksHtml(fallbacks) {
+              if (!fallbacks || !fallbacks.length) return '<div class="route-list-empty">暂无备用集群</div>';
+              return '<div class="route-view-list">' + fallbacks.map(function (f) {
+                var model = f.model || '透传';
+                return '<div class="route-view-item">集群：' + IvuUI.escapeHtml(f.cluster_name) +
+                  ' / 模型：' + IvuUI.escapeHtml(model) + '</div>';
+              }).join('') + '</div>';
+            }
+
+            function viewDrawerBody(row) {
+              return '<div class="forward-rule-upsert">' +
+                '<form class="ivu-form ivu-form-label-top">' +
+                  IvuUI.formTopItem('规则名称',
+                    '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" value="' +
+                    IvuUI.escapeHtml(row.name || '') + '" disabled /></div>') +
+                  IvuUI.formTopItem('表达式',
+                    '<div class="ivu-input-wrapper ivu-input-type-textarea"><textarea class="ivu-input" rows="6" disabled>' +
+                    IvuUI.escapeHtml(row.cond || '') + '</textarea></div>') +
+                  IvuUI.formTopItem('目标集群和模型', viewTargetsHtml(row.targets)) +
+                  IvuUI.formTopItem('备用集群和模型', viewFallbacksHtml(row.fallbacks)) +
+                '</form>' +
+              '</div>';
+            }
+
+            // ======= Model select (datalist-like dropdown) =======
+            function modelDatalistId(type, index) {
+              return 'model-datalist-' + type + '-' + index;
+            }
+
+            function modelInputHtml(type, index, value) {
+              var listId = modelDatalistId(type, index);
+              return '<div class="route-model-input-wrap">' +
+                '<input type="text" class="route-model-input" data-' + type + '-model-idx="' + index +
+                '" value="' + IvuUI.escapeHtml(value || '') + '" placeholder="留空表示透传，可搜索或手动输入" autocomplete="off" />' +
+                '<div class="route-model-datalist" id="' + listId + '"></div>' +
+              '</div>';
+            }
+
+            function renderModelDatalist(type, index, keyword) {
+              var listId = modelDatalistId(type, index);
+              var listEl = document.getElementById(listId);
+              if (!listEl) return;
+              var models = allModelOptions();
+              var kw = (keyword || '').trim().toUpperCase();
+              var filtered = kw ? models.filter(function (m) { return m.toUpperCase().indexOf(kw) !== -1; }) : models;
+              if (!filtered.length) {
+                listEl.innerHTML = '<div class="route-model-option" style="color:#999;">无匹配模型，可手动输入</div>';
+                return;
+              }
+              var groups = MockData.modelGroups || [];
+              var html = '';
+              groups.forEach(function (g) {
+                var groupModels = (g.models || []).filter(function (m) {
+                  return filtered.indexOf(m) !== -1;
+                });
+                if (!groupModels.length) return;
+                html += '<div class="route-model-group-label">' + IvuUI.escapeHtml(g.label || '') + '</div>';
+                groupModels.forEach(function (m) {
+                  html += '<div class="route-model-option" data-model-value="' + IvuUI.escapeHtml(m) + '">' + IvuUI.escapeHtml(m) + '</div>';
+                });
+              });
+              listEl.innerHTML = html;
+            }
+
+            function openModelDatalist(type, index) {
+              var listId = modelDatalistId(type, index);
+              var listEl = document.getElementById(listId);
+              if (!listEl) return;
+              var inputEl = document.querySelector('input[data-' + type + '-model-idx="' + index + '"]');
+              var value = inputEl ? inputEl.value : '';
+              renderModelDatalist(type, index, value);
+              listEl.classList.add('is-open');
+            }
+
+            function closeAllModelDatalists() {
+              document.querySelectorAll('.route-model-datalist.is-open').forEach(function (el) {
+                el.classList.remove('is-open');
+              });
+            }
+
+            // Close model dropdowns when clicking outside
+      document.addEventListener('mousedown', function (e) {
+        var wrap = e.target.closest ? e.target.closest('.route-model-input-wrap') : null;
+        if (!wrap) closeAllModelDatalists();
+      });
+
+            // ======= Edit form =======
+            function editDrawerBody() {
+              return '<div class="forward-rule-upsert">' +
+                '<form class="ivu-form ivu-form-label-top">' +
+                  IvuUI.formTopItem('规则名称',
+                    '<div class="ivu-input-wrapper ivu-input-type-text">' +
+                      '<input type="text" id="route-name" class="ivu-input" placeholder="请输入规则名称，1-64字符，字母数字开头结尾" maxlength="64" />' +
+                    '</div>', true) +
+                  IvuUI.formTopItem('表达式', IvuUI.expressionEditor('route-expression'), true) +
+                  IvuUI.formTopItem('目标集群和模型',
+                    '<div id="route-targets-list" class="route-target-list"></div>' +
+                    '<div style="margin-top:8px;">' + IvuUI.btn('添加目标', 'default', 'small', '', 'id="btn-target-add"') + '</div>', true) +
+                  IvuUI.formTopItem('备用集群和模型',
+                    '<div id="route-fallbacks-list" class="route-fallback-list"></div>' +
+                    '<div style="margin-top:8px;">' + IvuUI.btn('添加备用', 'default', 'small', '', 'id="btn-fallback-add"') + '</div>', false) +
+                '</form>' +
+              '</div>';
+            }
+
+            function clusterSelectHtml(selected, dataAttr, index) {
+              var opts = clusterOptions().map(function (name) {
+                return '<option value="' + IvuUI.escapeHtml(name) + '"' + (name === selected ? ' selected' : '') + '>' +
+                  IvuUI.escapeHtml(name) + '</option>';
+              }).join('');
+              return '<select class="proto-route-cluster" ' + dataAttr + '="' + index + '" style="min-width:140px;">' + opts + '</select>';
+            }
+
+            function renderTargetRows() {
+              var container = document.getElementById('route-targets-list');
+              if (!container) return;
+              if (!state.editTargets.length) {
+                container.innerHTML = '<div class="route-list-empty">暂无目标集群</div>';
+                return;
+              }
+              container.innerHTML = state.editTargets.map(function (t, i) {
+                return '<div class="route-target-row">' +
+                  '<span>集群</span>' + clusterSelectHtml(t.cluster_name, 'data-target-idx', i) +
+                  '<span>模型</span>' +
+                  modelInputHtml('target', i, t.model) +
+                  '<span>权重</span>' +
+                  '<input type="number" data-target-weight-idx="' + i + '" value="' + (t.weight || 0) + '" min="0" max="100" />' +
+                  IvuUI.btn('删除', 'error', 'small', '', 'data-target-delete="' + i + '"') +
+                '</div>';
+              }).join('');
+            }
+
+            function renderFallbackRows() {
+              var container = document.getElementById('route-fallbacks-list');
+              if (!container) return;
+              if (!state.editFallbacks.length) {
+                container.innerHTML = '<div class="route-list-empty">暂无备用集群</div>';
+                return;
+              }
+              container.innerHTML = state.editFallbacks.map(function (f, i) {
+                return '<div class="route-fallback-row">' +
+                  '<span>集群</span>' + clusterSelectHtml(f.cluster_name, 'data-fallback-idx', i) +
+                  '<span>模型</span>' +
+                  modelInputHtml('fallback', i, f.model) +
+                  IvuUI.btn('删除', 'error', 'small', '', 'data-fallback-delete="' + i + '"') +
+                '</div>';
+              }).join('');
+            }
+
+            function bindTargetEvents() {
+              var container = document.getElementById('route-targets-list');
+              if (!container) return;
+
+              container.onchange = function (e) {
+                var el = e.target;
+                var idx = el.getAttribute('data-target-idx');
+                if (idx != null) {
+                  state.editTargets[parseInt(idx, 10)].cluster_name = el.value;
+                }
+              };
+
+              container.oninput = function (e) {
+                var el = e.target;
+                var modelIdx = el.getAttribute('data-target-model-idx');
+                if (modelIdx != null) {
+                  var mi = parseInt(modelIdx, 10);
+                  state.editTargets[mi].model = el.value;
+                  renderModelDatalist('target', mi, el.value);
+                }
+                var weightIdx = el.getAttribute('data-target-weight-idx');
+                if (weightIdx != null) state.editTargets[parseInt(weightIdx, 10)].weight = parseInt(el.value, 10) || 0;
+              };
+
+              container.addEventListener('focusin', function (e) {
+                var el = e.target;
+                var modelIdx = el.getAttribute('data-target-model-idx');
+                if (modelIdx != null) {
+                  openModelDatalist('target', parseInt(modelIdx, 10));
+                }
+              });
+
+              container.onclick = function (e) {
+                var btn = e.target.closest ? e.target.closest('[data-target-delete]') : null;
+                if (btn) {
+                  var idx = parseInt(btn.getAttribute('data-target-delete'), 10);
+                  state.editTargets.splice(idx, 1);
+                  renderTargetRows();
+                  return;
+                }
+                var opt = e.target.closest ? e.target.closest('[data-model-value]') : null;
+                if (opt && opt.getAttribute('data-model-value')) {
+                  var val = opt.getAttribute('data-model-value');
+                  var input = opt.closest('.route-model-input-wrap').querySelector('input');
+                  var typeAttr = input.getAttribute('data-target-model-idx');
+                  if (typeAttr != null) {
+                    var i2 = parseInt(typeAttr, 10);
+                    state.editTargets[i2].model = val;
+                    input.value = val;
+                    closeAllModelDatalists();
+                  }
+                }
+              };
+            }
+
+            function bindFallbackEvents() {
+              var container = document.getElementById('route-fallbacks-list');
+              if (!container) return;
+
+              container.onchange = function (e) {
+                var el = e.target;
+                var idx = el.getAttribute('data-fallback-idx');
+                if (idx != null) {
+                  state.editFallbacks[parseInt(idx, 10)].cluster_name = el.value;
+                }
+              };
+
+              container.oninput = function (e) {
+                var el = e.target;
+                var idx = el.getAttribute('data-fallback-model-idx');
+                if (idx != null) {
+                  var mi = parseInt(idx, 10);
+                  state.editFallbacks[mi].model = el.value;
+                  renderModelDatalist('fallback', mi, el.value);
+                }
+              };
+
+              container.addEventListener('focusin', function (e) {
+                var el = e.target;
+                var modelIdx = el.getAttribute('data-fallback-model-idx');
+                if (modelIdx != null) {
+                  openModelDatalist('fallback', parseInt(modelIdx, 10));
+                }
+              });
+
+              container.onclick = function (e) {
+                var btn = e.target.closest ? e.target.closest('[data-fallback-delete]') : null;
+                if (btn) {
+                  var idx = parseInt(btn.getAttribute('data-fallback-delete'), 10);
+                  state.editFallbacks.splice(idx, 1);
+                  renderFallbackRows();
+                  return;
+                }
+                var opt = e.target.closest ? e.target.closest('[data-model-value]') : null;
+                if (opt && opt.getAttribute('data-model-value')) {
+                  var val = opt.getAttribute('data-model-value');
+                  var input = opt.closest('.route-model-input-wrap').querySelector('input');
+                  var typeAttr = input.getAttribute('data-fallback-model-idx');
+                  if (typeAttr != null) {
+                    var i2 = parseInt(typeAttr, 10);
+                    state.editFallbacks[i2].model = val;
+                    input.value = val;
+                    closeAllModelDatalists();
+                  }
+                }
+              };
+            }
+
+            // ======= Drawer =======
+            function bindDrawerActions() {
+              var saveBtn = document.getElementById('btn-route-save');
+              if (saveBtn) saveBtn.onclick = onDrawerSave;
+              var resetBtn = document.getElementById('btn-route-reset');
+              if (resetBtn) resetBtn.onclick = onDrawerReset;
+              var targetAddBtn = document.getElementById('btn-target-add');
+              if (targetAddBtn) targetAddBtn.onclick = function () {
+                state.editTargets.push({ cluster_name: clusterOptions()[0] || '', model: '', weight: state.editTargets.length ? 0 : 100 });
+                renderTargetRows();
+              };
+              var fallbackAddBtn = document.getElementById('btn-fallback-add');
+              if (fallbackAddBtn) fallbackAddBtn.onclick = function () {
+                state.editFallbacks.push({ cluster_name: clusterOptions()[0] || '', model: '' });
+                renderFallbackRows();
+              };
+            }
+
+            function setDrawerTitle(mode) {
+              var titleEl = document.querySelector('#drawer-route .ivu-drawer-header-inner');
+              if (!titleEl) return;
+              if (mode === 'view') titleEl.textContent = '查看规则';
+              else if (mode === 'add') titleEl.textContent = '添加规则';
+              else titleEl.textContent = '编辑规则';
+            }
+
+            function fillEditDrawerForm(row) {
+              document.getElementById('route-name').value = row ? row.name : '';
+              document.getElementById('route-expression').value = row ? row.cond : '';
+              state.editTargets = cloneRules(row && row.targets ? row.targets : [{ cluster_name: clusterOptions()[0] || '', model: '', weight: 100 }]);
+              state.editFallbacks = cloneRules(row && row.fallbacks ? row.fallbacks : []);
+              renderTargetRows();
+              renderFallbackRows();
+              var errEl = document.querySelector('#drawer-route .proto-expression-error');
+              if (errEl) {
+                errEl.textContent = '';
+                errEl.classList.add('proto-hidden-inline');
+              }
+            }
+
+            function openDrawer(mode, filteredIndex) {
+              state.drawerMode = mode;
+              var row = null;
+              if ((mode === 'edit' || mode === 'view') && typeof filteredIndex === 'number') {
+                row = getRowFromFilteredIndex(filteredIndex);
+                state.editIndex = mode === 'edit' ? findRowIndex(row) : -1;
+              } else {
+                state.editIndex = -1;
+              }
+
+              var drawerContent = document.querySelector('#drawer-route .ivu-drawer-content');
+              var bodyEl = drawerContent.querySelector('.ivu-drawer-body');
+              var footerEl = drawerContent.querySelector('.ivu-drawer-footer');
+
+              if (mode === 'view') {
+                bodyEl.innerHTML = viewDrawerBody(row || {});
+                if (footerEl) footerEl.style.display = 'none';
+              } else {
+                bodyEl.innerHTML = editDrawerBody();
+                if (footerEl) footerEl.style.display = '';
+                fillEditDrawerForm(mode === 'edit' ? row : null);
+                IvuUI.initExpressionEditor('#drawer-route .proto-expression-editor');
+                bindDrawerActions();
+                bindTargetEvents();
+                bindFallbackEvents();
+              }
+
+              setDrawerTitle(mode);
+              Prototype.openDrawer('drawer-route');
+            }
+
+            // ======= Validation =======
+            function validateName(name) {
+              if (!name) return '请输入规则名称';
+              if (name.length < 1 || name.length > 64) return '规则名称长度必须为 1-64 字符';
+              if (!NAME_REGEX.test(name)) return '规则名称格式不正确：必须以字母或数字开头和结尾，只能包含字母、数字、点、下划线和中划线';
+              return '';
+            }
+
+            function checkNameUnique(name, excludeIndex) {
+              var dup = state.rows.some(function (r, idx) {
+                if (excludeIndex != null && idx === excludeIndex) return false;
+                return r.name === name;
+              });
+              return !dup;
+            }
+
+            function targetKey(t) {
+              return (t.cluster_name || '') + '|' + (t.model || '');
+            }
+
+            function checkDuplicateInList(list) {
+              var seen = {};
+              for (var i = 0; i < list.length; i++) {
+                var key = targetKey(list[i]);
+                if (seen[key]) return { index: i, key: key };
+                seen[key] = true;
+              }
+              return null;
+            }
+
+            function checkOverlapBetweenLists(listA, listB) {
+              var seen = {};
+              listA.forEach(function (t) { seen[targetKey(t)] = true; });
+              for (var i = 0; i < listB.length; i++) {
+                if (seen[targetKey(listB[i])]) return { index: i, key: targetKey(listB[i]) };
+              }
+              return null;
+            }
+
+            function onDrawerSave() {
+              var name = document.getElementById('route-name').value.trim();
+              var cond = document.getElementById('route-expression').value.trim();
+
+              var nameErr = validateName(name);
+              if (nameErr) {
+                Prototype.toast(nameErr, 'error');
+                return;
+              }
+              if (!cond) {
+                Prototype.toast('请输入表达式', 'error');
+                return;
+              }
+              if (!state.editTargets.length) {
+                Prototype.toast('请至少配置一个目标集群', 'error');
+                return;
+              }
+
+              var excludeIndex = (state.drawerMode === 'edit' && state.editIndex >= 0) ? state.editIndex : null;
+              if (!checkNameUnique(name, excludeIndex)) {
+                Prototype.toast('规则名称已存在，请使用其他名称', 'error');
+                return;
+              }
+
+              var weightSum = state.editTargets.reduce(function (sum, t) { return sum + (t.weight || 0); }, 0);
+              if (weightSum !== 100) {
+                Prototype.toast('目标集群权重之和必须等于100（当前 ' + weightSum + '）', 'error');
+                return;
+              }
+
+              var dupTarget = checkDuplicateInList(state.editTargets);
+              if (dupTarget) {
+                Prototype.toast('目标集群和模型存在重复：' + dupTarget.key.replace('|', ' / '), 'error');
+                return;
+              }
+
+              var dupFallback = checkDuplicateInList(state.editFallbacks);
+              if (dupFallback) {
+                Prototype.toast('备用集群和模型存在重复：' + dupFallback.key.replace('|', ' / '), 'error');
+                return;
+              }
+
+              var overlap = checkOverlapBetweenLists(state.editTargets, state.editFallbacks);
+              if (overlap) {
+                Prototype.toast('目标与备用集群/模型不能重复：' + overlap.key.replace('|', ' / '), 'error');
+                return;
+              }
+
+              var data = {
+                name: name,
+                cond: cond,
+                targets: cloneRules(state.editTargets),
+                fallbacks: cloneRules(state.editFallbacks)
+              };
+
+              if (state.drawerMode === 'add') {
+                state.rows.unshift(data);
+              } else if (state.editIndex >= 0) {
+                state.rows[state.editIndex] = data;
+              }
+
+              Prototype.closeDrawer('drawer-route');
+              renderTable();
+              Prototype.toast(state.drawerMode === 'add' ? '添加成功！' : '保存成功！');
+            }
+
+            function onDrawerReset() {
+              fillEditDrawerForm(state.drawerMode === 'edit' && state.editIndex >= 0 ? state.rows[state.editIndex] : null);
+            }
+
+            document.getElementById('btn-route-add').addEventListener('click', function () {
+              openDrawer('add');
+            });
+
+            Prototype.bindDrawerClose();
+            renderHeader();
+            updateAddButtonVisibility();
+            updateEnableSelect();
             renderTable();
-            Prototype.toast('删除成功!');
-          },
-          onCancel: function () {
-            Prototype.toast('取消删除', 'info');
+          });
+
+          function drawerRoute() {
+            var footer =
+              '<div class="com-btn-box drawer-footer route-drawer-footer">' +
+                IvuUI.btn('本地保存', 'primary', 'small', '', 'id="btn-route-save"') + ' ' +
+                IvuUI.btn('重置', 'default', 'small', 'reset-btn', 'id="btn-route-reset"') +
+              '</div>';
+            return IvuUI.drawer('drawer-route', '添加规则', '<div class="ivu-drawer-body-placeholder"></div>', footer, '60%');
           }
-        });
-      };
-    });
-  }
-
-  function viewTargetsHtml(targets) {
-    if (!targets || !targets.length) return '<div class="route-list-empty">暂无目标集群</div>';
-    return '<div class="route-view-list">' + targets.map(function (t) {
-      var model = t.Model || '透传';
-      return '<div class="route-view-item">集群：' + IvuUI.escapeHtml(t.ClusterName) +
-        ' / 模型：' + IvuUI.escapeHtml(model) +
-        ' / 权重：' + (t.Weight || 0) + '%</div>';
-    }).join('') + '</div>';
-  }
-
-  function viewFallbacksHtml(fallbacks) {
-    if (!fallbacks || !fallbacks.length) return '<div class="route-list-empty">暂无备用集群</div>';
-    return '<div class="route-view-list">' + fallbacks.map(function (f) {
-      var model = f.Model || '透传';
-      return '<div class="route-view-item">集群：' + IvuUI.escapeHtml(f.ClusterName) +
-        ' / 模型：' + IvuUI.escapeHtml(model) + '</div>';
-    }).join('') + '</div>';
-  }
-
-  function viewDrawerBody(row) {
-    return '<div class="forward-rule-upsert">' +
-      '<form class="ivu-form ivu-form-label-top">' +
-        IvuUI.formTopItem('规则名称',
-          '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" value="' +
-          IvuUI.escapeHtml(row.name || '') + '" disabled /></div>') +
-        IvuUI.formTopItem('表达式',
-          '<div class="ivu-input-wrapper ivu-input-type-textarea"><textarea class="ivu-input" rows="6" disabled>' +
-          IvuUI.escapeHtml(row.Cond || '') + '</textarea></div>') +
-        IvuUI.formTopItem('目标集群和模型', viewTargetsHtml(row.targets)) +
-        IvuUI.formTopItem('备用集群和模型', viewFallbacksHtml(row.fallbacks)) +
-      '</form>' +
-    '</div>';
-  }
-
-  function editDrawerBody() {
-    return '<div class="forward-rule-upsert">' +
-      '<form class="ivu-form ivu-form-label-top">' +
-        IvuUI.formTopItem('规则名称',
-          '<div class="ivu-input-wrapper ivu-input-type-text">' +
-            '<input type="text" id="route-name" class="ivu-input" placeholder="请输入规则名称" />' +
-          '</div>', true) +
-        IvuUI.formTopItem('表达式', IvuUI.expressionEditor('route-expression'), true) +
-        IvuUI.formTopItem('目标集群和模型',
-          '<div id="route-targets-list" class="route-target-list"></div>' +
-          '<div style="margin-top:8px;">' + IvuUI.btn('添加目标', 'default', 'small', '', 'id="btn-target-add"') + '</div>', true) +
-        IvuUI.formTopItem('备用集群和模型',
-          '<div id="route-fallbacks-list" class="route-fallback-list"></div>' +
-          '<div style="margin-top:8px;">' + IvuUI.btn('添加备用', 'default', 'small', '', 'id="btn-fallback-add"') + '</div>', false) +
-      '</form>' +
-    '</div>';
-  }
-
-  function clusterSelectHtml(selected, dataAttr, index) {
-    var opts = clusterOptions().map(function (name) {
-      return '<option value="' + IvuUI.escapeHtml(name) + '"' + (name === selected ? ' selected' : '') + '>' +
-        IvuUI.escapeHtml(name) + '</option>';
-    }).join('');
-    return '<select class="proto-route-cluster" ' + dataAttr + '="' + index + '" style="min-width:140px;">' + opts + '</select>';
-  }
-
-  function renderTargetRows() {
-    var container = document.getElementById('route-targets-list');
-    if (!container) return;
-    if (!state.editTargets.length) {
-      container.innerHTML = '<div class="route-list-empty">暂无目标集群</div>';
-      return;
-    }
-    container.innerHTML = state.editTargets.map(function (t, i) {
-      return '<div class="route-target-row">' +
-        '<span>集群</span>' + clusterSelectHtml(t.ClusterName, 'data-target-idx', i) +
-        '<span>模型</span>' +
-        '<input type="text" data-target-model-idx="' + i + '" value="' + IvuUI.escapeHtml(t.Model || '') + '" placeholder="留空表示透传" />' +
-        '<span>权重</span>' +
-        '<input type="number" data-target-weight-idx="' + i + '" value="' + (t.Weight || 0) + '" min="0" max="100" />' +
-        IvuUI.btn('删除', 'error', 'small', '', 'data-target-delete="' + i + '"') +
-      '</div>';
-    }).join('');
-  }
-
-  function renderFallbackRows() {
-    var container = document.getElementById('route-fallbacks-list');
-    if (!container) return;
-    if (!state.editFallbacks.length) {
-      container.innerHTML = '<div class="route-list-empty">暂无备用集群</div>';
-      return;
-    }
-    container.innerHTML = state.editFallbacks.map(function (f, i) {
-      return '<div class="route-fallback-row">' +
-        '<span>集群</span>' + clusterSelectHtml(f.ClusterName, 'data-fallback-idx', i) +
-        '<span>模型</span>' +
-        '<input type="text" data-fallback-model-idx="' + i + '" value="' + IvuUI.escapeHtml(f.Model || '') + '" placeholder="留空表示透传" />' +
-        IvuUI.btn('删除', 'error', 'small', '', 'data-fallback-delete="' + i + '"') +
-      '</div>';
-    }).join('');
-  }
-
-  function bindTargetEvents() {
-    var container = document.getElementById('route-targets-list');
-    if (!container) return;
-    container.onchange = function (e) {
-      var el = e.target;
-      var idx = el.getAttribute('data-target-idx');
-      if (idx != null) state.editTargets[parseInt(idx, 10)].ClusterName = el.value;
-    };
-    container.oninput = function (e) {
-      var el = e.target;
-      var modelIdx = el.getAttribute('data-target-model-idx');
-      if (modelIdx != null) state.editTargets[parseInt(modelIdx, 10)].Model = el.value;
-      var weightIdx = el.getAttribute('data-target-weight-idx');
-      if (weightIdx != null) state.editTargets[parseInt(weightIdx, 10)].Weight = parseInt(el.value, 10) || 0;
-    };
-    container.onclick = function (e) {
-      var btn = e.target.closest ? e.target.closest('[data-target-delete]') : null;
-      if (btn) {
-        var idx = parseInt(btn.getAttribute('data-target-delete'), 10);
-        state.editTargets.splice(idx, 1);
-        renderTargetRows();
-      }
-    };
-  }
-
-  function bindFallbackEvents() {
-    var container = document.getElementById('route-fallbacks-list');
-    if (!container) return;
-    container.onchange = function (e) {
-      var el = e.target;
-      var idx = el.getAttribute('data-fallback-idx');
-      if (idx != null) state.editFallbacks[parseInt(idx, 10)].ClusterName = el.value;
-    };
-    container.oninput = function (e) {
-      var el = e.target;
-      var idx = el.getAttribute('data-fallback-model-idx');
-      if (idx != null) state.editFallbacks[parseInt(idx, 10)].Model = el.value;
-    };
-    container.onclick = function (e) {
-      var btn = e.target.closest ? e.target.closest('[data-fallback-delete]') : null;
-      if (btn) {
-        var idx = parseInt(btn.getAttribute('data-fallback-delete'), 10);
-        state.editFallbacks.splice(idx, 1);
-        renderFallbackRows();
-      }
-    };
-  }
-
-  function bindDrawerActions() {
-    var saveBtn = document.getElementById('btn-route-save');
-    if (saveBtn) saveBtn.onclick = onDrawerSave;
-    var resetBtn = document.getElementById('btn-route-reset');
-    if (resetBtn) resetBtn.onclick = onDrawerReset;
-    var targetAddBtn = document.getElementById('btn-target-add');
-    if (targetAddBtn) targetAddBtn.onclick = function () {
-      state.editTargets.push({ ClusterName: clusterOptions()[0] || '', Model: '', Weight: state.editTargets.length ? 0 : 100 });
-      renderTargetRows();
-    };
-    var fallbackAddBtn = document.getElementById('btn-fallback-add');
-    if (fallbackAddBtn) fallbackAddBtn.onclick = function () {
-      state.editFallbacks.push({ ClusterName: clusterOptions()[0] || '', Model: '' });
-      renderFallbackRows();
-    };
-  }
-
-  function setDrawerTitle(mode) {
-    var titleEl = document.querySelector('#drawer-route .ivu-drawer-header-inner');
-    if (!titleEl) return;
-    if (mode === 'view') titleEl.textContent = '查看规则';
-    else if (mode === 'add') titleEl.textContent = '添加规则';
-    else titleEl.textContent = '编辑规则';
-  }
-
-  function fillEditDrawerForm(row) {
-    document.getElementById('route-name').value = row ? row.name : '';
-    document.getElementById('route-expression').value = row ? row.Cond : '';
-    state.editTargets = cloneRules(row && row.targets ? row.targets : [{ ClusterName: clusterOptions()[0] || '', Model: '', Weight: 100 }]);
-    state.editFallbacks = cloneRules(row && row.fallbacks ? row.fallbacks : []);
-    renderTargetRows();
-    renderFallbackRows();
-    var errEl = document.querySelector('#drawer-route .proto-expression-error');
-    if (errEl) {
-      errEl.textContent = '';
-      errEl.classList.add('proto-hidden-inline');
-    }
-  }
-
-  function openDrawer(mode, filteredIndex) {
-    state.drawerMode = mode;
-    var row = null;
-    if ((mode === 'edit' || mode === 'view') && typeof filteredIndex === 'number') {
-      row = getRowFromFilteredIndex(filteredIndex);
-      state.editIndex = mode === 'edit' ? findRowIndex(row) : -1;
-    } else {
-      state.editIndex = -1;
-    }
-
-    var drawerContent = document.querySelector('#drawer-route .ivu-drawer-content');
-    var bodyEl = drawerContent.querySelector('.ivu-drawer-body');
-    var footerEl = drawerContent.querySelector('.ivu-drawer-footer');
-
-    if (mode === 'view') {
-      bodyEl.innerHTML = viewDrawerBody(row || {});
-      if (footerEl) footerEl.style.display = 'none';
-    } else {
-      bodyEl.innerHTML = editDrawerBody();
-      if (footerEl) footerEl.style.display = '';
-      fillEditDrawerForm(mode === 'edit' ? row : null);
-      IvuUI.initExpressionEditor('#drawer-route .proto-expression-editor');
-      bindDrawerActions();
-      bindTargetEvents();
-      bindFallbackEvents();
-    }
-
-    setDrawerTitle(mode);
-    Prototype.openDrawer('drawer-route');
-  }
-
-  function onDrawerSave() {
-    var name = document.getElementById('route-name').value.trim();
-    var cond = document.getElementById('route-expression').value.trim();
-
-    if (!name) {
-      Prototype.toast('请输入规则名称', 'error');
-      return;
-    }
-    if (!cond) {
-      Prototype.toast('请输入表达式', 'error');
-      return;
-    }
-    if (!state.editTargets.length) {
-      Prototype.toast('请至少配置一个目标集群', 'error');
-      return;
-    }
-
-    var weightSum = state.editTargets.reduce(function (sum, t) { return sum + (t.Weight || 0); }, 0);
-    if (weightSum !== 100) {
-      Prototype.toast('目标集群权重之和必须等于100（当前 ' + weightSum + '）', 'error');
-      return;
-    }
-
-    var data = {
-      name: name,
-      Cond: cond,
-      targets: cloneRules(state.editTargets),
-      fallbacks: cloneRules(state.editFallbacks)
-    };
-
-    if (state.drawerMode === 'add') {
-      state.rows.unshift(data);
-    } else if (state.editIndex >= 0) {
-      state.rows[state.editIndex] = data;
-    }
-
-    Prototype.closeDrawer('drawer-route');
-    renderTable();
-    Prototype.toast(state.drawerMode === 'add' ? '添加成功！' : '保存成功！');
-  }
-
-  function onDrawerReset() {
-    fillEditDrawerForm(state.drawerMode === 'edit' && state.editIndex >= 0 ? state.rows[state.editIndex] : null);
-  }
-
-  document.getElementById('btn-route-add').addEventListener('click', function () {
-    openDrawer('add');
-  });
-
-  Prototype.bindDrawerClose();
-  renderHeader();
-  updateAddButtonVisibility();
-  updateEnableSelect();
-  renderTable();
-});
-
-function drawerRoute() {
-  var footer =
-    '<div class="com-btn-box drawer-footer route-drawer-footer">' +
-      IvuUI.btn('本地保存', 'primary', 'small', '', 'id="btn-route-save"') + ' ' +
-      IvuUI.btn('重置', 'default', 'small', 'reset-btn', 'id="btn-route-reset"') +
-    '</div>';
-  return IvuUI.drawer('drawer-route', '添加规则', '<div class="ivu-drawer-body-placeholder"></div>', footer, '60%');
-}
-</script>
-</body>
+    </script>
+  </body>
 </html>

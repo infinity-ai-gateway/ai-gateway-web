@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The rainway-ai-gateway Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -164,11 +164,11 @@
               <InputNumber
                 v-model="formData.quota_plan.quota"
                 :min="0"
-                :max="INT64_MAX"
-                :precision="0"
-                :step="1"
-                :formatter="formatNumberInput"
-                :parser="parseNumberInput"
+                :max="isRMB ? RMB_QUOTA_MAX : INT64_MAX"
+                :precision="quotaPrecision"
+                :step="quotaStep"
+                :formatter="isRMB ? null : formatNumberInput"
+                :parser="isRMB ? null : parseNumberInput"
                 style="width: 100%;"
               ></InputNumber>
             </FormItem>
@@ -180,6 +180,7 @@
             <FormItem :label="$t('entity.quotaUnit')">
               <Select v-model="formData.quota_plan.unit" style="width: 100%;">
                 <Option value="total_token">total_token</Option>
+                <Option value="RMB">RMB</Option>
               </Select>
             </FormItem>
           </Col>
@@ -508,6 +509,7 @@ import { cloneDeep } from 'lodash';
 import { getModelGroupsFromServices } from '@/utils/model';
 
 const INT64_MAX = 9223372036854775807;
+const RMB_QUOTA_MAX = 90000000;
 const INT_MAX = 2147483647;
 
 export default {
@@ -568,12 +570,24 @@ export default {
                     callback(new Error(this.$t('entity.enterQuotaTotal')));
                     return;
                 }
-                if (!Number.isInteger(value)) {
+                if (Number.isNaN(Number(value)) || value < 0) {
+                    callback(new Error(this.$t('entity.quotaRangeError')));
+                    return;
+                }
+                const isRMB = that.formData.quota_plan.unit === 'RMB';
+                if (!isRMB && !Number.isInteger(value)) {
                     callback(new Error(this.$t('entity.quotaMustBeNonNegative')));
                     return;
                 }
-                if (value < 0) {
-                    callback(new Error(this.$t('entity.quotaRangeError')));
+                if (isRMB) {
+                    const decimals = (String(value).split('.')[1] || '').length;
+                    if (decimals > 4) {
+                        callback(new Error(this.$t('entity.quotaRmbPrecisionError') || 'RMB 配额最多保留 4 位小数'));
+                        return;
+                    }
+                }
+                if (isRMB && value > RMB_QUOTA_MAX) {
+                    callback(new Error(this.$t('entity.quotaRmbMaxError') || 'RMB 配额不能超过 9000 万元'));
                     return;
                 }
                 if (value > INT64_MAX) {
@@ -623,6 +637,7 @@ export default {
 
         return {
             INT64_MAX,
+            RMB_QUOTA_MAX,
             INT_MAX,
             maxConcurrencyMode: 'limited',
             entityTypeList: [],
@@ -709,6 +724,15 @@ export default {
                     trigger: 'blur'
                 }
             ];
+        },
+        isRMB() {
+            return this.formData.quota_plan && this.formData.quota_plan.unit === 'RMB';
+        },
+        quotaPrecision() {
+            return this.isRMB ? 4 : 0;
+        },
+        quotaStep() {
+            return this.isRMB ? 0.0001 : 1;
         }
     },
     watch: {
@@ -1195,7 +1219,10 @@ export default {
                     submitData.quota_plan.unlimited = submitData.quota_plan.unlimited === 'true';
                     submitData.quota_plan.pass_when_no_enough_quota = submitData.quota_plan.pass_when_no_enough_quota === 'true';
                     if (!submitData.quota_plan.unlimited) {
-                        submitData.quota_plan.quota = Math.trunc(submitData.quota_plan.quota);
+                        // RMB 模式保留 4 位小数，total_token 模式截断为整数
+                        if (submitData.quota_plan.unit !== 'RMB') {
+                            submitData.quota_plan.quota = Math.trunc(submitData.quota_plan.quota);
+                        }
                     }
                     submitData.rate_limit_policy.enabled = submitData.rate_limit_policy.enabled === 'true';
 

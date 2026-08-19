@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     '</tr>';
   }
 
-  function renderEditRow(item, index, deleteAble) {
+  function renderEditRow(item, index) {
     return '<tr data-index="' + index + '">' +
       '<td><div class="ivu-input-wrapper ivu-input-type-text">' +
         '<input type="text" class="ivu-input" data-field="hostname" value="' + escapeAttr(item.hostname) + '" placeholder="请输入机器名" />' +
@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', function () {
           '<input type="number" class="ivu-input" data-field="port" min="1" max="65535" value="' + escapeAttr(item.port) + '" placeholder="端口值" />' +
         '</div>' +
       '</td>' +
-      '<td>' + IvuUI.btn('删除', 'error', 'small', '', (deleteAble ? '' : 'disabled="disabled" ') + 'data-action="remove" data-index="' + index + '"') + '</td>' +
     '</tr>';
   }
 
@@ -117,23 +116,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var toolbar = state.isEditing ? '' :
       '<div class="page-toolbar">' + IvuUI.btn('编辑', 'primary', 'default', '', 'id="btn-start-edit"') + '</div>';
 
-    var tableHead = state.isEditing
-      ? '<tr><th>机器名</th><th>ip/域名</th><th>端口</th><th>操作</th></tr>'
-      : '<tr><th>机器名</th><th>ip/域名</th><th>端口</th></tr>';
+    var tableHead = '<tr><th>机器名</th><th>ip/域名</th><th>端口</th></tr>';
 
     var tableBody = '';
     if (!state.instances.length && !state.isEditing) {
       tableBody = '<tr><td colspan="3" class="empty-cell">暂无数据</td></tr>';
     } else {
-      var deleteAble = state.instances.length > 1;
       tableBody = state.instances.map(function (item, index) {
-        return state.isEditing ? renderEditRow(item, index, deleteAble) : renderViewRow(item);
+        return state.isEditing ? renderEditRow(item, index) : renderViewRow(item);
       }).join('');
     }
-
-    var addBtn = state.isEditing
-      ? '<div style="margin-top:8px;">' + IvuUI.btn('+ 创建', 'success', 'small', 'add-btn', 'id="btn-add-row"') + '</div>'
-      : '';
 
     var footer = state.isEditing
       ? '<div class="footer-actions">' +
@@ -153,7 +145,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 tableHead + tableBody +
               '</table>' +
             '</div>' +
-            addBtn +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -168,28 +159,10 @@ document.addEventListener('DOMContentLoaded', function () {
       startEditBtn.addEventListener('click', function () {
         if (!state.instances.length) {
           state.instances = [createEmptyInstance()];
+        } else {
+          state.instances = state.instances.slice(0, 1);
         }
         state.isEditing = true;
-        render();
-      });
-    }
-
-    document.querySelectorAll('[data-action="remove"]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        if (btn.hasAttribute('disabled')) return;
-        var index = parseInt(btn.getAttribute('data-index'), 10);
-        var list = collectInstancesFromForm();
-        list.splice(index, 1);
-        state.instances = list;
-        render();
-      });
-    });
-
-    var addBtn = document.getElementById('btn-add-row');
-    if (addBtn) {
-      addBtn.addEventListener('click', function () {
-        state.instances = collectInstancesFromForm();
-        state.instances.push(createEmptyInstance());
         render();
       });
     }
@@ -197,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var submitBtn = document.getElementById('btn-submit-edit');
     if (submitBtn) {
       submitBtn.addEventListener('click', function () {
-        var list = collectInstancesFromForm();
+        var list = collectInstancesFromForm().slice(0, 1);
         if (!validateInstances(list)) return;
         state.instances = list;
         MockData.gatewayInstances = cloneInstances(list);

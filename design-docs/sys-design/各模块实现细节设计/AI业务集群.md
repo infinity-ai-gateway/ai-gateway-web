@@ -2,7 +2,7 @@
 
 ## 1. 模块定位
 
-`Clusters` 管理 AI 业务集群（Cluster），是系统中最复杂的配置对象之一。新建/编辑采用**六步向导**模式，每个步骤负责 Cluster 的一部分配置，最终由复核步骤统一提交。
+`Clusters` 管理 AI 业务集群（Cluster），是系统中最复杂的配置对象之一。新建/编辑采用**六步向导**模式，每个步骤负责 Cluster 的一部分配置（含多 Key 加权、价格关联提供商、模型前缀裁剪），最终由复核步骤统一提交。
 
 ## 2. 路由与入口
 
@@ -75,7 +75,7 @@ Clusters/index.vue
 
 ### 6.2 Timeout
 
-- 5 个 timeout 字段及 `max_retry_in_subcluster` 均为非负整数，上限 `99999999`。
+- 5 个 timeout 字段及 `retries.max_retry_in_cluster` 均为非负整数，上限 `99999999`。
 
 ### 6.3 PassiveHealthCheck
 
@@ -87,13 +87,25 @@ Clusters/index.vue
 
 - 支持 IP 模式与域名模式。
 - IP + 端口重复检测。
-- 域名模式使用 FQDN 校验，端口固定为 443。
+- 域名模式使用 FQDN 校验；端口随 LLM `model_endpoint.schema` 同步（http → 80，https → 443），提交与探测模型时保持一致。
 
-### 6.5 GatewayConfig
+### 6.5 GatewayConfig（大模型配置）
 
-- `service_name`、`provider_type`、`model_endpoint`（含 schema、uri、headers）必填。
-- `key` 长度 20–200 字符；编辑时通过掩码与 focus 事件实现「未修改则保留原值」。
-- 提交时根据 `keepExistingKey` 决定是否保留原 key。
+| 字段 | 校验 | 说明 |
+|------|------|------|
+| `provider_type` | 可选 | 模型服务商类型，用于探测模型列表与接口适配。 |
+| `provider` | 可选 | 价格关联提供商，与模型定价表 `provider` 匹配。 |
+| `strip_prefix` | 布尔 | 开启后转发前去掉请求 model 中的匹配前缀。 |
+| `match_prefix` | 开启裁剪时必填，必须以 `/` 结尾 | 模型前缀匹配，如 `openrouter/`。 |
+| `model_endpoint` | schema + uri；uri 以 `/` 开头 | 模型列表接口；host 来自实例池。 |
+| `models` | 必填 | 已选模型列表。 |
+| `model_mappings` | 原模型名不可重复 | 模型重定向。 |
+| `keys[]` | name/key 成对填写；权重 0–100，有效 Key 权重之和 = 100 | 多 Key 加权；请求头含 `${API_KEY}` 时 Keys 不能为空。 |
+| `key_policy` | `strategy` 仅 `weighted_random`；退避最大值 ≥ 初始值 | Key 路由策略（重试与退避）。 |
+
+密钥与 headers 编辑时做掩码；未修改则提交原值。
+
+复核页 `Review.vue` 只读展示上述 LLM 字段（含提供商、裁剪前缀、前缀匹配、Keys、Key 策略）。
 
 ## 7. OpenAPI 消费映射
 
@@ -104,15 +116,16 @@ Clusters/index.vue
 | `Clusters/index.vue` | `DELETE` | `clusters/{cluster_name}` | 删除集群。 |
 | `components/index.vue` | `POST` | `clusters` | 新建集群。 |
 | `components/index.vue` | `PATCH` | `clusters/{cluster_name}` | 更新集群。 |
-| `GatewayConfig.vue` | `GET` | `model-providers` | 提供商列表。 |
-| `GatewayConfig.vue` | `POST` | `models` | 探测模型列表。 |
-| `Review.vue` | `GET` | `model-providers` | 详情展示提供商名称。 |
+| `GatewayConfig.vue` | `GET` | `model-provider-types` | 服务商类型列表。 |
+| `GatewayConfig.vue` | `POST` | `tools/get-models-from-provider` | 探测下游模型列表。 |
+| `Review.vue` | `GET` | `model-provider-types` | 详情展示服务商类型名称。 |
 
-> 注：实际代码使用 `PATCH` 更新集群，与 `OpenAPI消费接口映射.md` 中标注的 `PUT` 不一致，以代码实现为准。
+> 更新集群使用 `PATCH`。
 
 ## 8. 边界情况
 
 - `cancel_on_client_close` 字段在编辑时存在字符串与布尔互转。
 - 提交前将空对象字段转为 `null`。
-- LLM key 与 headers 编辑时做掩码处理，避免明文泄露。
-- 实例池数据可能来自 `instance_pool` 或单子集群 `sub_clusters[0].instance_pool`，组件需兼容两种结构。
+- LLM keys / headers 编辑时做掩码处理，避免明文泄露。
+- 实例池端口随 endpoint schema 同步；探测模型与提交使用同一套 host:port。
+- 删除集群若被路由规则引用，前端解析 `route-tables` / Entity / API-Key 引用并提示跳转处理。

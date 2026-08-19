@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The rainway-ai-gateway Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@
       :page-sizes="pageSizes"
       :page-size="pageSize"
       layout="sizes, prev, pager, next"
-      :total="showTableData.length"
+      :total="serverPagination ? total : showTableData.length"
       background
       class="page"
     ></el-pagination>
@@ -120,6 +120,14 @@ export default {
             default: function () {
                 return [20, 30, 40, 50];
             }
+        },
+        total: {
+            type: Number,
+            default: 0
+        },
+        serverPagination: {
+            type: Boolean,
+            default: false
         },
         draggable: {
             type: Boolean,
@@ -214,6 +222,12 @@ export default {
                 if (!data) {
                     data = [];
                 }
+                if (this.serverPagination) {
+                    this.showTableData = cloneDeep(data);
+                    this.cloneShowData = cloneDeep(data);
+                    this.handlePageData(this.showTableData, this.page);
+                    return;
+                }
                 // Clear search conditions when external data is refreshed (e.g. after add/edit submit)
                 this.columns.forEach(item => {
                     if (item.searchable) {
@@ -232,6 +246,19 @@ export default {
             },
             deep: true,
             immediate: true
+        },
+
+        currentPage(val) {
+            if (this.serverPagination && val !== this.page.currentPage) {
+                this.page.currentPage = val;
+                this.showCurrentPage = val;
+            }
+        },
+
+        pageSize(val) {
+            if (this.serverPagination && val !== this.page.pageSize) {
+                this.page.pageSize = val;
+            }
         },
 
         page: {
@@ -280,6 +307,17 @@ export default {
                         this.$set(this.searchMessage, event.key + '_render_', event.render);
                     }
                 }
+            }
+
+            if (this.serverPagination) {
+                const filters = {};
+                for (let key in this.searchMessage) {
+                    if (key.indexOf('_render_') === -1) {
+                        filters[key] = this.searchMessage[key];
+                    }
+                }
+                this.$emit('on-search-change', filters);
+                return;
             }
 
             if (isEmpty(this.searchMessage) && isEmpty(this.filterMessage)) {
@@ -496,12 +534,25 @@ export default {
             return 'iview_table_tr';
         },
         handleSizeChange(val) {
+            if (this.serverPagination) {
+                this.$emit('on-page-change', { page: 1, pageSize: val });
+                return;
+            }
             this.page.pageSize = val;
         },
         handleCurrentChange(val) {
+            if (this.serverPagination) {
+                this.$emit('on-page-change', { page: val, pageSize: this.page.pageSize });
+                return;
+            }
             this.page.currentPage = val;
         },
         handlePageData(data, page) {
+            if (this.serverPagination) {
+                this.pageData = data;
+                this.showCurrentPage = page.currentPage;
+                return;
+            }
             const startIndex = (page.currentPage - 1) * page.pageSize;
             const endIndex = startIndex + page.pageSize;
             this.pageData = data.slice(startIndex, endIndex);

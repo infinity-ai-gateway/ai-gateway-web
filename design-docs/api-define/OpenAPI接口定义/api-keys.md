@@ -42,14 +42,15 @@
     "rules": [
       {
         "name": "apikey-default",
-        "Cond": "default_t()",
+        "cond": "default_t()",
         "targets": [
           {
-            "ClusterName": "cluster_apikey",
-            "Model": "",
-            "Weight": 100
+            "cluster_name": "cluster_apikey",
+            "model": "",
+            "weight": 100
           }
-        ]
+        ],
+        "fallbacks": []
       }
     ]
   },
@@ -81,6 +82,8 @@
 | `route_rules` | object | 路由规则 | 类型为 [RouteRules](./00-common.md#公共参数类型)，**不会为空** |
 | `entity_id` | string | 挂载到的Entity ID | 为空表示未挂载到任何Entity |
 | `entity` | object | 挂载的Entity摘要（只读） | 包含id、name、type |
+
+> **说明**：`quota_plan` 中的 `quota`、`balance.used`、`balance.remaining` 类型为 `number`，支持 `unit="total_token"`（整数）和 `unit="RMB"`（最多 4 位小数展示）。详见 [QuotaPlan](./00-common.md#公共参数类型)。
 
 **公共类型引用**
 
@@ -166,14 +169,15 @@
         "rules": [
             {
                 "name": "apikey-default",
-                "Cond": "default_t()",
+                "cond": "default_t()",
                 "targets": [
                     {
-                        "ClusterName": "cluster_apikey",
-                        "Model": "",
-                        "Weight": 100
+                        "cluster_name": "cluster_apikey",
+                        "model": "",
+                        "weight": 100
                     }
-                ]
+                ],
+                "fallbacks": []
             }
         ]
     },
@@ -234,14 +238,15 @@
             "rules": [
                 {
                     "name": "apikey-default",
-                    "Cond": "default_t()",
+                    "cond": "default_t()",
                     "targets": [
                         {
-                            "ClusterName": "cluster_apikey",
-                            "Model": "",
-                            "Weight": 100
+                            "cluster_name": "cluster_apikey",
+                            "model": "",
+                            "weight": 100
                         }
-                    ]
+                    ],
+                    "fallbacks": []
                 }
             ]
         },
@@ -452,8 +457,8 @@ Data为null。
 | - | - | - | - |
 | unlimited | bool | 是否无限配额 | - |
 | pass_when_no_enough_quota | bool | 配额不足时是否放行 | - |
-| quota | int64 | 配额总量 | - |
-| unit | string | 配额单位 | - |
+| quota | number | 配额总量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| unit | string | 配额单位 | 可选值：`total_token`、`RMB` |
 | reset_period | string | 配额重置周期 | - |
 | balance | object | 余额状态（只读） | 包含used和remaining |
 
@@ -461,10 +466,10 @@ Data为null。
 
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
-| used | int64 | 已用量 | - |
-| remaining | int64 | 剩余量 | - |
+| used | number | 已用量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| remaining | number | 剩余量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
 
-**成功返回示例**
+**成功返回示例（Token 配额）**
 
 ```json
 {
@@ -479,6 +484,26 @@ Data为null。
         "balance": {
             "used": 12345679,
             "remaining": 87654321
+        }
+    }
+}
+```
+
+**成功返回示例（RMB 配额）**
+
+```json
+{
+    "ErrNum": 200,
+    "ErrMsg": "success",
+    "Data": {
+        "unlimited": false,
+        "pass_when_no_enough_quota": false,
+        "quota": 5000.00,
+        "unit": "RMB",
+        "reset_period": "monthly",
+        "balance": {
+            "used": 1234.56,
+            "remaining": 3765.44
         }
     }
 }
@@ -507,7 +532,7 @@ Data为null。
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
-| quota | int64 | 重置后的配额总量 | N | 若传入则更新quota并同步重置balance；若不传则按当前quota重置 | - |
+| quota | number | 重置后的配额总量 | N | 若传入则更新quota并同步重置balance；若不传则按当前quota重置 | 非负数；`unit=total_token` 时必须为整数；`unit=RMB` 时取值范围 0 ~ 90000000.00（9000 万元），小数位不超过 8 位 |
 | reason | string | 重置原因 | N | 用于审计 | - |
 
 **执行逻辑**
@@ -523,19 +548,19 @@ Data为null。
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
 | id | string | API-Key标识 | - |
-| previous_quota | int64 | 重置前配额 | - |
-| new_quota | int64 | 重置后配额 | - |
+| previous_quota | number | 重置前配额 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| new_quota | number | 重置后配额 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
 | balance | object | 余额变更详情 | 见下方 |
 
 **balance结构**
 
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
-| previous_remaining | int64 | 重置前剩余量 | - |
-| new_remaining | int64 | 重置后剩余量 | - |
-| used | int64 | 当前已用量 | 重置后为0 |
+| previous_remaining | number | 重置前剩余量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| new_remaining | number | 重置后剩余量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| used | number | 当前已用量 | 重置后为0；`unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
 
-**成功返回示例**
+**成功返回示例（Token 配额）**
 
 ```json
 {
@@ -548,6 +573,25 @@ Data为null。
         "balance": {
             "previous_remaining": 87654321,
             "new_remaining": 100000000,
+            "used": 0
+        }
+    }
+}
+```
+
+**成功返回示例（RMB 配额）**
+
+```json
+{
+    "ErrNum": 200,
+    "ErrMsg": "success",
+    "Data": {
+        "id": "apikey-001",
+        "previous_quota": 5000.00,
+        "new_quota": 5000.00,
+        "balance": {
+            "previous_remaining": 3765.44,
+            "new_remaining": 5000.00,
             "used": 0
         }
     }

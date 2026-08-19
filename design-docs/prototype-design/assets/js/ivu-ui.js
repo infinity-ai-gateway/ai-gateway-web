@@ -178,7 +178,8 @@ window.IvuUI = {
       { name: 'bfe_cluster_in', snippet: 'bfe_cluster_in("")', title: 'bfe_cluster_in(patterns)' }
     ]},
     { name: 'body:', buttons: [
-      { name: 'req_body_json_in', snippet: 'req_body_json_in("","",false)', title: 'req_body_json_in(jsonpath, patterns, foldCase)' }
+      { name: 'req_body_json_in', snippet: 'req_body_json_in("","",false)', title: 'req_body_json_in(jsonpath, patterns, foldCase)' },
+      { name: 'req_body_json_prefix_in', snippet: 'req_body_json_prefix_in("","",false)', title: 'req_body_json_prefix_in(jsonpath, patterns, foldCase)' }
     ]}
   ],
 
@@ -376,6 +377,26 @@ window.IvuUI = {
             '</a>' +
           '</div>' +
           '<div class="ivu-drawer-body">' + body + '</div>' +
+          footerHtml +
+        '</div></div></div>';
+  },
+
+  modal(id, title, body, footer, width) {
+    width = width || '700px';
+    var footerHtml = footer
+      ? '<div class="ivu-modal-footer">' + footer + '</div>'
+      : '';
+    return '<div class="ivu-modal-wrap proto-hidden" id="' + id + '">' +
+      '<div class="ivu-modal-mask" data-close-modal="' + id + '"></div>' +
+      '<div class="ivu-modal" style="width:' + width + ';">' +
+        '<div class="ivu-modal-content">' +
+          '<div class="ivu-modal-header">' +
+            '<div class="ivu-modal-header-inner">' + title + '</div>' +
+            '<a class="ivu-modal-close" data-close-modal="' + id + '" href="javascript:void(0)" aria-label="关闭">' +
+              '<i class="ivu-icon ivu-icon-ios-close"></i>' +
+            '</a>' +
+          '</div>' +
+          '<div class="ivu-modal-body">' + body + '</div>' +
           footerHtml +
         '</div></div></div>';
   },

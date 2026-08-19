@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 The rainway-ai-gateway Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -29,75 +29,75 @@
 * limitations under the License.
 */
 <template>
-    <div class="clusters">
-        <Button type="primary" size="small" @click="onAdd">{{
+  <div class="clusters">
+    <Button type="primary" size="small" @click="onAdd">{{
             $t('com.createX', { obj: $t('cluster.name') })
-        }}</Button>
-        <pageTable :tableData="tableData" :columns="columns" :loading="tableLoading" />
+    }}</Button>
+    <pageTable
+      :tableData="tableData"
+      :columns="columns"
+      :loading="tableLoading"
+    />
 
-        <Drawer
-            :title="
+    <Drawer
+      :title="
                 isAdd
                     ? $t('com.createX', { obj: $t('cluster.name') })
                     : $t('com.editX', { obj: $t('cluster.name') })
             "
-            v-model="upsertVisible"
-            :mask-closable="false"
-            width="80"
-        >
-            <Upsert
-                v-if="upsertVisible"
-                :currentCluster="currentCluster"
-                :clusterNames="clusterNames"
-                :isAdd="isAdd"
-                @submit="upsertSubmit"
-            />
-        </Drawer>
+      v-model="upsertVisible"
+      :mask-closable="false"
+      width="65"
+    >
+      <Upsert
+        v-if="upsertVisible"
+        :currentCluster="currentCluster"
+        :clusterNames="clusterNames"
+        :isAdd="isAdd"
+        @submit="upsertSubmit"
+      />
+    </Drawer>
 
-        <Drawer :title="$t('com.detail')" v-model="infoVisible" width="80">
-            <Review
-                :showFooter="false"
-                :baseConfigData="baseConfigData"
-                :instancePoolData="instancePoolData"
-                :passiveHealthData="passiveHealthData"
-                :llmConfigData="llmConfigData"
-                :originalLlmConfigKey="originalLlmConfigKey"
-                :originalLlmConfigHeaders="originalLlmConfigHeaders"
-            />
-        </Drawer>
+    <Drawer :title="$t('com.detail')" v-model="infoVisible" width="80">
+      <Review
+        :showFooter="false"
+        :baseConfigData="baseConfigData"
+        :instancePoolData="instancePoolData"
+        :passiveHealthData="passiveHealthData"
+        :llmConfigData="llmConfigData"
+        :originalLlmConfigKey="originalLlmConfigKey"
+        :originalLlmConfigHeaders="originalLlmConfigHeaders"
+      />
+    </Drawer>
 
-        <Modal
-            v-model="deleteErrorVisible"
-            :mask-closable="false"
-            width="560"
+    <Modal v-model="deleteErrorVisible" :mask-closable="false" width="560">
+      <div slot="header" class="delete-error-title">
+        <Icon type="ios-close-circle" color="#ed4014" :size="22" />
+        <span>{{ $t('cluster.deleteFailed') }}</span>
+      </div>
+      <div class="delete-error-content">
+        <p
+          v-for="(ref, index) in deleteErrorRefs"
+          :key="index"
+          class="delete-error-line"
         >
-            <div slot="header" class="delete-error-title">
-                <Icon type="ios-close-circle" color="#ed4014" :size="22" />
-                <span>{{ $t('cluster.deleteFailed') }}</span>
-            </div>
-            <div class="delete-error-content">
-                <p
-                    v-for="(ref, index) in deleteErrorRefs"
-                    :key="index"
-                    class="delete-error-line"
-                >
-                    {{
+          {{
                         $t('cluster.deleteBlockedByRule', {
                             cluster: deleteErrorCluster,
                             table: buildRouteTableLabel(ref),
                             rule: ref.ruleName
                         })
-                    }}
-                    <a @click="goToRouteTable(ref)">{{ $t('cluster.goToHandle') }}</a>
-                </p>
-            </div>
-            <div slot="footer">
-                <Button type="primary" @click="deleteErrorVisible = false">{{
+          }}
+          <a @click="goToRouteTable(ref)">{{ $t('cluster.goToHandle') }}</a>
+        </p>
+      </div>
+      <div slot="footer">
+        <Button type="primary" @click="deleteErrorVisible = false">{{
                     $t('com.confirm')
-                }}</Button>
-            </div>
-        </Modal>
-    </div>
+        }}</Button>
+      </div>
+    </Modal>
+  </div>
 </template>
 <script>
 import pageTable from '@/components/table/pageTable';

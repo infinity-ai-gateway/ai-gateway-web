@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The rainway-ai-gateway Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -58,20 +58,43 @@ export default {
         return {
             navIcon: {
                 'AIGatewayInstancePool.list': 'iconfont icon-instancePool',
+                'AIGatewayInstancePoolManage': 'iconfont icon-instancePool',
 
                 'certs.list': 'iconfont icon-cert',
+                'CertsManage': 'iconfont icon-cert',
+                'CertificateManage': 'iconfont icon-cert',
+
                 'user.list': 'iconfont icon-user',
+                'UserManage': 'iconfont icon-user',
 
                 'APIKey.list': 'ivu-icon-ios-key',
+                'APIKeyManage': 'ivu-icon-ios-key',
+
                 'QuotaControl.list': 'ivu-icon-md-apps',
+
                 'ai_route.list.admin': 'iconfont icon-zhuanfa',
+
                 'Entity.list': 'ivu-icon-ios-settings',
+                'EntityManage': 'ivu-icon-ios-settings',
 
                 'consumer.admin.list': 'ivu-icon-md-people',
+                'ConsumerManage': 'ivu-icon-md-people',
+
                 'route.admin.list': 'ivu-icon-ios-cube',
+                'RouteManage': 'ivu-icon-ios-cube',
+
                 'resource.admin.list': 'ivu-icon-md-appstore',
+                'ResourceManage': 'ivu-icon-md-appstore',
+
                 'AICluster.list': 'iconfont icon-jiqun',
-                'AdvanceRouteRule.list': 'iconfont icon-zhuanfa'
+                'AIClusterManage': 'iconfont icon-jiqun',
+                'AIGatewayClusterManage': 'iconfont icon-jiqun',
+
+                'AdvanceRouteRule.list': 'iconfont icon-zhuanfa',
+                'AdvanceRouteRuleManage': 'iconfont icon-zhuanfa',
+                'RouteTableManage': 'iconfont icon-zhuanfa',
+
+                'ModelPrice.list': 'ivu-icon-logo-yen',
             }
         };
     },

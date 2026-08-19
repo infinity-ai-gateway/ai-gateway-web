@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The rainway-ai-gateway Authors. 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -128,9 +128,14 @@ export default {
                         const quotaPlan = params.row.quota_plan || {};
                         let text = '-';
                         if (!quotaPlan.unlimited) {
+                            const isRMB = quotaPlan.unit === 'RMB';
+                            const decimals = isRMB ? 4 : 0;
+                            const unitText = isRMB ? '¥' : ' tokens';
                             const used = quotaPlan.balance && quotaPlan.balance.used || 0;
                             const quota = quotaPlan.quota || 0;
-                            text = `${that.formatNumber(used)} / ${that.formatNumber(quota)}`;
+                            const usedText = isRMB ? '¥' + that.formatNumber(used, decimals) : that.formatNumber(used, decimals) + unitText;
+                            const quotaText = isRMB ? '¥' + that.formatNumber(quota, decimals) : that.formatNumber(quota, decimals) + unitText;
+                            text = `${usedText} / ${quotaText}`;
                         }
                         return h('span', text);
                     }
@@ -243,8 +248,13 @@ export default {
         this.fetchData();
     },
     methods: {
-        formatNumber(num) {
-            return num.toLocaleString();
+        formatNumber(num, decimals = 0) {
+            const value = Number(num);
+            if (Number.isNaN(value)) return '-';
+            return value.toLocaleString('zh-CN', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
         },
         onViewSubmit() {
             this.isHiden = false;
