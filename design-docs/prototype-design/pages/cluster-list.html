@@ -23,7 +23,8 @@ document.addEventListener('DOMContentLoaded', function () {
       '<div id="cluster-table"></div>' +
     '</div>' +
     drawerUpsert() +
-    drawerDetail();
+    drawerDetail() +
+    drawerRefCheck();
 
   var upsertController = null;
   var state = {
@@ -31,7 +32,9 @@ document.addEventListener('DOMContentLoaded', function () {
     filteredRows: cloneRows(MockData.clusters),
     searchName: '',
     pageSize: 20,
-    currentPage: 1
+    currentPage: 1,
+    sortKey: '',
+    sortOrder: '' // 'asc' | 'desc' | ''
   };
 
   function cloneRows(list) {
@@ -44,15 +47,29 @@ document.addEventListener('DOMContentLoaded', function () {
     return IvuUI.escapeHtml(value);
   }
 
+  function sortRows(rows) {
+    if (!state.sortKey || !state.sortOrder) return rows.slice();
+    var key = state.sortKey;
+    var order = state.sortOrder;
+    return rows.slice().sort(function (a, b) {
+      var av = String(a[key] || '');
+      var bv = String(b[key] || '');
+      if (av < bv) return order === 'asc' ? -1 : 1;
+      if (av > bv) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
   function filterRows() {
     var keyword = state.searchName.trim().toUpperCase();
     if (!keyword) {
       state.filteredRows = cloneRows(state.allRows);
-      return;
+    } else {
+      state.filteredRows = state.allRows.filter(function (row) {
+        return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
+      });
     }
-    state.filteredRows = state.allRows.filter(function (row) {
-      return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
-    });
+    state.filteredRows = sortRows(state.filteredRows);
   }
 
   function getPageRows() {
@@ -75,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
           searchable: true,
           searchPlaceholder: '请输入名称查询'
         },
-        { title: '描述', key: 'description' },
+        { title: '描述', key: 'description', sortable: true },
         {
           title: '操作',
           key: 'action',
@@ -93,6 +110,18 @@ document.addEventListener('DOMContentLoaded', function () {
       searchValues: { name: state.searchName },
       tableId: 'cluster-page-table'
     });
+
+    // 添加排序样式
+    if (state.sortKey && state.sortOrder) {
+      var sortIcons = container.querySelectorAll('.ivu-table-sort');
+      var cols = container.querySelectorAll('th');
+      var colKeys = ['name', 'description', 'action'];
+      colKeys.forEach(function (key, idx) {
+        if (key === state.sortKey && sortIcons[idx]) {
+          sortIcons[idx].classList.add('sort-' + state.sortOrder);
+        }
+      });
+    }
 
     bindTableEvents(container);
   }
@@ -141,6 +170,33 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
+    // 排序点击事件
+    container.querySelectorAll('th').forEach(function (th, idx) {
+      var colKeys = ['name', 'description', 'action'];
+      var key = colKeys[idx];
+      if (key === 'action') return;
+      var sortIcon = th.querySelector('.ivu-table-sort');
+      if (!sortIcon) return;
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', function () {
+        if (state.sortKey === key) {
+          if (state.sortOrder === 'asc') {
+            state.sortOrder = 'desc';
+          } else if (state.sortOrder === 'desc') {
+            state.sortKey = '';
+            state.sortOrder = '';
+          } else {
+            state.sortOrder = 'asc';
+          }
+        } else {
+          state.sortKey = key;
+          state.sortOrder = 'asc';
+        }
+        state.currentPage = 1;
+        renderTable();
+      });
+    });
+
     container.querySelectorAll('[data-action]').forEach(function (btn) {
       btn.addEventListener('click', function (event) {
         event.stopPropagation();
@@ -150,13 +206,114 @@ document.addEventListener('DOMContentLoaded', function () {
         if (action === 'detail') openDetail(row);
         else if (action === 'edit') openUpsert(false, row);
         else if (action === 'delete') {
-          Prototype.confirmDelete('是否删除' + name + '？', function () {
-            state.allRows = state.allRows.filter(function (item) { return item.name !== name; });
-            renderTable();
-          });
+          handleDelete(name);
         }
       });
     });
+  }
+
+  function handleDelete(name) {
+    var refs = findClusterReferences(name);
+    if (refs.length > 0) {
+      showRefCheckModal(name, refs);
+    } else {
+      Prototype.confirmDelete('是否删除' + name + '？', function () {
+        state.allRows = state.allRows.filter(function (item) { return item.name !== name; });
+        renderTable();
+        Prototype.toast('删除成功');
+      });
+    }
+  }
+
+  function findClusterReferences(clusterName) {
+    var results = [];
+
+    // 检查全局路由规则
+    var globalRules = (MockData.globalRouteRules && MockData.globalRouteRules.rules) || [];
+    globalRules.forEach(function (rule) {
+      var found = false;
+      var targets = rule.targets || [];
+      targets.forEach(function (t) { if (t.cluster_name === clusterName) found = true; });
+      var fallbacks = rule.fallbacks || [];
+      fallbacks.forEach(function (f) { if (f.cluster_name === clusterName) found = true; });
+      if (found) {
+        results.push({ table: '全局路由表', ruleName: rule.name, ruleType: '全局规则' });
+      }
+    });
+
+    // 检查实体路由规则
+    var entities = MockData.entities || [];
+    entities.forEach(function (entity) {
+      var rules = (entity.route_rules && entity.route_rules.rules) || [];
+      rules.forEach(function (rule) {
+        var found = false;
+        var targets = rule.targets || [];
+        targets.forEach(function (t) { if (t.cluster_name === clusterName) found = true; });
+        var fallbacks = rule.fallbacks || [];
+        fallbacks.forEach(function (f) { if (f.cluster_name === clusterName) found = true; });
+        if (found) {
+          results.push({ table: entity.name + ' 路由表', ruleName: rule.name, ruleType: '实体规则' });
+        }
+      });
+    });
+
+    // 检查 API Key 路由规则
+    var apiKeys = MockData.apiKeys || [];
+    apiKeys.forEach(function (ak) {
+      var rules = (ak.route_rules && ak.route_rules.rules) || [];
+      rules.forEach(function (rule) {
+        var found = false;
+        var targets = rule.targets || [];
+        targets.forEach(function (t) { if (t.cluster_name === clusterName) found = true; });
+        var fallbacks = rule.fallbacks || [];
+        fallbacks.forEach(function (f) { if (f.cluster_name === clusterName) found = true; });
+        if (found) {
+          results.push({ table: 'API Key ' + ak.id + ' 路由表', ruleName: rule.name, ruleType: 'API Key 规则' });
+        }
+      });
+    });
+
+    // 检查转发规则
+    var forwardRules = MockData.forwardRules || [];
+    forwardRules.forEach(function (rule) {
+      if (rule.cluster_name === clusterName) {
+        results.push({ table: '转发规则', ruleName: rule.name, ruleType: '转发规则' });
+      }
+    });
+
+    return results;
+  }
+
+  function showRefCheckModal(clusterName, refs) {
+    var body = document.getElementById('ref-check-body');
+    if (!body) return;
+
+    var rows = refs.map(function (ref) {
+      return '<tr>' +
+        '<td><div class="ivu-table-cell">' + IvuUI.escapeHtml(ref.table) + '</div></td>' +
+        '<td><div class="ivu-table-cell">' + IvuUI.escapeHtml(ref.ruleName) + '</div></td>' +
+        '<td><div class="ivu-table-cell">' + IvuUI.escapeHtml(ref.ruleType) + '</div></td>' +
+      '</tr>';
+    }).join('');
+
+    body.innerHTML =
+      '<div style="margin-bottom:12px;color:#ed4014;">删除失败：集群 <b>' + IvuUI.escapeHtml(clusterName) + '</b> 被以下规则引用，请先解除引用后再删除。</div>' +
+      '<div class="ivu-table-wrapper">' +
+        '<div class="ivu-table ivu-table-default ivu-table-border" style="width:100%;">' +
+          '<div class="ivu-table-body">' +
+            '<table cellspacing="0" cellpadding="0" border="0" style="width:100%;table-layout:fixed;">' +
+              '<thead><tr>' +
+                '<th><div class="ivu-table-cell"><span>路由表</span></div></th>' +
+                '<th><div class="ivu-table-cell"><span>规则名称</span></div></th>' +
+                '<th><div class="ivu-table-cell"><span>规则类型</span></div></th>' +
+              '</tr></thead>' +
+              '<tbody class="ivu-table-tbody">' + rows + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    Prototype.openDrawer('drawer-ref-check');
   }
 
   function openUpsert(isAdd, row) {
@@ -169,12 +326,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var body = drawer.querySelector('.ivu-drawer-body');
     if (!body) return;
 
+    // 收集所有集群名称用于重名校验
+    var allNames = state.allRows.map(function (item) { return item.name; });
+
     upsertController = ClusterUpsert.mount(
       body,
       document.getElementById('cluster-upsert-footer'),
       {
       isAdd: isAdd,
       row: row,
+      clusterNames: allNames,
       onSubmit: function (data) {
         var name = data.baseConfigData.name.trim();
         var desc = data.baseConfigData.description || '';
@@ -228,6 +389,12 @@ function drawerDetail() {
   return IvuUI.drawer('drawer-cluster-detail', '详情',
     '<div id="cluster-detail-body"></div>',
     IvuUI.btn('关闭', 'primary', 'default', '', 'data-close-drawer="drawer-cluster-detail"'), '80%');
+}
+
+function drawerRefCheck() {
+  return IvuUI.drawer('drawer-ref-check', '引用检查',
+    '<div id="ref-check-body"></div>',
+    IvuUI.btn('关闭', 'primary', 'default', '', 'data-close-drawer="drawer-ref-check"'), '60%');
 }
 </script>
 </body>

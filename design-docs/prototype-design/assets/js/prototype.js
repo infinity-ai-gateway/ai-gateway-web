@@ -25,7 +25,9 @@ window.Prototype = {
       'nav.ConsumerManage': '消费者管理',
       'nav.EntityManage': 'Entity管理',
       'nav.APIKeyManage': 'API Key 管理',
-      'nav.UserManage': '用户管理'
+      'nav.ModelManage': '模型管理',
+      'nav.ModelPriceManage': '模型定价',
+      'nav.UserManage': '用户管理',
     },
     en: {
       'login.gateway': 'AI Gateway',
@@ -48,8 +50,10 @@ window.Prototype = {
       'nav.ConsumerManage': 'Consumer Manage',
       'nav.EntityManage': 'Entity Manage',
       'nav.APIKeyManage': 'API Key Manage',
-      'nav.UserManage': 'User Manage'
-    }
+      'nav.ModelManage': 'Model Manage',
+      'nav.ModelPriceManage': 'Model Pricing',
+      'nav.UserManage': 'User Manage',
+    },
   },
 
   getLang() {
@@ -71,12 +75,17 @@ window.Prototype = {
     try {
       var raw = localStorage.getItem(this.USER_KEY);
       if (raw) return JSON.parse(raw);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
     return { name: 'admin' };
   },
 
   setUser(user) {
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user || { name: 'admin' }));
+    localStorage.setItem(
+      this.USER_KEY,
+      JSON.stringify(user || { name: 'admin' }),
+    );
   },
 
   removeUser() {
@@ -96,9 +105,11 @@ window.Prototype = {
   },
 
   closeAllDropdowns() {
-    document.querySelectorAll('.proto-header-dropdown.proto-dropdown-open').forEach(function (el) {
-      el.classList.remove('proto-dropdown-open');
-    });
+    document
+      .querySelectorAll('.proto-header-dropdown.proto-dropdown-open')
+      .forEach(function (el) {
+        el.classList.remove('proto-dropdown-open');
+      });
   },
 
   confirm(options) {
@@ -117,8 +128,11 @@ window.Prototype = {
       return;
     }
 
-    if (titleEl) titleEl.textContent = options.title || this.t('com.informationTips');
-    if (contentEl) contentEl.textContent = options.content || this.t('login.tipConfirmLogout');
+    if (titleEl)
+      titleEl.textContent = options.title || this.t('com.informationTips');
+    if (contentEl)
+      contentEl.textContent =
+        options.content || this.t('login.tipConfirmLogout');
 
     var nextOk = options.onOk;
     var nextCancel = options.onCancel;
@@ -128,9 +142,11 @@ window.Prototype = {
       wrap.classList.add('proto-hidden');
       okBtn.onclick = null;
       cancelBtn.onclick = null;
-      wrap.querySelectorAll('[data-proto-confirm-cancel]').forEach(function (el) {
-        el.onclick = null;
-      });
+      wrap
+        .querySelectorAll('[data-proto-confirm-cancel]')
+        .forEach(function (el) {
+          el.onclick = null;
+        });
     }
 
     okBtn.onclick = function () {
@@ -170,7 +186,9 @@ window.Prototype = {
       var target = event.target;
       if (!target) return;
 
-      var trigger = target.closest ? target.closest('.proto-dropdown-trigger') : null;
+      var trigger = target.closest
+        ? target.closest('.proto-dropdown-trigger')
+        : null;
       if (trigger) {
         event.preventDefault();
         event.stopPropagation();
@@ -183,20 +201,29 @@ window.Prototype = {
       }
 
       var langItem = target.closest ? target.closest('[data-lang]') : null;
-      if (langItem && langItem.closest('.proto-header-dropdown[data-proto-dropdown="lang"]')) {
+      if (
+        langItem &&
+        langItem.closest('.proto-header-dropdown[data-proto-dropdown="lang"]')
+      ) {
         event.preventDefault();
         Prototype.setLang(langItem.getAttribute('data-lang'));
         return;
       }
 
-      var logoutItem = target.closest ? target.closest('[data-action="logout"]') : null;
+      var logoutItem = target.closest
+        ? target.closest('[data-action="logout"]')
+        : null;
       if (logoutItem) {
         event.preventDefault();
         Prototype.closeAllDropdowns();
         Prototype.confirm({
           content: Prototype.t('login.tipConfirmLogout'),
-          onOk: function () { Prototype.logout(); },
-          onCancel: function () { Prototype.toast(Prototype.t('com.tipCancel'), 'info'); }
+          onOk: function () {
+            Prototype.logout();
+          },
+          onCancel: function () {
+            Prototype.toast(Prototype.t('com.tipCancel'), 'info');
+          },
         });
         return;
       }
@@ -212,12 +239,12 @@ window.Prototype = {
     var iconMap = {
       success: 'ivu-icon-ios-checkmark-circle',
       error: 'ivu-icon-ios-close-circle',
-      info: 'ivu-icon-ios-information-circle'
+      info: 'ivu-icon-ios-information-circle',
     };
     var colorMap = {
       success: '#19be6b',
       error: '#ed4014',
-      info: '#2d8cf0'
+      info: '#2d8cf0',
     };
     var icon = iconMap[type] || iconMap.success;
     var color = colorMap[type] || colorMap.success;
@@ -225,17 +252,25 @@ window.Prototype = {
     if (!wrap) return;
     wrap.innerHTML =
       '<div class="ivu-message" style="top:20px;">' +
-        '<div class="ivu-message-notice">' +
-          '<div class="ivu-message-notice-content">' +
-            '<div class="ivu-message-custom">' +
-              '<i class="ivu-icon ' + icon + '" style="color:' + color + ';margin-right:8px;"></i>' +
-              '<span>' + message + '</span>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
+      '<div class="ivu-message-notice">' +
+      '<div class="ivu-message-notice-content">' +
+      '<div class="ivu-message-custom">' +
+      '<i class="ivu-icon ' +
+      icon +
+      '" style="color:' +
+      color +
+      ';margin-right:8px;"></i>' +
+      '<span>' +
+      message +
+      '</span>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
       '</div>';
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(function () { wrap.innerHTML = ''; }, 2500);
+    this.toastTimer = setTimeout(function () {
+      wrap.innerHTML = '';
+    }, 2500);
   },
 
   openDrawer(id) {
@@ -263,8 +298,12 @@ window.Prototype = {
     container.querySelectorAll('.ivu-tabs-tab').forEach(function (tab) {
       tab.addEventListener('click', function () {
         var name = tab.getAttribute('data-tab');
-        container.querySelectorAll('.ivu-tabs-tab').forEach(function (t) { t.classList.remove('ivu-tabs-tab-active'); });
-        container.querySelectorAll('[data-tab-pane]').forEach(function (p) { p.classList.remove('ivu-tabs-tabpane-active'); });
+        container.querySelectorAll('.ivu-tabs-tab').forEach(function (t) {
+          t.classList.remove('ivu-tabs-tab-active');
+        });
+        container.querySelectorAll('[data-tab-pane]').forEach(function (p) {
+          p.classList.remove('ivu-tabs-tabpane-active');
+        });
         tab.classList.add('ivu-tabs-tab-active');
         var pane = container.querySelector('[data-tab-pane="' + name + '"]');
         if (pane) pane.classList.add('ivu-tabs-tabpane-active');
@@ -283,32 +322,54 @@ window.Prototype = {
 
     function render() {
       if (stepsBar && titles.length) {
-        stepsBar.innerHTML = '<div class="ivu-steps ivu-steps-horizontal">' + IvuUI.steps(titles, current) + '</div>';
+        stepsBar.innerHTML =
+          '<div class="ivu-steps ivu-steps-horizontal">' +
+          IvuUI.steps(titles, current) +
+          '</div>';
       }
       panels.forEach(function (panel, index) {
         panel.classList.toggle('proto-hidden-inline', index !== current);
       });
       if (prevBtn) prevBtn.disabled = current === 0;
-      if (nextBtn) nextBtn.classList.toggle('proto-hidden-inline', current === panels.length - 1);
-      if (submitBtn) submitBtn.classList.toggle('proto-hidden-inline', current !== panels.length - 1);
+      if (nextBtn)
+        nextBtn.classList.toggle(
+          'proto-hidden-inline',
+          current === panels.length - 1,
+        );
+      if (submitBtn)
+        submitBtn.classList.toggle(
+          'proto-hidden-inline',
+          current !== panels.length - 1,
+        );
     }
 
-    if (nextBtn) nextBtn.addEventListener('click', function () {
-      if (current < panels.length - 1) { current += 1; render(); }
-    });
-    if (prevBtn) prevBtn.addEventListener('click', function () {
-      if (current > 0) { current -= 1; render(); }
-    });
-    if (submitBtn) submitBtn.addEventListener('click', function () {
-      if (typeof options.onSubmit === 'function') {
-        options.onSubmit();
-        return;
-      }
-      Prototype.toast('提交成功！');
-      if (options.redirect !== false && options.redirect !== null) {
-        setTimeout(function () { window.location.href = options.redirect || 'cluster-list.html'; }, 800);
-      }
-    });
+    if (nextBtn)
+      nextBtn.addEventListener('click', function () {
+        if (current < panels.length - 1) {
+          current += 1;
+          render();
+        }
+      });
+    if (prevBtn)
+      prevBtn.addEventListener('click', function () {
+        if (current > 0) {
+          current -= 1;
+          render();
+        }
+      });
+    if (submitBtn)
+      submitBtn.addEventListener('click', function () {
+        if (typeof options.onSubmit === 'function') {
+          options.onSubmit();
+          return;
+        }
+        Prototype.toast('提交成功！');
+        if (options.redirect !== false && options.redirect !== null) {
+          setTimeout(function () {
+            window.location.href = options.redirect || 'cluster-list.html';
+          }, 800);
+        }
+      });
     render();
   },
 
@@ -318,13 +379,17 @@ window.Prototype = {
     document.addEventListener('click', function (event) {
       var target = event.target;
       if (!target) return;
-      var closeBtn = target.closest ? target.closest('[data-close-drawer]') : null;
+      var closeBtn = target.closest
+        ? target.closest('[data-close-drawer]')
+        : null;
       if (closeBtn) {
         event.preventDefault();
         Prototype.closeDrawer(closeBtn.getAttribute('data-close-drawer'));
         return;
       }
-      var openBtn = target.closest ? target.closest('[data-open-drawer]') : null;
+      var openBtn = target.closest
+        ? target.closest('[data-open-drawer]')
+        : null;
       if (openBtn) {
         event.preventDefault();
         Prototype.openDrawer(openBtn.getAttribute('data-open-drawer'));
@@ -353,11 +418,17 @@ window.Prototype = {
       };
       if (el.tagName === 'SELECT') el.onchange = handler;
       else el.oninput = handler;
-      el.onclick = function (e) { e.stopPropagation(); };
+      el.onclick = function (e) {
+        e.stopPropagation();
+      };
     });
-    container.querySelectorAll('.searchTable .ivu-table-tbody tr').forEach(function (tr) {
-      tr.onclick = function (e) { e.stopPropagation(); };
-    });
+    container
+      .querySelectorAll('.searchTable .ivu-table-tbody tr')
+      .forEach(function (tr) {
+        tr.onclick = function (e) {
+          e.stopPropagation();
+        };
+      });
   },
 
   bindRowClick(container, handler) {
@@ -376,7 +447,7 @@ window.Prototype = {
     }
   },
 
-  pageHeadExtraCss: []
+  pageHeadExtraCss: [],
 };
 
 document.addEventListener('DOMContentLoaded', function () {

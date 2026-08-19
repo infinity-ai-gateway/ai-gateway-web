@@ -82,6 +82,7 @@
                 </div>
                 <Button size="small" type="primary" @click="addLimit">+ {{ $t('modelPrices.addLimit') }}</Button>
                 <p v-if="limitsDuplicateError" class="error-text">{{ $t('modelPrices.limitsDuplicateKey') }}</p>
+                <p v-if="limitsValueError" class="error-text">{{ $t('modelPrices.limitsValueInvalid') }}</p>
             </Card>
 
             <Card :title="$t('modelPrices.prices')" class="dynamic-card">
@@ -107,6 +108,7 @@
                 <Button size="small" type="primary" @click="addPrice">+ {{ $t('modelPrices.addPrice') }}</Button>
                 <p v-if="pricesError" class="error-text">{{ $t('modelPrices.pricesRequired') }}</p>
                 <p v-if="pricesDuplicateError" class="error-text">{{ $t('modelPrices.pricesDuplicateKey') }}</p>
+                <p v-if="pricesValueError" class="error-text">{{ $t('modelPrices.pricesValueInvalid') }}</p>
             </Card>
 
             <Card :title="$t('modelPrices.metadata')" class="dynamic-card">
@@ -148,7 +150,8 @@ const CAPABILITY_OPTIONS = [
 
 const SUPPORTED_PARAMETER_OPTIONS = [
     'temperature', 'top_p', 'max_tokens', 'tools', 'tool_choice',
-    'response_format', 'reasoning', 'image_input', 'video_input', 'audio_input'
+    'response_format', 'reasoning', 'image_input', 'video_input', 'audio_input',
+    'voice', 'speed', 'size', 'quality', 'style'
 ];
 
 const LIMIT_KEY_OPTIONS = [
@@ -188,6 +191,8 @@ export default {
             pricesError: false,
             limitsDuplicateError: false,
             pricesDuplicateError: false,
+            limitsValueError: false,
+            pricesValueError: false,
             submitting: false,
             formData: {
                 provider: '',
@@ -279,6 +284,8 @@ export default {
             this.pricesError = false;
             this.limitsDuplicateError = false;
             this.pricesDuplicateError = false;
+            this.limitsValueError = false;
+            this.pricesValueError = false;
         },
 
         objectToList(obj) {
@@ -315,7 +322,21 @@ export default {
             const pricesDuplicates = this.getDuplicateKeys(this.pricesList);
             this.limitsDuplicateError = limitsDuplicates.length > 0;
             this.pricesDuplicateError = pricesDuplicates.length > 0;
-            return !this.limitsDuplicateError && !this.pricesDuplicateError;
+
+            // limits 值须为非负整数；prices 值须为非负数
+            this.limitsValueError = this.limitsList.some(item => {
+                if (!item.key) return false;
+                const value = Number(item.value);
+                return Number.isNaN(value) || value < 0 || !Number.isInteger(value);
+            });
+            this.pricesValueError = this.pricesList.some(item => {
+                if (!item.key) return false;
+                const value = Number(item.value);
+                return Number.isNaN(value) || value < 0;
+            });
+
+            return !this.limitsDuplicateError && !this.pricesDuplicateError
+                && !this.limitsValueError && !this.pricesValueError;
         },
 
         addLimit() {
@@ -388,8 +409,12 @@ export default {
                     },
                     openapi: true
                 }).then(res => {
-                    if (res.status === 200 && res.data && res.data.Data) {
-                        // 组合已存在
+                    const data = res.data && res.data.Data;
+                    // 后端返回单条记录时存在 id；返回分页列表时检查 list 长度
+                    const isDuplicate = data && (
+                        data.id || (Array.isArray(data.list) && data.list.length > 0)
+                    );
+                    if (isDuplicate) {
                         this.$Message.error(this.$t('modelPrices.duplicateCombo'));
                         this.submitting = false;
                     } else {

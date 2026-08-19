@@ -4,8 +4,8 @@ AI Gateway Web 为 AI 网关的用户提供图形化操作界面，用于管理�
 
 ## 特性
 
-- 资源管理（AI网关实例池、AI业务集群）
-- 路由管理（路由规则）
+- 资源管理（AI 网关实例池、AI 业务集群、模型定价）
+- 路由管理（路由表：Global / Entity / API-Key）
 - 消费者管理（API Key 管理、Entity 管理）
 - 用户管理（用户、Token）
 
@@ -23,7 +23,7 @@ AI Gateway Web 为 AI 网关的用户提供图形化操作界面，用于管理�
 
 ## 文档
 
-- [使用指南](docs/zh-cn/user-guide/SUMMARY.md)
+- [使用指南](docs/zh-cn/00-README.md)
 - [部署文档](docs/zh-cn/deploy.md)
 - [开发文档](docs/zh-cn/develop.md)
 

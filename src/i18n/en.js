@@ -938,7 +938,9 @@ export default {
     yamlTopLevelMustBeObject: 'Top level must be an object (containing version, default_currency, etc.)',
     yamlVersionRequired: 'version field is required',
     limitsDuplicateKey: 'Duplicate key exists in limits',
+    limitsValueInvalid: 'limits values must be non-negative integers',
     pricesDuplicateKey: 'Duplicate key exists in prices',
+    pricesValueInvalid: 'prices values must be non-negative numbers',
     sourceUrlInvalid: 'source must be a valid URL',
   },
 };

@@ -54,7 +54,7 @@
 - 必填字段以 `*` 标注；
 - 控制台地址默认为 `http://<控制台IP>:8183`，默认管理员账号 `admin` / `admin`（见 01 章），建议首次登录后及时修改；
 - **控制台 IP 怎么填**：单机本地部署用 `127.0.0.1`；远程服务器部署用浏览器地址栏中的 IP 或域名（如 `192.168.1.10`）。控制台地址与数据面地址（见实例池章节）不是同一个；
-- **部署文档**：[AI Gateway Web 部署](deploy.md)、[AI Gateway API 部署](https://github.com/infinity-ai-gateway/ai-gateway-api/blob/develop/docs/zh_cn/deploy.md)。
+- **部署文档**：[AI Gateway Web 部署](deploy.md)、[AI Gateway API 部署](https://github.com/rainway-ai-gateway/ai-gateway-api/blob/develop/docs/zh_cn/deploy.md)。
 
 ## 模块全景
 

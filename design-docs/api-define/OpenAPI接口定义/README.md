@@ -21,6 +21,7 @@
 | /certificates | [certificates.md](./certificates.md) |
 | /clusters | [clusters.md](./clusters.md) |
 | /model-provider-types | [model-provider-types.md](./model-provider-types.md) |
+| /model-prices | [model-prices.md](./model-prices.md) |
 | /tools | [tools.md](./tools.md) |
 | /expression/verify | [expression-verify.md](./expression-verify.md) |
 | 关键业务流程 | [workflows.md](./workflows.md) |

@@ -6,7 +6,7 @@
 
 **前提**：
 
-- 已按部署文档完成三个组件的部署：控制台（Web 管理界面）、BFE 数据面（请求转发引擎）、conf-agent（配置同步助手），能正常登录控制台（部署说明见 [Web 部署](deploy.md)、[API 部署](https://github.com/infinity-ai-gateway/ai-gateway-api/blob/develop/docs/zh_cn/deploy.md)）；
+- 已按部署文档完成三个组件的部署：控制台（Web 管理界面）、BFE 数据面（请求转发引擎）、conf-agent（配置同步助手），能正常登录控制台（部署说明见 [Web 部署](deploy.md)、[API 部署](https://github.com/rainway-ai-gateway/ai-gateway-api/blob/develop/docs/zh_cn/deploy.md)）；
 - 手头有一个可用的模型服务：自建 OpenAI 兼容服务（vLLM / Xinference / Ollama 等），或公有模型服务商（DeepSeek / OpenAI / Qwen 等）。
 
 **配置完成后的请求链路**：

@@ -31,6 +31,7 @@ language governing permissions and * limitations under the License. */
       :current-page="page"
       :page-size="pageSize"
       @on-page-change="onPageChange"
+      @on-search-change="onSearchChange"
       @on-sort-change="onSortChange"
     />
 
@@ -83,6 +84,12 @@ import ModelPriceView from './components/ModelPriceView.vue';
 import ModelPriceImport from './components/ModelPriceImport.vue';
 import { cloneDeep } from 'lodash';
 
+const MODE_OPTIONS = [
+    'chat', 'completion', 'responses', 'image_generation', 'image_edit',
+    'embedding', 'rerank', 'audio_speech', 'audio_transcription',
+    'video_generation', 'ocr', 'search', 'realtime'
+];
+
 export default {
     name: 'ModelPrices',
 
@@ -94,7 +101,6 @@ export default {
     },
 
     data() {
-        const that = this;
         return {
             loading: false,
             tableData: [],
@@ -107,63 +113,73 @@ export default {
             isView: false,
             importVisible: false,
             importLoading: false,
-            columns: [
+            searchParams: {},
+            providerOptions: [],
+            modeOptions: MODE_OPTIONS.map(m => ({ label: m, value: m }))
+        };
+    },
+
+    computed: {
+        columns() {
+            return [
                 {
-                    title: that.$t('modelPrices.provider'),
+                    title: this.$t('modelPrices.provider'),
                     key: 'provider',
                     searchable: true,
+                    searchType: 'select',
+                    searchFilters: this.providerOptions,
                     sortable: 'custom'
                 },
                 {
-                    title: that.$t('modelPrices.model'),
+                    title: this.$t('modelPrices.model'),
                     key: 'model',
                     searchable: true,
                     sortable: 'custom'
                 },
                 {
-                    title: that.$t('modelPrices.baseModel'),
-                    key: 'base_model',
+                    title: this.$t('modelPrices.mode'),
+                    key: 'mode',
                     searchable: true,
+                    searchType: 'select',
+                    searchFilters: this.modeOptions,
+                    sortable: 'custom',
+                    render: (h, params) => h('span', params.row.mode)
+                },
+                {
+                    title: this.$t('modelPrices.baseModel'),
+                    key: 'base_model',
                     sortable: 'custom'
                 },
                 {
-                    title: that.$t('modelPrices.mode'),
-                    key: 'mode',
-                    searchable: true,
-                    sortable: 'custom',
-                    render(h, params) {
-                        return h('span', params.row.mode);
-                    }
-                },
-                {
-                    title: that.$t('com.operation') || '操作',
+                    title: this.$t('com.operation') || '操作',
                     key: 'operation',
                     width: 240,
-                    render(h, params) {
+                    render: (h, params) => {
                         const row = params.row;
                         return h('div', [
                             h('Button', {
                                 props: { size: 'small', type: 'primary' },
                                 style: { marginRight: '8px' },
-                                on: { click: () => that.onView(row) }
-                            }, that.$t('com.see') || '详情'),
+                                on: { click: () => this.onView(row) }
+                            }, this.$t('com.see') || '详情'),
                             h('Button', {
                                 props: { size: 'small', type: 'success' },
                                 style: { marginRight: '8px' },
-                                on: { click: () => that.onEdit(row) }
-                            }, that.$t('com.edit') || '编辑'),
+                                on: { click: () => this.onEdit(row) }
+                            }, this.$t('com.edit') || '编辑'),
                             h('Button', {
                                 props: { size: 'small', type: 'error' },
-                                on: { click: () => that.onDelete(row) }
-                            }, that.$t('com.del') || '删除')
+                                on: { click: () => this.onDelete(row) }
+                            }, this.$t('com.del') || '删除')
                         ]);
                     }
                 }
-            ]
-        };
+            ];
+        }
     },
 
     mounted() {
+        this.fetchProviderOptions();
         this.fetchData();
     },
 
@@ -182,14 +198,15 @@ export default {
                 method: 'get',
                 params: {
                     page: this.page,
-                    page_size: this.pageSize
+                    page_size: this.pageSize,
+                    ...this.searchParams
                 },
                 openapi: true
             }).then(res => {
                 if (res.status === 200) {
                     const data = res.data.Data || {};
                     this.tableData = data.list || [];
-                    this.total = data.total || 0;
+                    this.total = (data.pagination && data.pagination.total) || 0;
                 } else {
                     this.$Message.error(this.$t('modelPrices.loadFailed'));
                 }
@@ -201,9 +218,32 @@ export default {
             });
         },
 
+        fetchProviderOptions() {
+            this.$request({
+                url: 'model-prices',
+                method: 'get',
+                params: { page: 1, page_size: 1000 },
+                openapi: true
+            }).then(res => {
+                if (res.status === 200) {
+                    const list = (res.data.Data && res.data.Data.list) || [];
+                    const providers = [...new Set(list.map(item => item.provider).filter(Boolean))];
+                    this.providerOptions = providers.map(p => ({ label: p, value: p }));
+                }
+            }).catch(err => {
+                console.error('加载 provider 选项失败:', err);
+            });
+        },
+
         onPageChange(pageInfo) {
             this.page = pageInfo.page;
             this.pageSize = pageInfo.pageSize;
+            this.fetchData();
+        },
+
+        onSearchChange(filters) {
+            this.searchParams = filters || {};
+            this.page = 1;
             this.fetchData();
         },
 
@@ -244,6 +284,7 @@ export default {
                     }).then(res => {
                         if (res.status === 200) {
                             this.$Message.success(this.$t('com.deleteSucc') || '删除成功');
+                            this.fetchProviderOptions();
                             this.fetchData();
                         } else {
                             this.$Message.error(this.$t('com.deleteFailed') || '删除失败');
@@ -258,6 +299,7 @@ export default {
 
         onUpsertSubmit() {
             this.drawerVisible = false;
+            this.fetchProviderOptions();
             this.fetchData();
         },
 
@@ -275,6 +317,7 @@ export default {
         onImportSubmit() {
             this.importLoading = false;
             this.importVisible = false;
+            this.fetchProviderOptions();
             this.fetchData();
         },
 

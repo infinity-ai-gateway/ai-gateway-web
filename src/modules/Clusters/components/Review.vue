@@ -202,6 +202,18 @@
           <li class="value">{{ providerTypeText }}</li>
         </ul>
         <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.provider') }}:</li>
+          <li class="value">{{ displayProvider }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.stripPrefix') }}:</li>
+          <li class="value">{{ displayStripPrefix }}</li>
+        </ul>
+        <ul v-if="isStripPrefixEnabled" class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.matchPrefix') }}:</li>
+          <li class="value">{{ displayMatchPrefix }}</li>
+        </ul>
+        <ul class="clearFloat">
           <li class="title">{{ $t('gatewayConfig.modelListEndpoint') }}:</li>
           <li class="value">
             <p>{{ endpointSchema }}://{{ ipStr }}{{ endpointUri }}</p>
@@ -416,6 +428,22 @@ export default {
             }
             const provider = this.providers.find(item => item.id === providerType);
             return provider ? provider.name : providerType;
+        },
+        displayProvider() {
+            const provider = this.llmConfigData && this.llmConfigData.provider;
+            return provider || '-';
+        },
+        isStripPrefixEnabled() {
+            return !!(this.llmConfigData && this.llmConfigData.strip_prefix);
+        },
+        displayStripPrefix() {
+            return this.isStripPrefixEnabled
+                ? this.$t('com.enable')
+                : this.$t('com.deactivate');
+        },
+        displayMatchPrefix() {
+            const prefix = this.llmConfigData && this.llmConfigData.match_prefix;
+            return prefix || '-';
         },
         isDomainMode() {
             return this.instanceMode === 'domain';

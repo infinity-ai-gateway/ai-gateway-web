@@ -904,7 +904,9 @@ export default {
     yamlTopLevelMustBeObject: '顶层必须是对象（包含 version、default_currency 等字段）',
     yamlVersionRequired: 'version 字段必填',
     limitsDuplicateKey: 'limits 中存在重复的键',
+    limitsValueInvalid: 'limits 值必须为非负整数',
     pricesDuplicateKey: 'prices 中存在重复的键',
+    pricesValueInvalid: 'prices 值必须为非负数',
     sourceUrlInvalid: 'source 必须是有效的 URL',
   },
 };

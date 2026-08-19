@@ -21,18 +21,19 @@
 
 ---
 
-## 二、细节设计（details/）
+## 二、细节设计（各模块实现细节设计/）
 
-`details/` 按 UI 模块展开，描述每个业务模块的页面结构、组件接口、数据流与表单校验。
+`各模块实现细节设计/` 按 UI 模块展开，描述每个业务模块的页面结构、组件接口、数据流与表单校验。
 
 | 模块 | 文件路径 | 核心内容 |
 |------|----------|----------|
-| 认证与用户 | [details/认证与用户.md](./details/认证与用户.md) | 登录、首页、用户管理、Token 管理 |
-| AI 业务实例池 | [details/AI业务实例池.md](./details/AI业务实例池.md) | 全局 ALB 实例池的单页内联编辑 |
-| AI 业务集群 | [details/AI业务集群.md](./details/AI业务集群.md) | Cluster 六步向导配置与列表管理 |
-| 路由规则 | [details/路由规则.md](./details/路由规则.md) | 默认转发规则与高级 AI 路由规则 |
-| APIKey 管理 | [details/APIKey管理.md](./details/APIKey管理.md) | API Key 的创建、编辑、配额、限流 |
-| Entity 管理 | [details/Entity管理.md](./details/Entity管理.md) | Entity 与 Entity Type 的组织层级 |
+| 认证与用户 | [认证与用户.md](./各模块实现细节设计/认证与用户.md) | 登录、首页、用户管理、Token 管理 |
+| AI 业务实例池 | [AI业务实例池.md](./各模块实现细节设计/AI业务实例池.md) | 全局 ALB 实例池的单页内联编辑 |
+| AI 业务集群 | [AI业务集群.md](./各模块实现细节设计/AI业务集群.md) | Cluster 六步向导，含多 Key / 前缀 / 定价绑定 |
+| 模型定价 | [模型定价.md](./各模块实现细节设计/模型定价.md) | 模型价格列表、创建/编辑、YAML 导入 |
+| 路由规则 | [路由规则.md](./各模块实现细节设计/路由规则.md) | 路由表（Global / Entity / API-Key）与规则 fallbacks |
+| APIKey 管理 | [APIKey管理.md](./各模块实现细节设计/APIKey管理.md) | API Key 的创建、编辑、配额（Token/RMB）、限流 |
+| Entity 管理 | [Entity管理.md](./各模块实现细节设计/Entity管理.md) | Entity 与 Entity Type 的组织层级、配额（Token/RMB） |
 
 ---
 
@@ -41,13 +42,13 @@
 1. 快速建立全局认知：先阅读《总体设计文档.md》。
 2. 理解界面分层：依次阅读《模块设计文档.md》《路由与导航设计文档.md》《组件与复用设计文档.md》。
 3. 查看接口映射：参考《OpenAPI消费接口映射.md》。
-4. 深入具体模块：选择 `details/` 下对应模块的文档。
+4. 深入具体模块：选择 `各模块实现细节设计/` 下对应模块的文档。
 5. 系统级能力：根据关注领域选择《状态管理设计文档.md》《国际化设计文档.md》《构建与部署设计文档.md》。
 
 **维护约定**
 
 - 新增系统级设计文档：在 `sys-design/` 下新增 `.md` 文件后，同步更新本索引第一节。
-- 新增模块细节文档：在 `sys-design/details/` 下新增 `.md` 文件后，同步更新本索引第二节。
+- 新增模块细节文档：在 `sys-design/各模块实现细节设计/` 下新增 `.md` 文件后，同步更新本索引第二节。
 - 调整文档结构：若重命名或移动文件，需同步修正本索引中的相对链接。
 - 保持索引简洁：本索引只给出定位与导读，不重复展开各文档的详细内容。
 - 与 `design-docs/README.md` 保持一致：若顶层目录结构变化，需同步复核本索引。
@@ -55,5 +56,5 @@
 **相关入口**
 
 - 设计文档总入口：`design-docs/README.md`
-- 接口依赖说明：`design-docs/api-define/OpenAPI接口依赖说明.md`
+- 接口定义：`design-docs/api-define/OpenAPI接口定义/`
 - 系统设计文档索引：`design-docs/sys-design/summary.md`（本文件）

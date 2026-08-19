@@ -49,7 +49,7 @@
 | `parent_id` | 可选；选项为 level 低于当前类型的 Entity，不可选自己 | 父级实体。 |
 | `allow_models` | 多选；`*` 与具体模型互斥 | 模型白名单。 |
 | `block_models` | 多选；空时提交为 `['*']` | 模型黑名单。 |
-| `quota_plan` / `rate_limit` | 与 API Key 类似 | 配额与限流。 |
+| `quota_plan` / `rate_limit` | 与 API Key 类似；`quota_plan.unit` 支持 `total_token` / `RMB` | 配额与限流。RMB 上限 90,000,000.00，4 位小数。 |
 
 ### 5.2 EntityTypeUpsert
 
@@ -84,13 +84,13 @@ Entity/index.vue (Tab 容器)
 | `EntityView.vue` | `GET` | `entities/{id}` | 详情。 |
 | `EntityView.vue` | `POST` | `entities/{id}/quota-plan/reset` | 重置配额。 |
 | `EntityUpsert.vue` | `GET` | `entity-types` | 类型下拉。 |
-| `EntityUpsert.vue` | `GET` | `global-models` | 模型分组。 |
+| `EntityUpsert.vue` | `GET` | `clusters` | 集群模型列表。 |
 | `EntityTypeList.vue` | `GET` | `entity-types` | 类型列表。 |
 | `EntityTypeList.vue` | `POST` | `entity-types` | 创建类型。 |
-| `EntityTypeList.vue` | `PATCH` | `entity-types/{type_name}` | 更新类型。 |
-| `EntityTypeList.vue` | `DELETE` | `entity-types/{type_name}` | 删除类型。 |
+| `EntityTypeList.vue` | `PATCH` | `entity-types/{id}` | 更新类型。 |
+| `EntityTypeList.vue` | `DELETE` | `entity-types/{id}` | 删除类型。 |
 
-> 注：实际代码使用 `PATCH` 更新，与 `OpenAPI消费接口映射.md` 中标注的 `PUT` 不一致，以代码实现为准。
+配额重置弹窗按当前 `unit` 限制精度与上限。
 
 ## 8. 边界情况
 

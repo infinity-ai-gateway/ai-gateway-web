@@ -34,13 +34,13 @@
     │   └── router.js
     ├── modules             // 业务模块
     │   ├── AIInstancePool // AI网关实例池
-    │   ├── AIRouteRules    // AI路由规则
     │   ├── APIKey          // API Key管理
     │   // ├── Cert            // 证书管理（暂未提供）
     │   ├── Clusters        // AI业务集群
     │   ├── Entity          // Entity管理
     │   ├── Login           // 登录模块
-    │   ├── Routes          // 转发规则
+    │   ├── ModelPrices     // 模型定价
+    │   ├── RouteTable      // 路由表（Global / Entity / API-Key）
     │   └── User            // 用户管理
     ├── layout              // 布局逻辑
     │   ├── 404.vue
