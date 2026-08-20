@@ -1,5 +1,5 @@
 <!--
- Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+ Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -37,6 +37,28 @@ does not necessarily reflect the changes.
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [v0.0.7] - 2026-08-19
+
+### Added
+
+- Model pricing module: new `ModelPrices` module with list (server-side pagination and filters), detail, create/edit, YAML import, routing, menu icon, and i18n coverage
+- Route rule fallbacks: forms, detail views, and submissions now persist `fallbacks`; added cross `targets` / `fallbacks` duplicate validation for `(cluster_name, model)` combinations
+- Route expression primitive `req_body_json_prefix_in` for matching JSON body field prefixes (e.g. OpenRouter `openrouter/` model prefix)
+- Cluster LLM multi-key weighted routing: `llm_config` supports `keys` (name/key/weight) and `key_policy` (strategy/max_retries/retry_backoff)
+- Cluster LLM price-table binding and prefix handling: `provider` for pricing lookup; `match_prefix` / `strip_prefix` for aggregated providers (e.g. OpenRouter); review and detail views display these fields
+- API-Key / Entity RMB quota: `quota_plan.unit` supports `RMB`; cap 90,000,000.00 with 4-decimal display; reset quota dialog respects unit and cap
+- `pageTable` server-side pagination: `server-pagination` with `total`/`currentPage`/`pageSize` and `on-page-change`/`on-search-change`; used by route tables and model pricing
+
+### Changed
+
+- Route rule field naming aligned to OpenAPI snake_case: `Cond`/`ClusterName`/`Model`/`Weight` → `cond`/`cluster_name`/`model`/`weight`
+
+### Fixed
+
+- Cluster instance ports now sync with the http/https schema when fetching models and submitting cluster config
+- Model pricing duplicate-combination validation no longer false-positives when the backend returns an empty object or empty list
+- Model pricing upsert now rejects negative `limits` (must be non-negative integers) and negative `prices`
 
 ## [v0.0.6] - 2026-08-06
 
@@ -174,9 +196,10 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
-[v0.0.6]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.6
-[v0.0.5]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.5
-[v0.0.4]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.4
-[v0.0.3]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.3
-[v0.0.2]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.2
-[v0.0.1]: https://github.com/yf-networks/ai-gateway-web/releases/tag/v0.0.1
+[v0.0.7]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.7
+[v0.0.6]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.6
+[v0.0.5]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.5
+[v0.0.4]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.4
+[v0.0.3]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.3
+[v0.0.2]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.2
+[v0.0.1]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.1

@@ -57,29 +57,30 @@
 | `Clusters/index.vue` | `GET` | `clusters` | 查询集群列表。 |
 | `Clusters/index.vue` | `GET` | `clusters/{cluster_name}` | 查询单个集群详情。 |
 | `Clusters/index.vue` | `DELETE` | `clusters/{cluster_name}` | 删除集群。 |
+| `Clusters/index.vue` | `GET` | `route-tables` / `entities` / `api-keys` | 删除被引用时解析引用方，用于提示跳转。 |
 | `Clusters/components/index.vue` | `POST` | `clusters` | 新建集群。 |
-| `Clusters/components/index.vue` | `PUT` | `clusters/{cluster_name}` | 更新集群。 |
-| `Clusters/components/GatewayConfig.vue` | `GET` | `models` | 查询模型列表。 |
-| `Clusters/components/GatewayConfig.vue` | `GET` | `model-providers` | 查询模型提供商。 |
-| `Clusters/components/Review.vue` | `GET` | `model-providers` | 查询模型提供商（详情展示）。 |
+| `Clusters/components/index.vue` | `PATCH` | `clusters/{cluster_name}` | 更新集群。 |
+| `Clusters/components/GatewayConfig.vue` | `GET` | `model-provider-types` | 查询模型服务商类型。 |
+| `Clusters/components/GatewayConfig.vue` | `POST` | `tools/get-models-from-provider` | 按 endpoint 探测下游模型列表。 |
+| `Clusters/components/Review.vue` | `GET` | `model-provider-types` | 详情展示服务商类型名称。 |
 
-## 8. 路由规则
-
-### 8.1 默认路由规则（`modules/Routes`）
+## 8. 路由表（`modules/RouteTable`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
-| `Routes/index.vue` | `GET` | `clusters` | 获取可用集群列表。 |
-| `Routes/index.vue` | `GET` | `ai-route-rules` | 查询 AI 路由规则。 |
-| `Routes/index.vue` | `PATCH` | `ai-route-rules` | 提交更新路由规则。 |
+| `RouteTable/index.vue` | `GET` | `route-tables` | 分页查询路由表列表（`page` / `page_size` + 筛选）。 |
+| `RouteTable/index.vue` | `GET` | `entities` | 解析 Entity 类型路由表的 owner 名称。 |
+| `RouteTable/index.vue` | `GET` | `global-route-rules` | 加载 Global 表完整规则（启停切换）。 |
+| `RouteTable/index.vue` | `GET` | `entities/{id}` / `api-keys/{id}` | 加载 Entity / API-Key 表完整规则。 |
+| `RouteTable/index.vue` | `PUT` | `global-route-rules` | 切换 Global 表启用状态。 |
+| `RouteTable/index.vue` | `PATCH` | `entities/{id}` / `api-keys/{id}` | 切换 Entity / API-Key 表启用状态。 |
+| `RouteTable/components/RouteRules.vue` | `GET` | `clusters` | 规则目标/降级集群下拉。 |
+| `RouteTable/components/RouteRules.vue` | `GET` | `global-route-rules` | 加载 Global 规则详情。 |
+| `RouteTable/components/RouteRules.vue` | `PUT` | `global-route-rules` | 提交 Global 规则（`enabled` + `rules`）。 |
+| `RouteTable/components/RouteRules.vue` | `PATCH` | `entities/{id}` / `api-keys/{id}` | 提交嵌套 `route_rules`。 |
+| `RouteTable/components/RuleForm.vue` | `GET` | `clusters` | 规则表单选择目标集群与模型。 |
 
-### 8.2 AI 高级路由规则（`modules/AIRouteRules`）
-
-| 前端组件 | 请求方法 | 相对 URL | 说明 |
-|----------|----------|----------|------|
-| `AIRouteRules/index.vue` | `GET` | `ai-route-rules` | 查询 AI 高级路由规则。 |
-| `AIRouteRules/index.vue` | `POST` | `ai-route-rules` | 创建/更新 AI 高级路由规则。 |
-| `AIRouteRules/Rules/components/index.vue` | `GET` | `clusters` | 获取集群列表用于选择目标集群。 |
+规则字段使用 snake_case：`cond`、`targets[].cluster_name/model/weight`、`fallbacks[].cluster_name/model`。同一规则内 `(cluster_name, model)` 在 `targets` 与 `fallbacks` 之间不可重复。
 
 ## 9. API Key 管理（`modules/APIKey`）
 
@@ -87,12 +88,14 @@
 |----------|----------|----------|------|
 | `APIKey/components/ApiKeyList.vue` | `GET` | `api-keys` | 查询 API Key 列表。 |
 | `APIKey/components/ApiKeyList.vue` | `POST` | `api-keys` | 创建 API Key。 |
-| `APIKey/components/ApiKeyList.vue` | `PUT` | `api-keys/{id}` | 更新 API Key。 |
+| `APIKey/components/ApiKeyList.vue` | `PATCH` | `api-keys/{id}` | 更新 API Key。 |
 | `APIKey/components/ApiKeyList.vue` | `DELETE` | `api-keys/{id}` | 删除 API Key。 |
 | `APIKey/components/ApiKeyView.vue` | `GET` | `api-keys/{id}` | 查询 API Key 详情。 |
-| `APIKey/components/ApiKeyView.vue` | `POST` | `api-keys/{id}/quota-plan/reset` | 重置 API Key 配额。 |
+| `APIKey/components/ApiKeyView.vue` | `POST` | `api-keys/{id}/quota-plan/reset` | 重置 API Key 配额（按 `unit` 限制精度与上限）。 |
 | `APIKey/components/Upsert.vue` | `GET` | `entities` | 获取 Entity 列表用于关联。 |
-| `APIKey/components/Upsert.vue` | `GET` | `global-models` | 获取全局模型列表。 |
+| `APIKey/components/Upsert.vue` | `GET` | `clusters` | 获取集群模型列表用于模型绑定。 |
+
+`quota_plan.unit` 支持 `total_token` 与 `RMB`；RMB 上限 90,000,000.00，展示 4 位小数。
 
 ## 10. Entity 管理（`modules/Entity`）
 
@@ -100,18 +103,33 @@
 |----------|----------|----------|------|
 | `Entity/components/EntityList.vue` | `GET` | `entities` | 查询 Entity 列表。 |
 | `Entity/components/EntityList.vue` | `POST` | `entities` | 创建 Entity。 |
-| `Entity/components/EntityList.vue` | `PUT` | `entities/{id}` | 更新 Entity。 |
+| `Entity/components/EntityList.vue` | `PATCH` | `entities/{id}` | 更新 Entity。 |
 | `Entity/components/EntityList.vue` | `DELETE` | `entities/{id}` | 删除 Entity。 |
 | `Entity/components/EntityView.vue` | `GET` | `entities/{id}` | 查询 Entity 详情。 |
 | `Entity/components/EntityView.vue` | `POST` | `entities/{id}/quota-plan/reset` | 重置 Entity 配额。 |
 | `Entity/components/EntityTypeList.vue` | `GET` | `entity-types` | 查询 Entity Type 列表。 |
 | `Entity/components/EntityTypeList.vue` | `POST` | `entity-types` | 创建 Entity Type。 |
-| `Entity/components/EntityTypeList.vue` | `PUT` | `entity-types/{id}` | 更新 Entity Type。 |
+| `Entity/components/EntityTypeList.vue` | `PATCH` | `entity-types/{id}` | 更新 Entity Type。 |
 | `Entity/components/EntityTypeList.vue` | `DELETE` | `entity-types/{id}` | 删除 Entity Type。 |
 | `Entity/components/EntityUpsert.vue` | `GET` | `entity-types` | 获取 Entity Type 用于选择。 |
-| `Entity/components/EntityUpsert.vue` | `GET` | `global-models` | 获取全局模型列表。 |
+| `Entity/components/EntityUpsert.vue` | `GET` | `clusters` | 获取集群模型列表。 |
 
-## 11. 证书管理（`modules/Cert`，未启用）
+配额单位与 API Key 相同：`total_token` / `RMB`。
+
+## 11. 模型定价（`modules/ModelPrices`）
+
+| 前端组件 | 请求方法 | 相对 URL | 说明 |
+|----------|----------|----------|------|
+| `ModelPrices/index.vue` | `GET` | `model-prices` | 分页列表（`page` / `page_size` + 筛选）。 |
+| `ModelPrices/index.vue` | `DELETE` | `model-prices/{id}` | 删除定价记录。 |
+| `ModelPrices/components/ModelPriceUpsert.vue` | `GET` | `model-prices` | 校验 `(provider, model, mode)` 是否重复。 |
+| `ModelPrices/components/ModelPriceUpsert.vue` | `POST` | `model-prices` | 新建定价。 |
+| `ModelPrices/components/ModelPriceUpsert.vue` | `PUT` | `model-prices/{id}` | 更新定价。 |
+| `ModelPrices/components/ModelPriceImport.vue` | `POST` | `model-prices/import` | YAML 导入（`mode=replace|merge`）。 |
+
+时间字段为 `create_time` / `update_time`（Unix 秒）。
+
+## 12. 证书管理（`modules/Cert`，未启用）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -120,7 +138,7 @@
 | `Cert/index.vue` | `PUT` | `certificates/{cert_name}` | 更新证书。 |
 | `Cert/index.vue` | `PUT` | `certificates/{cert_name}/default` | 设置默认证书。 |
 
-## 12. 变更影响分析
+## 13. 变更影响分析
 
 当 `ai-gateway-api` 接口发生变更时，按以下顺序评估影响：
 
@@ -130,8 +148,8 @@
 4. 若涉及 i18n 文案变化，同步更新 `en.js` 与 `zh.js`。
 5. 若涉及路由/权限变化，同步更新 `路由与导航设计文档.md` 与 `状态管理设计文档.md`。
 
-## 13. 引用规范
+## 14. 引用规范
 
-- 接口定义位置：`ai-gateway-api/design-docs/api-define/OpenAPI接口定义.md`。
+- 接口定义位置：`design-docs/api-define/OpenAPI接口定义/`（按模块拆分，见该目录 `README.md`）。
 - 引用方式：在文档中直接写明相对路径或仓库链接，不复制接口定义内容。
-- 接口依赖说明通用文档：`design-docs/api-define/OpenAPI接口依赖说明.md`。
+- 上游权威定义：`ai-gateway-api` 仓库对应 OpenAPI 文档。

@@ -1,35 +1,60 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI网关 - 产品原型导航</title>
-  <link rel="stylesheet" href="assets/static/css/app.css" />
-  <link rel="stylesheet" href="assets/css/prototype-overrides.css" />
-</head>
-<body id="product-body" style="background:#f5f7f9;">
-  <div style="max-width:960px;margin:40px auto;padding:0 20px;">
-    <h1>AI网关 · 产品原型</h1>
-    <p style="color:#808695;margin-bottom:8px;">样式来自项目 <code>npm run build</code> 产物（与线上一致），DOM 结构对齐 iView 组件。</p>
-    <p style="color:#808695;margin-bottom:24px;">UI 变更后请运行：<code>sh prototype/sync-assets.sh</code></p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI网关 - 产品原型导航</title>
+    <link rel="stylesheet" href="assets/static/css/app.css" />
+    <link rel="stylesheet" href="assets/css/prototype-overrides.css" />
+  </head>
+  <body id="product-body" style="background:#f5f7f9;">
+    <div style="max-width:960px;margin:40px auto;padding:0 20px;">
+      <h1>AI网关 · 产品原型</h1>
+      <p style="color:#808695;margin-bottom:8px;">
+        样式来自项目 <code>npm run build</code> 产物（与线上一致），DOM 结构对齐
+        iView 组件。
+      </p>
+      <p style="color:#808695;margin-bottom:24px;">
+        UI 变更后请运行：<code>sh design-docs/prototype-design/sync-assets.sh</code>
+      </p>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
-      <div class="ivu-card ivu-card-bordered" style="padding:16px;"><h3>认证</h3><ul><li><a href="login.html">登录页</a></li></ul></div>
-      <div class="ivu-card ivu-card-bordered" style="padding:16px;"><h3>工作台</h3><ul><li><a href="pages/home.html">首页</a></li></ul></div>
-      <div class="ivu-card ivu-card-bordered" style="padding:16px;"><h3>资源管理</h3><ul>
-        <li><a href="pages/instance-pool-ai.html">AI网关实例池</a></li>
-        <li><a href="pages/cluster-list.html">AI业务集群</a></li>
-        <li><a href="pages/cluster-wizard.html">集群创建向导</a></li>
-      </ul></div>
-      <div class="ivu-card ivu-card-bordered" style="padding:16px;"><h3>路由管理</h3><ul>
-        <li><a href="pages/route-tables.html">路由表</a></li>
-      </ul></div>
-      <div class="ivu-card ivu-card-bordered" style="padding:16px;"><h3>消费者管理</h3><ul>
-        <li><a href="pages/api-key.html">API Key 管理</a></li>
-        <li><a href="pages/entity.html">Entity 管理</a></li>
-      </ul></div>
-      <div class="ivu-card ivu-card-bordered" style="padding:16px;"><h3>系统管理</h3><ul><li><a href="pages/user.html">用户管理</a></li></ul></div>
+      <div
+        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"
+      >
+        <div class="ivu-card ivu-card-bordered" style="padding:16px;">
+          <h3>认证</h3>
+          <ul>
+            <li><a href="login.html">登录页</a></li>
+          </ul>
+        </div>
+        <div class="ivu-card ivu-card-bordered" style="padding:16px;">
+          <h3>工作台</h3>
+          <ul>
+            <li><a href="pages/home.html">首页</a></li>
+          </ul>
+        </div>
+        <div class="ivu-card ivu-card-bordered" style="padding:16px;">
+          <h3>资源管理</h3>
+          <ul>
+            <li><a href="pages/instance-pool-ai.html">AI网关实例池</a></li>
+            <li><a href="pages/cluster-list.html">AI业务集群</a></li>
+            <li><a href="pages/model-prices.html">模型定价</a></li>
+          </ul>
+        </div>
+        <div class="ivu-card ivu-card-bordered" style="padding:16px;">
+          <h3>消费者管理</h3>
+          <ul>
+            <li><a href="pages/api-key.html">API Key 管理</a></li>
+            <li><a href="pages/entity.html">Entity 管理</a></li>
+          </ul>
+        </div>
+        <div class="ivu-card ivu-card-bordered" style="padding:16px;">
+          <h3>系统管理</h3>
+          <ul>
+            <li><a href="pages/user.html">用户管理</a></li>
+          </ul>
+        </div>
+      </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>

@@ -8,12 +8,18 @@
   "rules": [
     {
       "name": "global-default",
-      "Cond": "default_t()",
+      "cond": "default_t()",
       "targets": [
         {
-          "ClusterName": "cluster_global",
-          "Model": "",
-          "Weight": 100
+          "cluster_name": "cluster_global",
+          "model": "",
+          "weight": 100
+        }
+      ],
+      "fallbacks": [
+        {
+          "cluster_name": "cluster_global_fallback",
+          "model": ""
         }
       ]
     }
@@ -68,12 +74,18 @@
     "rules": [
         {
             "name": "global-default",
-            "Cond": "default_t()",
+            "cond": "default_t()",
             "targets": [
                 {
-                    "ClusterName": "cluster_global",
-                    "Model": "",
-                    "Weight": 100
+                    "cluster_name": "cluster_global",
+                    "model": "",
+                    "weight": 100
+                }
+            ],
+            "fallbacks": [
+                {
+                    "cluster_name": "cluster_global_fallback",
+                    "model": ""
                 }
             ]
         }
@@ -107,12 +119,18 @@
         "rules": [
             {
                 "name": "global-default",
-                "Cond": "default_t()",
+                "cond": "default_t()",
                 "targets": [
                     {
-                        "ClusterName": "cluster_global",
-                        "Model": "",
-                        "Weight": 100
+                        "cluster_name": "cluster_global",
+                        "model": "",
+                        "weight": 100
+                    }
+                ],
+                "fallbacks": [
+                    {
+                        "cluster_name": "cluster_global_fallback",
+                        "model": ""
                     }
                 ]
             }

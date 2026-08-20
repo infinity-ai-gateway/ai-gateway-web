@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -29,204 +29,314 @@
 * limitations under the License.
 */
 <template>
-    <div class="Review">
-        <div class="panel">
-            <div class="panel-header">{{ $t('cluster.basicConfig') }}</div>
-            <div class="panel-body">
-                <ul class="clearFloat">
-                    <li class="title">
-                        {{ this.$t('com.nameX', { obj: this.$t('cluster.name') }) }}:
-                    </li>
-                    <li class="value">{{ baseConfigData['name'] }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.clusterDescription') }}:</li>
-                    <li class="value">{{ baseConfigData['description'] }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.protocol') }}:</li>
-                    <li class="value">{{ baseConfigData['protocol'] }}</li>
-                </ul>
-                <ul v-if="baseConfigData.connection" class="clearFloat">
-                    <li class="title">{{ $t('cluster.maxIdleConnPerRs') }}:</li>
-                    <li class="value">{{ baseConfigData.connection['max_idle_conn_per_rs'] }}</li>
-                </ul>
-                <ul v-if="baseConfigData.sticky_sessions" class="clearFloat">
-                    <li class="title">{{ $t('cluster.stickySessionsEnabled') }} :</li>
-                    <li class="value">
-                        {{ baseConfigData.sticky_sessions['enabled'] === 'true' ? $t('com.enable') : $t('com.deactivate') }}
-                    </li>
-                </ul>
-                <ul
-                    v-if="
+  <div class="Review">
+    <div class="panel">
+      <div class="panel-header">{{ $t('cluster.basicConfig') }}</div>
+      <div class="panel-body">
+        <ul class="clearFloat">
+          <li class="title">
+            {{ this.$t('com.nameX', { obj: this.$t('cluster.name') }) }}:
+          </li>
+          <li class="value">{{ baseConfigData['name'] }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.clusterDescription') }}:</li>
+          <li class="value">{{ baseConfigData['description'] }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.protocol') }}:</li>
+          <li class="value">{{ baseConfigData['protocol'] }}</li>
+        </ul>
+        <ul v-if="baseConfigData.connection" class="clearFloat">
+          <li class="title">{{ $t('cluster.maxIdleConnPerRs') }}:</li>
+          <li class="value">
+            {{ baseConfigData.connection['max_idle_conn_per_rs'] }}
+          </li>
+        </ul>
+        <ul v-if="baseConfigData.sticky_sessions" class="clearFloat">
+          <li class="title">{{ $t('cluster.stickySessionsEnabled') }} :</li>
+          <li class="value">
+            {{ baseConfigData.sticky_sessions['enabled'] === 'true' ? $t('com.enable') : $t('com.deactivate') }}
+          </li>
+        </ul>
+        <ul
+          v-if="
                         baseConfigData.sticky_sessions &&
                         baseConfigData.sticky_sessions['enabled'] === 'true'
                     "
-                    class="clearFloat"
-                >
-                    <li class="title">{{ $t('cluster.hashStrategy') }} :</li>
-                    <li class="value">{{ baseConfigData.sticky_sessions['hash_strategy'] }}</li>
-                </ul>
-                <ul
-                    v-if="
+          class="clearFloat"
+        >
+          <li class="title">{{ $t('cluster.hashStrategy') }} :</li>
+          <li class="value">
+            {{ baseConfigData.sticky_sessions['hash_strategy'] }}
+          </li>
+        </ul>
+        <ul
+          v-if="
                         baseConfigData.sticky_sessions &&
                         baseConfigData.sticky_sessions['enabled'] === 'true' &&
                         baseConfigData.sticky_sessions['hash_strategy'] !== 'CLIENT_IP_ONLY'
                     "
-                    class="clearFloat"
-                >
-                    <li class="title">{{ $t('cluster.hashHeader') }} :</li>
-                    <li class="value">{{ baseConfigData.sticky_sessions['hash_header'] }}</li>
-                </ul>
-                <ul v-if="baseConfigData.buffers" class="clearFloat">
-                    <li class="title">{{ $t('cluster.reqWriteBufferSize') }} :</li>
-                    <li class="value">{{ baseConfigData.buffers['req_write_buffer_size'] }}</li>
-                </ul>
-                <ul v-if="baseConfigData.connection" class="clearFloat">
-                    <li class="title">{{ $t('cluster.cancelOnClientClose') }}:</li>
-                    <li class="value">
-                        {{
+          class="clearFloat"
+        >
+          <li class="title">{{ $t('cluster.hashHeader') }} :</li>
+          <li class="value">
+            {{ baseConfigData.sticky_sessions['hash_header'] }}
+          </li>
+        </ul>
+        <ul v-if="baseConfigData.buffers" class="clearFloat">
+          <li class="title">{{ $t('cluster.reqWriteBufferSize') }} :</li>
+          <li class="value">
+            {{ baseConfigData.buffers['req_write_buffer_size'] }}
+          </li>
+        </ul>
+        <ul v-if="baseConfigData.connection" class="clearFloat">
+          <li class="title">{{ $t('cluster.cancelOnClientClose') }}:</li>
+          <li class="value">
+            {{
                             baseConfigData.connection['cancel_on_client_close'] === 'true'
                                 ? $t('com.enable')
                                 : $t('com.deactivate')
-                        }}
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">{{ $t('cluster.timeoutAndRetransmission') }}</div>
-            <div v-if="baseConfigData.timeouts && baseConfigData.retries" class="panel-body">
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.timeoutReadClientAgain') }}:</li>
-                    <li class="value">{{ baseConfigData.timeouts.timeout_read_client_again }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.timeoutReadbodyClient') }} :</li>
-                    <li class="value">{{ baseConfigData.timeouts.timeout_readbody_client }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.timeoutConnServ') }} :</li>
-                    <li class="value">{{ baseConfigData.timeouts.timeout_conn_serv }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.timeoutResHeader') }} :</li>
-                    <li class="value">{{ baseConfigData.timeouts.timeout_response_header }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.timeoutWriteClient') }} :</li>
-                    <li class="value">{{ baseConfigData.timeouts.timeout_write_client }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.maxRetryInCluster') }} :</li>
-                    <li class="value">{{ baseConfigData.retries.max_retry_in_cluster }}</li>
-                </ul>
-            </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">{{ $t('cluster.passiveHealthCheck') }}</div>
-            <div class="panel-body">
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.faultThreshold') }} :</li>
-                    <li class="value">{{ displayPassiveHealthData.failnum }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.healthCheckInterval') }}:</li>
-                    <li class="value">{{ displayPassiveHealthData.interval }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.healthCheckHost') }}:</li>
-                    <li class="value">{{ displayPassiveHealthData.host || '-' }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.healthCheckUri') }}:</li>
-                    <li class="value">{{ displayPassiveHealthData.uri }}</li>
-                </ul>
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('cluster.healthCheckStatuscode') }} :</li>
-                    <li class="value">{{ displayPassiveHealthData.statuscode }}</li>
-                </ul>
-            </div>
-        </div>
-        <div class="panel">
-            <div class="panel-header">{{ $t('instancePool.config') }}</div>
-            <div class="panel-body">
-                <ul class="clearFloat">
-                    <li class="title">{{ $t('instancePool.instanceMode') }}:</li>
-                    <li class="value">{{ instanceModeText }}</li>
-                </ul>
-                <ul v-if="isDomainMode" class="clearFloat">
-                    <li class="title">{{ $t('instancePool.domain') }}:</li>
-                    <li class="value">{{ providerDomain || '-' }}</li>
-                </ul>
-                <ul v-else class="clearFloat detail-row detail-row-block instance-ip-list-row">
-                    <li class="title">{{ $t('instancePool.list') }}:</li>
-                    <li class="value">
-                        <pageTable :columns="ipColumns" :tableData="instancePoolUsed" />
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <!-- 大模型 -->
-        <div class="panel">
-            <div class="panel-header">{{ $t('llmConfig.title') }}</div>
-            <div class="panel-body" v-if="llmConfigData">
-                <ul class="clearFloat">
-                        <li class="title">{{ $t('gatewayConfig.modelServiceProvider') }}:</li>
-                        <li class="value">{{ providerTypeText }}</li>
-                    </ul>
-                    <ul class="clearFloat">
-                        <li class="title">{{ $t('gatewayConfig.modelListEndpoint') }}:</li>
-                        <li class="value">
-                            <p>
-                                {{ endpointSchema }}://{{ ipStr }}{{ endpointUri }}
-                            </p>
-                            <p>header: {{ displayEndpointHeaders }}</p>
-                        </li>
-                    </ul>
-                    <ul class="clearFloat detail-row">
-                        <li class="title">{{ $t('llmConfig.models') }}:</li>
-                        <li class="value">
-                            <template v-if="displayModels.length">
-                                <span
-                                    v-for="model in displayModels"
-                                    :key="model"
-                                    class="model-tag"
-                                >{{ model }}</span>
-                            </template>
-                            <span v-else class="empty-text">-</span>
-                        </li>
-                    </ul>
-                    <ul class="clearFloat detail-row detail-row-block">
-                        <li class="title">{{ $t('llmConfig.modelRedirect') }}:</li>
-                        <li class="value">
-                            <table v-if="displayModelMappings.length" class="mapping-table">
-                                <thead>
-                                    <tr>
-                                        <th>{{ $t('llmConfig.originalModelName') }}</th>
-                                        <th>{{ $t('llmConfig.backendModelName') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="(item, index) in displayModelMappings"
-                                        :key="index"
-                                    >
-                                        <td>{{ item.source_model }}</td>
-                                        <td>{{ item.target_model }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <span v-else class="empty-text">-</span>
-                        </li>
-                    </ul>
-                    <ul class="clearFloat">
-                        <li class="title">{{ $t('llmConfig.serviceAuthKey') }}:</li>
-                        <li class="value">{{ maskedServiceAuthKey }}</li>
-                    </ul>
-            </div>
-        </div>
+            }}
+          </li>
+        </ul>
+      </div>
     </div>
+    <div class="panel">
+      <div class="panel-header">
+        {{ $t('cluster.timeoutAndRetransmission') }}
+      </div>
+      <div
+        v-if="baseConfigData.timeouts && baseConfigData.retries"
+        class="panel-body"
+      >
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.timeoutReadClientAgain') }}:</li>
+          <li class="value">
+            {{ baseConfigData.timeouts.timeout_read_client_again }}
+          </li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.timeoutReadbodyClient') }} :</li>
+          <li class="value">
+            {{ baseConfigData.timeouts.timeout_readbody_client }}
+          </li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.timeoutConnServ') }} :</li>
+          <li class="value">{{ baseConfigData.timeouts.timeout_conn_serv }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.timeoutResHeader') }} :</li>
+          <li class="value">
+            {{ baseConfigData.timeouts.timeout_response_header }}
+          </li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.timeoutWriteClient') }} :</li>
+          <li class="value">
+            {{ baseConfigData.timeouts.timeout_write_client }}
+          </li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.maxRetryInCluster') }} :</li>
+          <li class="value">
+            {{ baseConfigData.retries.max_retry_in_cluster }}
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">{{ $t('cluster.passiveHealthCheck') }}</div>
+      <div class="panel-body">
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.faultThreshold') }} :</li>
+          <li class="value">{{ displayPassiveHealthData.failnum }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.healthCheckInterval') }}:</li>
+          <li class="value">{{ displayPassiveHealthData.interval }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.healthCheckHost') }}:</li>
+          <li class="value">{{ displayPassiveHealthData.host || '-' }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.healthCheckUri') }}:</li>
+          <li class="value">{{ displayPassiveHealthData.uri }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('cluster.healthCheckStatuscode') }} :</li>
+          <li class="value">{{ displayPassiveHealthData.statuscode }}</li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">{{ $t('instancePool.config') }}</div>
+      <div class="panel-body">
+        <ul class="clearFloat">
+          <li class="title">{{ $t('instancePool.instanceMode') }}:</li>
+          <li class="value">{{ instanceModeText }}</li>
+        </ul>
+        <ul v-if="isDomainMode" class="clearFloat">
+          <li class="title">{{ $t('instancePool.domain') }}:</li>
+          <li class="value">{{ providerDomain || '-' }}</li>
+        </ul>
+        <ul
+          v-else
+          class="clearFloat detail-row detail-row-block instance-ip-list-row"
+        >
+          <li class="title">{{ $t('instancePool.list') }}:</li>
+          <li class="value">
+            <pageTable :columns="ipColumns" :tableData="instancePoolUsed" />
+          </li>
+        </ul>
+      </div>
+    </div>
+    <!-- 大模型 -->
+    <div class="panel">
+      <div class="panel-header">{{ $t('llmConfig.title') }}</div>
+      <div class="panel-body" v-if="llmConfigData">
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.modelServiceProvider') }}:</li>
+          <li class="value">{{ providerTypeText }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.provider') }}:</li>
+          <li class="value">{{ displayProvider }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.stripPrefix') }}:</li>
+          <li class="value">{{ displayStripPrefix }}</li>
+        </ul>
+        <ul v-if="isStripPrefixEnabled" class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.matchPrefix') }}:</li>
+          <li class="value">{{ displayMatchPrefix }}</li>
+        </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.modelListEndpoint') }}:</li>
+          <li class="value">
+            <p>{{ endpointSchema }}://{{ ipStr }}{{ endpointUri }}</p>
+            <p>header: {{ displayEndpointHeaders }}</p>
+          </li>
+        </ul>
+        <ul class="clearFloat detail-row">
+          <li class="title">{{ $t('llmConfig.models') }}:</li>
+          <li class="value">
+            <template v-if="displayModels.length">
+              <span
+                v-for="model in displayModels"
+                :key="model"
+                class="model-tag"
+                >{{ model }}</span
+              >
+            </template>
+            <span v-else class="empty-text">-</span>
+          </li>
+        </ul>
+        <ul class="clearFloat detail-row detail-row-block">
+          <li class="title">{{ $t('llmConfig.modelRedirect') }}:</li>
+          <li class="value">
+            <table v-if="displayModelMappings.length" class="mapping-table">
+              <thead>
+                <tr>
+                  <th>{{ $t('llmConfig.originalModelName') }}</th>
+                  <th>{{ $t('llmConfig.backendModelName') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in displayModelMappings" :key="index">
+                  <td>{{ item.source_model }}</td>
+                  <td>{{ item.target_model }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <span v-else class="empty-text">-</span>
+          </li>
+        </ul>
+        <ul class="clearFloat detail-row detail-row-block">
+          <li class="title">{{ $t('llmConfig.serviceAuthKeys') }}:</li>
+          <li class="value">
+            <table v-if="displayKeys.length" class="mapping-table">
+              <thead>
+                <tr>
+                  <th>{{ $t('gatewayConfig.keyName') }}</th>
+                  <th>{{ $t('gatewayConfig.keyValue') }}</th>
+                  <th>{{ $t('gatewayConfig.keyWeight') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in displayKeys" :key="index">
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.key }}</td>
+                  <td>{{ item.weight }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <span v-else class="empty-text">-</span>
+          </li>
+        </ul>
+        <ul
+          v-if="displayKeyPolicy"
+          class="clearFloat detail-row-block policy-row"
+        >
+          <li class="title">{{ $t('llmConfig.keyPolicy') }}:</li>
+          <li class="value">
+            <Card class="policy-card">
+              <Row :gutter="24" class="review-row">
+                <Col span="12">
+                  <div class="review-item">
+                    <div class="review-label">
+                      {{ $t('gatewayConfig.keyPolicyStrategy') }}:
+                    </div>
+                    <div class="review-value">
+                      {{ displayKeyPolicy.strategy }}
+                    </div>
+                  </div>
+                </Col>
+                <Col span="12">
+                  <div class="review-item">
+                    <div class="review-label">
+                      {{ $t('gatewayConfig.keyPolicyMaxRetries') }}:
+                    </div>
+                    <div class="review-value">
+                      {{ displayKeyPolicy.max_retries }}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+              <Row :gutter="24">
+                <Col span="12">
+                  <div class="review-item">
+                    <div class="review-label">
+                      {{ $t('gatewayConfig.keyPolicyRetryBackoffInitial') }}:
+                    </div>
+                    <div class="review-value">
+                      {{ displayKeyPolicy.retry_backoff_initial }}
+                    </div>
+                  </div>
+                </Col>
+                <Col span="12">
+                  <div class="review-item">
+                    <div class="review-label">
+                      {{ $t('gatewayConfig.keyPolicyRetryBackoffMax') }}:
+                    </div>
+                    <div class="review-value">
+                      {{ displayKeyPolicy.retry_backoff_max }}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          </li>
+        </ul>
+        <ul v-else class="clearFloat">
+          <li class="title">{{ $t('llmConfig.keyPolicy') }}:</li>
+          <li class="value"><span class="empty-text">-</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </template>
 <script>
 import pageTable from '@/components/table/pageTable';
@@ -284,14 +394,11 @@ export default {
             handler(v) {
                 const pool = Array.isArray(v) ? v : parseInstancePool(v);
                 this.instancePoolUsed = parseInstancePool(pool);
-                const { mode, domain } = detectInstanceMode(
-                    this.instancePoolUsed.length ? this.instancePoolUsed : pool
-                );
+                const source = this.instancePoolUsed.length ? this.instancePoolUsed : pool;
+                const { mode, domain } = detectInstanceMode(source);
                 this.instanceMode = mode;
                 this.providerDomain = domain;
-                this.ipStr = getInstanceEndpointHosts(
-                    this.instancePoolUsed.length ? this.instancePoolUsed : pool
-                ).join('\n');
+                this.ipStr = getInstanceEndpointHosts(source).join('\n');
             },
             immediate: true,
             deep: true
@@ -321,6 +428,22 @@ export default {
             }
             const provider = this.providers.find(item => item.id === providerType);
             return provider ? provider.name : providerType;
+        },
+        displayProvider() {
+            const provider = this.llmConfigData && this.llmConfigData.provider;
+            return provider || '-';
+        },
+        isStripPrefixEnabled() {
+            return !!(this.llmConfigData && this.llmConfigData.strip_prefix);
+        },
+        displayStripPrefix() {
+            return this.isStripPrefixEnabled
+                ? this.$t('com.enable')
+                : this.$t('com.deactivate');
+        },
+        displayMatchPrefix() {
+            const prefix = this.llmConfigData && this.llmConfigData.match_prefix;
+            return prefix || '-';
         },
         isDomainMode() {
             return this.instanceMode === 'domain';
@@ -378,15 +501,38 @@ export default {
             }
             return mappings.filter(item => item && (item.source_model || item.target_model));
         },
-        maskedServiceAuthKey() {
-            const key = this.llmConfigData && this.llmConfigData.key;
-            if (!key) {
-                return '-';
+        displayKeys() {
+            const keys = this.llmConfigData && this.llmConfigData.keys;
+            if (!Array.isArray(keys)) {
+                return [];
             }
-            if (this.originalLlmConfigKey && key === this.originalLlmConfigKey) {
-                return maskSecretKey(key);
+            return keys.map(item => ({
+                name: item.name || '',
+                key: item.key ? maskSecretKey(item.key) : '',
+                weight: item.weight || 0
+            }));
+        },
+        displayKeyPolicy() {
+            const policy = this.llmConfigData && this.llmConfigData.key_policy;
+            if (!policy) {
+                return null;
             }
-            return key;
+            const defaultPolicy = {
+                strategy: 'weighted_random',
+                max_retries: 0,
+                retry_backoff_initial: 500,
+                retry_backoff_max: 5000
+            };
+            const getValue = key => {
+                const value = policy[key];
+                return value !== undefined && value !== null && value !== '' ? value : defaultPolicy[key];
+            };
+            return {
+                strategy: getValue('strategy'),
+                max_retries: getValue('max_retries'),
+                retry_backoff_initial: getValue('retry_backoff_initial'),
+                retry_backoff_max: getValue('retry_backoff_max')
+            };
         },
         displayEndpointHeaders() {
             const headers =
@@ -466,7 +612,8 @@ export default {
     }
 
     .panel-body ul.clearFloat.detail-row-block,
-    .panel-body ul.clearFloat.instance-ip-list-row {
+    .panel-body ul.clearFloat.instance-ip-list-row,
+    .panel-body ul.clearFloat.policy-row {
         align-items: flex-start;
     }
 
@@ -532,6 +679,45 @@ export default {
     td {
         color: #333;
         background: #fff;
+    }
+}
+
+.policy-row {
+    .policy-card {
+        width: 100%;
+        margin-top: 0;
+
+        .review-row {
+            margin-bottom: 16px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+    }
+}
+
+.review-item {
+    display: flex;
+    align-items: center;
+
+    .review-label {
+        width: 150px;
+        flex-shrink: 0;
+        text-align: right;
+        margin-right: 8px;
+        margin-bottom: 0;
+        font-size: 13px;
+        color: #515a6e;
+        line-height: 22px;
+    }
+
+    .review-value {
+        flex: 1;
+        font-size: 13px;
+        color: #333;
+        line-height: 22px;
+        word-break: break-word;
     }
 }
 </style>

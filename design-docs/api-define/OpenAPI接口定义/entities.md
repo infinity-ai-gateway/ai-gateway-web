@@ -54,6 +54,8 @@
 | `create_time` | int64 | 创建时间 | Unix时间戳（秒） |
 | `update_time` | int64 | 更新时间 | Unix时间戳（秒） |
 
+> **说明**：`quota_plan` 中的 `quota`、`balance.used`、`balance.remaining` 类型为 `number`，支持 `unit="total_token"`（整数）和 `unit="RMB"`（最多 4 位小数展示）。详见 [QuotaPlan](./00-common.md#公共参数类型)。
+
 ---
 
 ## 2. 接口清单
@@ -124,14 +126,15 @@
         "rules": [
             {
                 "name": "entity-default",
-                "Cond": "default_t()",
+                "cond": "default_t()",
                 "targets": [
                     {
-                        "ClusterName": "cluster_entity",
-                        "Model": "",
-                        "Weight": 100
+                        "cluster_name": "cluster_entity",
+                        "model": "",
+                        "weight": 100
                     }
-                ]
+                ],
+                "fallbacks": []
             }
         ]
     }
@@ -187,14 +190,15 @@
             "rules": [
                 {
                     "name": "entity-default",
-                    "Cond": "default_t()",
+                    "cond": "default_t()",
                     "targets": [
                         {
-                            "ClusterName": "cluster_entity",
-                            "Model": "",
-                            "Weight": 100
+                            "cluster_name": "cluster_entity",
+                            "model": "",
+                            "weight": 100
                         }
-                    ]
+                    ],
+                    "fallbacks": []
                 }
             ]
         },
@@ -292,12 +296,12 @@
                     "rules": [
                         {
                             "name": "entity-default",
-                            "Cond": "default_t()",
+                            "cond": "default_t()",
                             "targets": [
                                 {
-                                    "ClusterName": "cluster_entity",
-                                    "Model": "",
-                                    "Weight": 100
+                                    "cluster_name": "cluster_entity",
+                                    "model": "",
+                                    "weight": 100
                                 }
                             ]
                         }
@@ -519,8 +523,8 @@ Data为null。
 | - | - | - | - |
 | unlimited | bool | 是否无限配额 | - |
 | pass_when_no_enough_quota | bool | 配额不足时是否放行 | - |
-| quota | int64 | 配额总量 | - |
-| unit | string | 配额单位 | - |
+| quota | number | 配额总量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| unit | string | 配额单位 | 可选值：`total_token`、`RMB` |
 | reset_period | string | 配额重置周期 | - |
 | balance | object | 余额状态（只读） | 包含used和remaining |
 
@@ -528,8 +532,8 @@ Data为null。
 
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
-| used | int64 | 已用量 | - |
-| remaining | int64 | 剩余量 | - |
+| used | number | 已用量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| remaining | number | 剩余量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
 
 ---
 
@@ -554,7 +558,7 @@ Data为null。
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
-| quota | int64 | 重置后的配额总量 | N | 若传入则更新quota并同步重置balance；若不传则按当前quota重置 | - |
+| quota | number | 重置后的配额总量 | N | 若传入则更新quota并同步重置balance；若不传则按当前quota重置 | 非负数；`unit=total_token` 时必须为整数；`unit=RMB` 时取值范围 0 ~ 90000000.00（9000 万元），小数位不超过 8 位 |
 | reason | string | 重置原因 | N | 用于审计 | - |
 
 **执行逻辑**
@@ -570,16 +574,16 @@ Data为null。
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
 | id | string | Entity标识 | - |
-| previous_quota | int64 | 重置前配额 | - |
-| new_quota | int64 | 重置后配额 | - |
+| previous_quota | number | 重置前配额 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| new_quota | number | 重置后配额 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
 | balance | object | 余额变更详情 | 见下方 |
 
 **balance结构**
 
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
-| previous_remaining | int64 | 重置前剩余量 | - |
-| new_remaining | int64 | 重置后剩余量 | - |
-| used | int64 | 当前已用量 | 重置后为0 |
+| previous_remaining | number | 重置前剩余量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| new_remaining | number | 重置后剩余量 | `unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
+| used | number | 当前已用量 | 重置后为0；`unit=total_token` 时为整数；`unit=RMB` 时最多 4 位小数展示 |
 
 ---

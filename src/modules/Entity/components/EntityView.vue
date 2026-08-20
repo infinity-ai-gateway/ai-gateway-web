@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -58,17 +58,24 @@
     <Card :title="$t('entity.quotaInfo')" class="form-card">
       <div class="info-row">
         <span class="info-label">{{ $t('entity.unlimitedQuota') }}</span>
-        <span class="info-value">{{ quotaPlanUnlimited ? $t('entity.yes') : $t('entity.no') }}</span>
+        <span
+          class="info-value"
+          >{{ quotaPlanUnlimited ? $t('entity.yes') : $t('entity.no') }}</span
+        >
       </div>
       <div v-if="!quotaPlanUnlimited">
         <div class="info-row">
           <span class="info-label">{{ $t('entity.passWhenNoQuota') }}</span>
-          <span class="info-value">{{ passWhenNoEnoughQuota ? $t('entity.yes') : $t('entity.no') }}</span>
+          <span
+            class="info-value"
+            >{{ passWhenNoEnoughQuota ? $t('entity.yes') : $t('entity.no') }}</span
+          >
         </div>
         <div class="info-row">
           <span class="info-label">{{ $t('entity.quotaTotal') }}</span>
-          <span class="info-value"
-            >{{ formatNumber(quotaPlanQuota) }} tokens</span
+          <span
+            class="info-value"
+            >{{ isRMB ? '¥' + formatNumber(quotaPlanQuota) : formatNumber(quotaPlanQuota) + ' tokens' }}</span
           >
         </div>
         <div class="info-row">
@@ -78,7 +85,11 @@
         <div class="info-row">
           <span class="info-label">{{ $t('com.used') }}</span>
           <span class="info-value"
-            >{{ formatNumber(quotaPlanUsed) }} tokens ({{ quotaPercent
+            >{{ isRMB ? '¥' + formatNumber(quotaPlanUsed) : formatNumber(quotaPlanUsed) + ' tokens' }}
+            ({{ quotaPercent
+
+
+
 
 
 
@@ -90,8 +101,9 @@
         </div>
         <div class="info-row">
           <span class="info-label">{{ $t('com.remaining') }}</span>
-          <span class="info-value"
-            >{{ formatNumber(quotaPlanRemaining) }} tokens</span
+          <span
+            class="info-value"
+            >{{ isRMB ? '¥' + formatNumber(quotaPlanRemaining) : formatNumber(quotaPlanRemaining) + ' tokens' }}</span
           >
         </div>
         <div class="info-row">
@@ -128,7 +140,8 @@
         <span class="info-label">{{ $t('entity.maxConcurrency') }}</span>
         <span
           class="info-value"
-        >{{ formatMaxConcurrency(rateLimitMaxConcurrency) }}</span>
+          >{{ formatMaxConcurrency(rateLimitMaxConcurrency) }}</span
+        >
       </div>
 
       <div
@@ -152,10 +165,16 @@
 
 
 
+
+
+
             }}：{{ rule.model === '*' ? $t('entity.allModels') : rule.model }}
           </div>
           <div>
             {{ $t('entity.timeWindow') }}：{{ rule.window_minutes
+
+
+
 
 
 
@@ -165,6 +184,9 @@
           <div>{{ $t('entity.maxTokens') }}：{{ rule.max_tokens }}</div>
           <div>
             {{ $t('entity.stepMinutes') }}：{{ rule.step_minutes
+
+
+
 
 
 
@@ -195,10 +217,16 @@
 
 
 
+
+
+
             }}：{{ rule.model === '*' ? $t('entity.allModels') : rule.model }}
           </div>
           <div>
             {{ $t('entity.timeWindow') }}：{{ rule.window_minutes
+
+
+
 
 
             }}{{ $t('com.minute') }}
@@ -228,9 +256,9 @@
           <InputNumber
             v-model="newQuota"
             :min="0"
-            :max="INT64_MAX"
-            :precision="0"
-            :step="1"
+            :max="isRMB ? RMB_QUOTA_MAX : INT64_MAX"
+            :precision="isRMB ? 4 : 0"
+            :step="isRMB ? 0.0001 : 1"
             style="width: 100%;"
           ></InputNumber>
         </span>
@@ -268,6 +296,7 @@
 
 <script>
 const INT64_MAX = 9223372036854775807;
+const RMB_QUOTA_MAX = 90000000;
 
 export default {
     props: {
@@ -287,6 +316,7 @@ export default {
     data() {
         return {
             INT64_MAX,
+            RMB_QUOTA_MAX,
             resetModalVisible: false,
             newQuota: 0,
             resetReason: '',
@@ -331,7 +361,10 @@ export default {
         quotaPlanUnit() {
             return this.displayData.quota_plan && this.displayData.quota_plan.unit
                 ? this.displayData.quota_plan.unit
-                : '-';
+                : 'total_token';
+        },
+        isRMB() {
+            return this.quotaPlanUnit === 'RMB';
         },
         quotaPlanQuota() {
             return this.displayData.quota_plan ? this.displayData.quota_plan.quota || 0 : 0;
@@ -413,8 +446,14 @@ export default {
             const date = new Date(timestamp * 1000);
             return date.toLocaleString('zh-CN');
         },
-        formatNumber(num) {
-            return num.toLocaleString();
+        formatNumber(num, decimals = null) {
+            const value = Number(num);
+            if (Number.isNaN(value)) return '-';
+            const fractionDigits = decimals !== null ? decimals : (this.isRMB ? 4 : 0);
+            return value.toLocaleString('zh-CN', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: fractionDigits
+            });
         },
         getResetPeriodText(period) {
             const map = {
@@ -435,15 +474,27 @@ export default {
                 this.$Message.error(this.$t('entity.enterQuotaTotal'));
                 return;
             }
-            if (!Number.isInteger(this.newQuota)) {
-                this.$Message.error(this.$t('entity.quotaMustBeNonNegative'));
-                return;
-            }
-            if (this.newQuota < 0) {
+            const value = Number(this.newQuota);
+            if (Number.isNaN(value) || value < 0) {
                 this.$Message.error(this.$t('entity.quotaRangeError'));
                 return;
             }
-            if (this.newQuota > INT64_MAX) {
+            if (!this.isRMB && !Number.isInteger(value)) {
+                this.$Message.error(this.$t('entity.quotaMustBeNonNegative'));
+                return;
+            }
+            if (this.isRMB) {
+                const decimalStr = String(this.newQuota).split('.')[1] || '';
+                if (decimalStr.length > 4) {
+                    this.$Message.error(this.$t('entity.quotaRmbPrecisionError'));
+                    return;
+                }
+            }
+            if (this.isRMB && value > RMB_QUOTA_MAX) {
+                this.$Message.error(this.$t('entity.quotaRmbMaxError') || 'RMB 配额不能超过 9000 万元');
+                return;
+            }
+            if (value > INT64_MAX) {
                 this.$Message.error(this.$t('entity.quotaMaxError'));
                 return;
             }

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>模型定价 - AI网关</title>
+    <link rel="stylesheet" href="../assets/static/css/app.css" />
+    <link rel="stylesheet" href="../assets/font/iconfont.css" />
+    <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  </head>
+  <body>
+    <script src="../assets/static/js/vendors.js"></script>
+    <script src="../assets/static/js/app.js"></script>
+    <script src="../assets/js/mock-data.js"></script>
+    <script src="../assets/js/prototype.js"></script>
+    <script src="../assets/js/ivu-ui.js"></script>
+    <script src="../assets/js/layout.js"></script>
+    <script src="../assets/js/model-price-upsert.js"></script>
+    <script>
+      var root = Layout.render({ pageId: 'ModelPrice.list', breadcrumb: '模型定价', basePath: '../' });
+
+      var state = {
+        page: 1,
+        pageSize: 20,
+        searchParams: {},
+        filtered: [],
+        isView: false,
+        currentData: null,
+        drawerVisible: false,
+        importVisible: false,
+        importMode: 'replace',
+        importFile: null,
+        importResult: null
+      };
+
+      function getProviderOptions() {
+        var providers = {};
+        MockData.modelPrices.forEach(function (item) {
+          providers[item.provider] = item.provider;
+        });
+        return Object.keys(providers).map(function (p) { return { value: p, label: p }; });
+      }
+
+      function applyFilter() {
+        var sp = state.searchParams;
+        state.filtered = MockData.modelPrices.filter(function (item) {
+          if (sp.provider && item.provider !== sp.provider) return false;
+          if (sp.model && item.model.toLowerCase().indexOf(sp.model.toLowerCase()) === -1) return false;
+          if (sp.mode && item.mode !== sp.mode) return false;
+          return true;
+        });
+      }
+
+      function getPageData() {
+        var start = (state.page - 1) * state.pageSize;
+        return state.filtered.slice(start, start + state.pageSize);
+      }
+
+      function renderTable() {
+        applyFilter();
+        var data = getPageData();
+        var providerOptions = getProviderOptions();
+        var modeOptions = MockData.modelModeOptions.map(function (m) { return { value: m, label: m }; });
+
+        var columns = [
+          { key: 'provider', title: '提供商', sortable: true, searchable: true, searchType: 'select', searchFilters: providerOptions },
+          { key: 'model', title: '模型名', sortable: true, searchable: true },
+          { key: 'mode', title: '模型模式', sortable: true, searchable: true, searchType: 'select', searchFilters: modeOptions },
+          { key: 'base_model', title: '归一化模型名', sortable: true },
+          {
+            key: 'operation', title: '操作', width: 240,
+            render: function (row) {
+              return '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" data-action="view" data-id="' + row.id + '" style="margin-right:8px;">详情</button>' +
+                '<button type="button" class="ivu-btn ivu-btn-success ivu-btn-small" data-action="edit" data-id="' + row.id + '" style="margin-right:8px;">编辑</button>' +
+                '<button type="button" class="ivu-btn ivu-btn-error ivu-btn-small" data-action="delete" data-id="' + row.id + '">删除</button>';
+            }
+          }
+        ];
+
+        var tableHtml = IvuUI.pageTable({
+          columns: columns,
+          rows: data,
+          pageSize: state.pageSize,
+          currentPage: state.page,
+          total: state.filtered.length,
+          searchValues: state.searchParams,
+          tableId: 'model-price-table'
+        });
+
+        root.innerHTML =
+          '<div class="model-prices-page">' +
+            '<div class="action-bar" style="margin-bottom:16px;">' +
+              '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="btn-create">+ 新增定价</button>' +
+              '<button type="button" class="ivu-btn ivu-btn-success ivu-btn-small" id="btn-import" style="margin-left:8px;">YAML 导入</button>' +
+            '</div>' +
+            tableHtml +
+          '</div>';
+
+        bindTableEvents();
+      }
+
+      function bindTableEvents() {
+        document.getElementById('btn-create').onclick = function () {
+          state.isView = false;
+          state.currentData = null;
+          ModelPriceUpsert.drawer(null, false, function () {
+            renderTable();
+          });
+        };
+
+        document.getElementById('btn-import').onclick = function () {
+          openImportModal();
+        };
+
+        root.querySelectorAll('[data-action="view"]').forEach(function (btn) {
+          btn.onclick = function (e) {
+            e.stopPropagation();
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            var item = MockData.modelPrices.find(function (p) { return p.id === id; });
+            if (!item) return;
+            state.isView = true;
+            state.currentData = item;
+            ModelPriceUpsert.drawer(item, true, function () {
+              renderTable();
+            });
+          };
+        });
+
+        root.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
+          btn.onclick = function (e) {
+            e.stopPropagation();
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            var item = MockData.modelPrices.find(function (p) { return p.id === id; });
+            if (!item) return;
+            state.isView = false;
+            state.currentData = item;
+            ModelPriceUpsert.drawer(item, false, function () {
+              renderTable();
+            });
+          };
+        });
+
+        root.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
+          btn.onclick = function (e) {
+            e.stopPropagation();
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            var item = MockData.modelPrices.find(function (p) { return p.id === id; });
+            if (!item) return;
+            Prototype.confirm({
+              title: '确认删除',
+              content: '确定要删除模型价格「' + item.model + '」吗？',
+              onOk: function () {
+                MockData.modelPrices = MockData.modelPrices.filter(function (p) { return p.id !== id; });
+                Prototype.toast('删除成功!');
+                renderTable();
+              }
+            });
+          };
+        });
+
+        Prototype.bindPageTableSearch(root, function (key, value) {
+          state.searchParams[key] = value;
+          state.page = 1;
+          renderTable();
+        });
+
+        root.querySelectorAll('.proto-page-size').forEach(function (sel) {
+          sel.onchange = function () {
+            state.pageSize = parseInt(sel.value, 10);
+            state.page = 1;
+            renderTable();
+          };
+        });
+
+        root.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+          btn.onclick = function () {
+            if (state.page > 1) { state.page -= 1; renderTable(); }
+          };
+        });
+
+        root.querySelectorAll('.proto-page-next').forEach(function (btn) {
+          btn.onclick = function () {
+            var totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+            if (state.page < totalPages) { state.page += 1; renderTable(); }
+          };
+        });
+
+        root.querySelectorAll('[data-page]').forEach(function (li) {
+          li.onclick = function () {
+            state.page = parseInt(li.getAttribute('data-page'), 10);
+            renderTable();
+          };
+        });
+      }
+
+      function openImportModal() {
+        state.importFile = null;
+        state.importResult = null;
+        var modalHtml =
+          '<div class="ivu-modal-wrap" id="import-modal">' +
+            '<div class="ivu-modal-mask" data-close-import></div>' +
+            '<div class="ivu-modal" style="width:700px;">' +
+              '<div class="ivu-modal-content">' +
+                '<div class="ivu-modal-header"><div class="ivu-modal-header-inner">导入YAML</div>' +
+                  '<a class="ivu-modal-close" data-close-import href="javascript:void(0)"><i class="ivu-icon ivu-icon-ios-close"></i></a>' +
+                '</div>' +
+                '<div class="ivu-modal-body">' +
+                  IvuUI.formTopItem('导入模式',
+                    '<div class="ivu-select ivu-select-single" style="width:200px;">' +
+                      '<div class="ivu-select-selection">' +
+                        '<select id="import-mode" class="proto-ivu-select-native" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
+                          '<option value="replace">replace（替换模式）</option>' +
+                          '<option value="merge">merge（合并模式）</option>' +
+                        '</select>' +
+                        '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
+                      '</div></div>') +
+                  IvuUI.formTopItem('YAML文件',
+                    '<div class="ivu-upload">' +
+                      '<button type="button" class="ivu-btn ivu-btn-default" id="btn-select-file">' +
+                        '<i class="ivu-icon ivu-icon-md-cloud-upload"></i> <span>选择YAML文件</span>' +
+                      '</button>' +
+                      '<input type="file" id="import-file-input" accept=".yaml,.yml" style="display:none;" />' +
+                      '<div id="import-file-name" style="margin-top:8px;color:#808695;">未选择文件</div>' +
+                    '</div>') +
+                  '<div id="import-result-section" class="proto-hidden" style="margin-top:16px;">' +
+                    '<div id="import-result-content"></div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="ivu-modal-footer">' +
+                  '<button type="button" class="ivu-btn" data-close-import>取消</button>' +
+                  '<button type="button" class="ivu-btn ivu-btn-primary" id="btn-confirm-import" style="margin-left:8px;">导入</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+
+        var oldModal = document.getElementById('import-modal');
+        if (oldModal) oldModal.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        document.querySelectorAll('[data-close-import]').forEach(function (el) {
+          el.onclick = function () {
+            var m = document.getElementById('import-modal');
+            if (m) m.remove();
+          };
+        });
+
+        document.getElementById('btn-select-file').onclick = function () {
+          document.getElementById('import-file-input').click();
+        };
+
+        document.getElementById('import-file-input').onchange = function (e) {
+          var file = e.target.files[0];
+          if (file) {
+            state.importFile = file;
+            document.getElementById('import-file-name').textContent = file.name;
+          }
+        };
+
+        document.getElementById('btn-confirm-import').onclick = function () {
+          if (!state.importFile) {
+            Prototype.toast('请先选择YAML文件', 'error');
+            return;
+          }
+          var mode = document.getElementById('import-mode').value;
+          // 模拟导入
+          var imported = 3 + Math.floor(Math.random() * 5);
+          var skipped = Math.floor(Math.random() * 2);
+          state.importResult = { imported_count: imported, skipped_count: skipped, errors: [] };
+
+          var resultSection = document.getElementById('import-result-section');
+          resultSection.classList.remove('proto-hidden');
+          document.getElementById('import-result-content').innerHTML =
+            '<p>导入数量: <strong>' + imported + '</strong>, 跳过数量: <strong>' + skipped + '</strong></p>';
+
+          Prototype.toast('导入成功!');
+          renderTable();
+        };
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        renderTable();
+      });
+    </script>
+  </body>
+</html>

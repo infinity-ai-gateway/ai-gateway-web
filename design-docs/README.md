@@ -10,8 +10,8 @@
 design-docs/
 ├── README.md                              # 本文件：变更方法论与目录索引
 ├── api-define/                            # 前端消费接口约定
-│   ├── OpenAPI接口依赖说明.md             # 如何引用 ai-gateway-api 的 OpenAPI 文档
-│   └── prototype-design/                  # 原型设计资产（可选参考）
+│   └── OpenAPI接口定义/                   # 按模块拆分的 OpenAPI 约定（含 model-prices、route-tables 等）
+├── prototype-design/                      # 原型设计资产（可选参考）
 ├── modifications/                         # 复杂变更的临时说明目录（按需创建）
 └── sys-design/                            # 系统设计文档
     ├── summary.md                         # 系统设计文档索引（本目录导读）
@@ -23,10 +23,11 @@ design-docs/
     ├── 组件与复用设计文档.md               # 通用组件、业务组件规范
     ├── OpenAPI消费接口映射.md              # 页面/组件 ↔ OpenAPI 端点映射
     ├── 构建与部署设计文档.md               # webpack、proxy、build
-    └── details/                           # 模块细节设计（按 UI 模块展开）
+    └── 各模块实现细节设计/                 # 模块细节设计（按 UI 模块展开）
         ├── 认证与用户.md
         ├── AI业务实例池.md
         ├── AI业务集群.md
+        ├── 模型定价.md
         ├── 路由规则.md
         ├── APIKey管理.md
         └── Entity管理.md
@@ -55,8 +56,8 @@ YYYYMMDD-<变更目的简述>
 ### Step 2：更新 api-define
 
 - 确认本次变更是否涉及新的 OpenAPI 依赖。
-- 确认所需 OpenAPI 端点已在 `ai-gateway-api/design-docs/api-define/` 中定义。
-- 若引用方式/路径有变化，更新 `api-define/OpenAPI接口依赖说明.md`。
+- 确认所需 OpenAPI 端点已在 `design-docs/api-define/OpenAPI接口定义/`（及上游 `ai-gateway-api`）中定义。
+- 若引用方式/路径有变化，更新 `sys-design/OpenAPI消费接口映射.md`。
 
 ### Step 3：更新 sys-design
 
@@ -65,7 +66,7 @@ YYYYMMDD-<变更目的简述>
 | 变更范围 | 更新文档 |
 |----------|----------|
 | 架构或数据流 | `sys-design/总体设计文档.md` |
-| 新增/修改业务模块 | `sys-design/模块设计文档.md` + `sys-design/details/<模块>.md` |
+| 新增/修改业务模块 | `sys-design/模块设计文档.md` + `sys-design/各模块实现细节设计/<模块>.md` |
 | 路由或菜单权限 | `sys-design/路由与导航设计文档.md` |
 | 状态或鉴权 | `sys-design/状态管理设计文档.md` |
 | 文案或多语言 | `sys-design/国际化设计文档.md` |
@@ -93,7 +94,7 @@ YYYYMMDD-<变更目的简述>
 - sys-design 的变更（Step 3）；
 - 实际代码变更（Step 4）。
 
-判断是否有**可复用、可沉淀的设计知识**，值得放入 `sys-design/details/` 中供后续使用。适合沉淀的内容包括：
+判断是否有**可复用、可沉淀的设计知识**，值得放入 `sys-design/各模块实现细节设计/` 中供后续使用。适合沉淀的内容包括：
 
 - 新的页面交互模式或复杂表单逻辑；
 - 可复用的业务组件或通用组件设计；
@@ -102,7 +103,7 @@ YYYYMMDD-<变更目的简述>
 
 若决定沉淀，应：
 
-1. 在 `sys-design/details/` 下新建或更新细节文档；
+1. 在 `sys-design/各模块实现细节设计/` 下新建或更新细节文档；
 2. 在 `sys-design/summary.md` 中补充索引；
 3. 确保细节文档基于实际代码，而非仅参考旧版设计文档。
 
@@ -114,16 +115,16 @@ YYYYMMDD-<变更目的简述>
 - [ ] 变更说明文件已填写并审核。
 - [ ] `api-define/` 已更新并 review：
   - [ ] 新依赖的 OpenAPI 端点已在 `ai-gateway-api` 中定义；
-  - [ ] 引用方式/路径变化已同步到 `api-define/OpenAPI接口依赖说明.md`。
+  - [ ] 引用方式/路径变化已同步到 `sys-design/OpenAPI消费接口映射.md`。
 - [ ] `sys-design/` 已更新并 review：
   - [ ] 设计与 api-define 一致；
   - [ ] 页面、组件、路由、状态、i18n 描述准确；
   - [ ] 新增的细节文档已加入 `summary.md`。
 - [ ] `sys-design/summary.md` 索引已同步。
-- [ ] `sys-design/details/<模块>.md` 已同步（如新增/调整模块）。
+- [ ] `sys-design/各模块实现细节设计/<模块>.md` 已同步（如新增/调整模块）。
 - [ ] `sys-design/OpenAPI消费接口映射.md` 中的接口映射准确。
 - [ ] 代码已按设计文档实现并通过 `npm run lint`。
-- [ ] 已评估是否需要沉淀新的 `details/` 文档。
+- [ ] 已评估是否需要沉淀新的 `各模块实现细节设计/` 文档。
 
 ---
 

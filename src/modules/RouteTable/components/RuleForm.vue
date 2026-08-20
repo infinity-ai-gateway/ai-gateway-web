@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -29,9 +29,9 @@
         />
       </FormItem>
 
-      <FormItem :label="$t('route.expression')" prop="Cond">
+      <FormItem :label="$t('route.expression')" prop="cond">
         <Expression
-          :expression="formData.Cond"
+          :expression="formData.cond"
           :readonly="readonly"
           @expressionChanged="onExpressionChanged"
         />
@@ -50,12 +50,12 @@
           <Col span="2" class="field-label">{{ $t('route.cluster') }}</Col>
           <Col span="5">
             <FormItem
-              :prop="`targets.${index}.ClusterName`"
+              :prop="`targets.${index}.cluster_name`"
               :rules="targetClusterRules"
               class="inline-form-item"
             >
               <Select
-                v-model="target.ClusterName"
+                v-model="target.cluster_name"
                 :disabled="readonly"
                 :placeholder="$t('route.selectTargetCluster')"
                 filterable
@@ -72,31 +72,37 @@
           </Col>
           <Col span="2" class="field-label">{{ $t('route.model') }}</Col>
           <Col span="9">
-            <Select
-              v-model="target.Model"
-              :disabled="readonly"
-              :placeholder="$t('route.modelTransparent')"
-              filterable
-              allow-create
-              clearable
+            <FormItem
+              :prop="`targets.${index}.model`"
+              :rules="targetModelRules"
+              class="inline-form-item"
             >
-              <Option
-                v-for="model in getModelsByCluster(target.ClusterName, index, 'target')"
-                :key="model"
-                :value="model"
-                :label="model"
-              />
-            </Select>
+              <Select
+                v-model="target.model"
+                :disabled="readonly"
+                :placeholder="$t('route.modelTransparent')"
+                filterable
+                allow-create
+                clearable
+              >
+                <Option
+                  v-for="model in getModelsByCluster(target.cluster_name, index, 'target')"
+                  :key="model"
+                  :value="model"
+                  :label="model"
+                />
+              </Select>
+            </FormItem>
           </Col>
           <Col span="2" class="field-label">{{ $t('route.weight') }}</Col>
           <Col span="2">
             <FormItem
-              :prop="`targets.${index}.Weight`"
-              :rules="targetWeightRules"
+              :prop="`targets.${index}.weight`"
+              :rules="targetweightRules"
               class="inline-form-item"
             >
               <InputNumber
-                v-model="target.Weight"
+                v-model="target.weight"
                 :disabled="readonly"
                 :min="0"
                 :max="100"
@@ -126,6 +132,83 @@
         {{ $t('route.weightSumError') }}
       </p>
 
+      <div class="section-title">
+        {{ $t('route.fallbackClusterAndModel') }}
+      </div>
+      <p v-if="!(formData.fallbacks || []).length" class="no-backup-tip">
+        {{ $t('route.noBackup') }}
+      </p>
+      <div
+        v-for="(fallback, index) in formData.fallbacks"
+        :key="`fallback-${index}`"
+        class="dynamic-row fallback-row"
+      >
+        <Row :gutter="8" type="flex" align="middle">
+          <Col span="2" class="field-label">{{ $t('route.cluster') }}</Col>
+          <Col span="7">
+            <FormItem
+              :prop="`fallbacks.${index}.cluster_name`"
+              :rules="fallbackClusterRules"
+              class="inline-form-item"
+            >
+              <Select
+                v-model="fallback.cluster_name"
+                :disabled="readonly"
+                :placeholder="$t('route.selectTargetCluster')"
+                filterable
+                @on-change="onFallbackClusterChange(index)"
+              >
+                <Option
+                  v-for="cluster in getClusters(index, 'fallback')"
+                  :key="cluster.name"
+                  :value="cluster.name"
+                  :label="cluster.name"
+                />
+              </Select>
+            </FormItem>
+          </Col>
+          <Col span="2" class="field-label">{{ $t('route.model') }}</Col>
+          <Col span="11">
+            <FormItem
+              :prop="`fallbacks.${index}.model`"
+              :rules="fallbackModelRules"
+              class="inline-form-item"
+            >
+              <Select
+                v-model="fallback.model"
+                :disabled="readonly"
+                :placeholder="$t('route.modelTransparent')"
+                filterable
+                allow-create
+                clearable
+              >
+                <Option
+                  v-for="model in getModelsByCluster(fallback.cluster_name, index, 'fallback')"
+                  :key="model"
+                  :value="model"
+                  :label="model"
+                />
+              </Select>
+            </FormItem>
+          </Col>
+          <Col span="2" class="delete-col">
+            <Button
+              v-if="!readonly"
+              class="delete-btn"
+              size="small"
+              @click="removeFallback(index)"
+            >
+              {{ $t('com.del') }}
+            </Button>
+          </Col>
+        </Row>
+      </div>
+      <div v-if="!readonly" class="add-btn-row">
+        <Button size="small" class="add-btn" @click="addFallback">
+          + {{ $t('route.addFallback') }}
+        </Button>
+      </div>
+
       <FormItem class="com-btn-box drawer-footer">
         <Button
           v-if="!readonly"
@@ -147,7 +230,8 @@
 import Expression from '@/components/Expression';
 import { cloneDeep } from 'lodash';
 
-const defaultTarget = { ClusterName: '', Model: '', Weight: 0 };
+const defaultTarget = { cluster_name: '', model: '', weight: 0 };
+const defaultFallback = { cluster_name: '', model: '' };
 
 export default {
   name: 'RuleForm',
@@ -198,7 +282,14 @@ export default {
           trigger: 'change'
         }
       ],
-      targetWeightRules: [
+      fallbackClusterRules: [
+        {
+          required: true,
+          message: this.$t('com.tipNotEmptyX', { obj: this.$t('route.cluster') }),
+          trigger: 'change'
+        }
+      ],
+      targetweightRules: [
         {
           validator: (rule, value, callback) => {
             if (value === '' || value === null || value === undefined) {
@@ -215,6 +306,18 @@ export default {
           trigger: 'change'
         }
       ],
+      targetModelRules: [
+        {
+          validator: this.validateTargetModelUnique,
+          trigger: 'change'
+        }
+      ],
+      fallbackModelRules: [
+        {
+          validator: this.validateFallbackModelUnique,
+          trigger: 'change'
+        }
+      ],
       ruleValidate: {
         name: [
           {
@@ -225,16 +328,16 @@ export default {
           {
             min: 1,
             max: 64,
-            message: this.$t('route.ruleNameLengthError') || '规则名称长度为 1–64 个字符',
+            message: this.$t('route.ruleNameLengthError'),
             trigger: 'blur'
           },
           {
             pattern: /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/,
-            message: this.$t('route.ruleNameFormatError') || '规则名称仅允许字母、数字、-、_、.，且不允许以 -、_、. 开头或结尾',
+            message: this.$t('route.ruleNameFormatError'),
             trigger: 'blur'
           }
         ],
-        Cond: [
+        cond: [
           {
             required: true,
             validator: validateCond,
@@ -248,8 +351,12 @@ export default {
   watch: {
     rule: {
       handler(newVal) {
+        const data = cloneDeep(newVal) || {};
+        if (!data.fallbacks) {
+          data.fallbacks = [];
+        }
         this.formData = {
-          ...cloneDeep(newVal),
+          ...data,
           condErrmsg: ''
         };
       },
@@ -264,9 +371,9 @@ export default {
 
   methods: {
     onExpressionChanged(data) {
-      this.formData.Cond = data.expression;
+      this.formData.cond = data.expression;
       this.formData.condErrmsg = data.errmsg || '';
-      this.$refs.formData.validateField('Cond');
+      this.$refs.formData.validateField('cond');
     },
 
     addTarget() {
@@ -277,15 +384,26 @@ export default {
       this.formData.targets.splice(index, 1);
     },
 
-    validateWeight() {
-      const sum = (this.formData.targets || []).reduce((acc, t) => acc + (Number(t.Weight) || 0), 0);
+    addFallback() {
+      if (!Array.isArray(this.formData.fallbacks)) {
+        this.$set(this.formData, 'fallbacks', []);
+      }
+      this.formData.fallbacks.push(cloneDeep(defaultFallback));
+    },
+
+    removeFallback(index) {
+      this.formData.fallbacks.splice(index, 1);
+    },
+
+    validateweight() {
+      const sum = (this.formData.targets || []).reduce((acc, t) => acc + (Number(t.weight) || 0), 0);
       this.weightError = sum !== 100;
       return !this.weightError;
     },
 
     validateDuplicate() {
       const targets = this.formData.targets || [];
-      const targetKeys = targets.map(t => `${t.ClusterName || ''}|${t.Model || ''}`);
+      const targetKeys = targets.map(t => `${t.cluster_name || ''}|${t.model || ''}`);
       const targetDup = targetKeys.find((key, idx) => targetKeys.indexOf(key) !== idx);
       if (targetDup) {
         this.$Message.error(this.$t('route.targetDuplicate'));
@@ -294,8 +412,19 @@ export default {
       return true;
     },
 
+    validateFallbackDuplicate() {
+      const fallbacks = this.formData.fallbacks || [];
+      const fallbackKeys = fallbacks.map(f => `${f.cluster_name || ''}|${f.model || ''}`);
+      const fallbackDup = fallbackKeys.find((key, idx) => fallbackKeys.indexOf(key) !== idx);
+      if (fallbackDup) {
+        this.$Message.error(this.$t('route.fallbackDuplicate'));
+        return false;
+      }
+      return true;
+    },
+
     getClusters(/* currentIndex, type */) {
-      // Allow selecting the same cluster for multiple targets as long as (ClusterName, Model) is unique
+      // Allow selecting the same cluster for multiple targets as long as (cluster_name, model) is unique
       return this.clusters || [];
     },
 
@@ -328,8 +457,111 @@ export default {
     onTargetClusterChange(index) {
       const target = this.formData.targets[index];
       if (target) {
-        target.Model = '';
+        target.model = '';
       }
+    },
+
+    onFallbackClusterChange(index) {
+      const fallback = this.formData.fallbacks[index];
+      if (fallback) {
+        fallback.model = '';
+      }
+    },
+
+    getTargetModelIndex(field) {
+      const match = field.match(/targets\.(\d+)\.model/);
+      return match ? parseInt(match[1], 10) : -1;
+    },
+
+    getFallbackModelIndex(field) {
+      const match = field.match(/fallbacks\.(\d+)\.model/);
+      return match ? parseInt(match[1], 10) : -1;
+    },
+
+    getDuplicateErrorMessage(clusterName, model, currentType, duplicateType) {
+      const modelText = model || this.$t('route.modelTransparent') || '-';
+      if (currentType === duplicateType) {
+        // 同类型重复
+        const msgKey = currentType === 'target' ? 'route.targetDuplicate' : 'route.fallbackDuplicate';
+        return `${this.$t(msgKey)}：${clusterName} / ${modelText}`;
+      }
+      // 跨类型重复
+      const msgKey = duplicateType === 'target' ? 'route.clusterModelUsedInTarget' : 'route.clusterModelUsedInFallback';
+      return this.$t(msgKey, { cluster: clusterName, model: modelText });
+    },
+
+    validateTargetModelUnique(rule, value, callback) {
+      const index = this.getTargetModelIndex(rule.field);
+      if (index < 0) {
+        callback();
+        return;
+      }
+      const current = this.formData.targets[index];
+      if (!current || !current.cluster_name) {
+        callback();
+        return;
+      }
+      const currentKey = `${current.cluster_name}|${value || ''}`;
+
+      // 与其他目标比较
+      const duplicateTarget = this.formData.targets.find((item, idx) => {
+        if (idx === index) return false;
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
+      });
+      if (duplicateTarget) {
+        callback(new Error(this.getDuplicateErrorMessage(duplicateTarget.cluster_name, duplicateTarget.model, 'target', 'target')));
+        return;
+      }
+
+      // 与备用集群比较
+      const duplicateFallback = (this.formData.fallbacks || []).find(item => {
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
+      });
+      if (duplicateFallback) {
+        callback(new Error(this.getDuplicateErrorMessage(duplicateFallback.cluster_name, duplicateFallback.model, 'target', 'fallback')));
+        return;
+      }
+
+      callback();
+    },
+
+    validateFallbackModelUnique(rule, value, callback) {
+      const index = this.getFallbackModelIndex(rule.field);
+      if (index < 0) {
+        callback();
+        return;
+      }
+      const current = this.formData.fallbacks[index];
+      if (!current || !current.cluster_name) {
+        callback();
+        return;
+      }
+      const currentKey = `${current.cluster_name}|${value || ''}`;
+
+      // 与其他备用比较
+      const duplicateFallback = this.formData.fallbacks.find((item, idx) => {
+        if (idx === index) return false;
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
+      });
+      if (duplicateFallback) {
+        callback(new Error(this.getDuplicateErrorMessage(duplicateFallback.cluster_name, duplicateFallback.model, 'fallback', 'fallback')));
+        return;
+      }
+
+      // 与目标集群比较
+      const duplicateTarget = (this.formData.targets || []).find(item => {
+        if (!item.cluster_name) return false;
+        return `${item.cluster_name}|${item.model || ''}` === currentKey;
+      });
+      if (duplicateTarget) {
+        callback(new Error(this.getDuplicateErrorMessage(duplicateTarget.cluster_name, duplicateTarget.model, 'fallback', 'target')));
+        return;
+      }
+
+      callback();
     },
 
     handleSubmit() {
@@ -338,11 +570,14 @@ export default {
           this.$Message.error(this.$t('com.tipValidateError'));
           return;
         }
-        if (!this.validateWeight()) {
+        if (!this.validateweight()) {
           this.$Message.error(this.$t('route.weightSumError'));
           return;
         }
         if (!this.validateDuplicate()) {
+          return;
+        }
+        if (!this.validateFallbackDuplicate()) {
           return;
         }
         if (!this.formData.targets || this.formData.targets.length === 0) {
@@ -351,15 +586,21 @@ export default {
         }
         const result = cloneDeep(this.formData);
         delete result.condErrmsg;
-        delete result.fallbacks;
+        if (!Array.isArray(result.fallbacks)) {
+          result.fallbacks = [];
+        }
         this.$emit('submit', result);
       });
     },
 
     handleReset() {
       this.$refs.formData.resetFields();
+      const data = cloneDeep(this.rule) || {};
+      if (!data.fallbacks) {
+        data.fallbacks = [];
+      }
       this.formData = {
-        ...cloneDeep(this.rule),
+        ...data,
         condErrmsg: ''
       };
     }
@@ -389,7 +630,8 @@ export default {
     margin-bottom: 0;
   }
 
-  .target-row {
+  .target-row,
+  .fallback-row {
     .field-label {
       text-align: right;
       line-height: 32px;
@@ -428,6 +670,12 @@ export default {
   .weight-error {
     color: #ed4014;
     margin-top: 8px;
+  }
+
+  .no-backup-tip {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 8px;
   }
 
   .footer-divider {

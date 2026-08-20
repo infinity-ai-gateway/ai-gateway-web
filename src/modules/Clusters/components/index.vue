@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 The rainway-ai-gateway Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@
             :llmConfigData="llmConfigData"
             :originalLlmConfigKey="originalLlmConfigKey"
             :originalLlmConfigHeaders="originalLlmConfigHeaders"
+            :originalLlmConfigKeys="originalLlmConfigKeys"
             :isAdd="isAdd"
             :stepsCurrentState="currentStepIndex"
             :instancePoolData="instancePoolData"
@@ -125,7 +126,8 @@ import BaseConfig from './BaseConfig';
 import Timeout from './Timeout';
 import InstancePool, {
     getClusterInstancePool,
-    formatInstancePoolForApi
+    formatInstancePoolForApi,
+    syncInstancePoolPortBySchema
 } from './InstancePool';
 import PassiveHealthCheck, {
     formatPassiveHealthCheckForApi
@@ -326,6 +328,7 @@ export default {
             llmConfigData: {},
             originalLlmConfigKey: '',
             originalLlmConfigHeaders: {},
+            originalLlmConfigKeys: [],
             passiveHealthData: {},
             baseSubmitFlag: false,
             timeoutSubmitFlag: false,
@@ -401,6 +404,17 @@ export default {
             } else {
                 this[data.topic] = data.data;
             }
+            if (data.topic === 'llmConfigData') {
+                const schema =
+                    (this.llmConfigData &&
+                        this.llmConfigData.model_endpoint &&
+                        this.llmConfigData.model_endpoint.schema) ||
+                    'https';
+                this.instancePoolData = syncInstancePoolPortBySchema(
+                    this.instancePoolData,
+                    schema
+                );
+            }
             this.submitName = this.baseConfigData.name;
 
             if (this.currentStepIndex < this.reviewStepIndex) {
@@ -408,11 +422,16 @@ export default {
             }
         },
         handelData() {
+            const schema =
+                (this.llmConfigData &&
+                    this.llmConfigData.model_endpoint &&
+                    this.llmConfigData.model_endpoint.schema) ||
+                'https';
             let data = {
                 name: this.baseConfigData.name,
                 description: this.baseConfigData.description,
                 basic: formatBasicForApi(this.baseConfigData),
-                instance_pool: formatInstancePoolForApi(this.instancePoolData),
+                instance_pool: formatInstancePoolForApi(this.instancePoolData, schema),
                 sticky_sessions: formatStickySessionsForApi(this.baseConfigData.sticky_sessions),
                 passive_health_check: formatPassiveHealthCheckForApi(this.passiveHealthData),
                 llm_config: formatLlmConfigForApi(this.llmConfigData)
@@ -486,6 +505,9 @@ export default {
                     tmpData.llm_config.model_endpoint &&
                     tmpData.llm_config.model_endpoint.headers) ||
                     {}
+            );
+            this.originalLlmConfigKeys = cloneDeep(
+                (tmpData.llm_config && tmpData.llm_config.keys) || []
             );
             this.instancePoolData = getClusterInstancePool(tmpData);
         },

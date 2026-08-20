@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 The rainway-ai-gateway Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ Vue.use(requestPlugin);
 Vue.prototype.$urlFormat = urlFormat;
 Vue.prototype.$BFEProductLineId = 1;
 Vue.prototype.$store = store;
-Vue.prototype.Version = '0.0.5@20260731180530';
+Vue.prototype.Version = '_VERSION_';
 
 Vue.use(VueClipboard);
 

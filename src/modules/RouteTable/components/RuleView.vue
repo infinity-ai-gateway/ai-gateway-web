@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -21,15 +21,24 @@
     </div>
     <div class="info-row">
       <span class="info-label">{{ $t('route.expression') }}</span>
-      <span class="info-value expression-value">{{ rule.Cond || '-' }}</span>
+      <span class="info-value expression-value">{{ rule.cond || '-' }}</span>
     </div>
     <div class="info-row">
       <span class="info-label">{{ $t('route.targetClusterAndModel') }}</span>
       <span class="info-value">
         <Tag v-for="(t, index) in rule.targets || []" :key="`target-${index}`">
-          {{ t.ClusterName }}/{{ t.Model || '' }}: {{ t.Weight }}%
+          {{ t.cluster_name }}/{{ t.model || '' }}: {{ t.weight }}%
         </Tag>
         <span v-if="!(rule.targets || []).length">-</span>
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">{{ $t('route.fallbackClusterAndModel') }}</span>
+      <span class="info-value">
+        <Tag v-for="(f, index) in rule.fallbacks || []" :key="`fallback-${index}`">
+          {{ f.cluster_name }}/{{ f.model || '' }}
+        </Tag>
+        <span v-if="!(rule.fallbacks || []).length">-</span>
       </span>
     </div>
   </div>

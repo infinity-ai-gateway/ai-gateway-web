@@ -1,90 +1,123 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="../assets/static/css/app.css" />
-  <link rel="stylesheet" href="../assets/static/css/ai-rule.css" />
-  <link rel="stylesheet" href="../assets/font/iconfont.css" />
-  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
-  <script src="../assets/js/mock-data.js"></script>
-  <script src="../assets/js/ivu-ui.js"></script>
-  <script src="../assets/js/layout.js"></script>
-  <script src="../assets/js/prototype.js"></script>
-</head>
-<body>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  var root = Layout.render({ pageId: 'RouteTable.list', basePath: '../' });
-  root.innerHTML = '<div id="route-table-list"></div>';
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../assets/static/css/app.css" />
+    <link rel="stylesheet" href="../assets/static/css/ai-rule.css" />
+    <link rel="stylesheet" href="../assets/font/iconfont.css" />
+    <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+    <style>
+      #route-table-list .ivu-table-sort { display: inline-block; height: 12px; margin-left: 4px; vertical-align: middle; width: 14px; }
+      #route-table-list .ivu-table-sort i { color: #c5c8ce; display: block; font-size: 14px; height: 6px; line-height: 6px; overflow: hidden; }
+    </style>
+    <script src="../assets/js/mock-data.js"></script>
+    <script src="../assets/js/ivu-ui.js"></script>
+    <script src="../assets/js/layout.js"></script>
+    <script src="../assets/js/prototype.js"></script>
+  </head>
+  <body>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var root = Layout.render({ pageId: 'RouteTable.list', basePath: '../' });
+        root.innerHTML = '<div id="route-table-list"></div>';
 
-  var TYPE_LABELS = { global: 'Global', entity: 'Entity', api_key: 'API-Key' };
+        var TYPE_LABELS = { global: 'Global', entity: 'Entity', api_key: 'API-Key' };
 
-  var state = {
-    rows: cloneRows(MockData.routeTables),
-    filteredRows: [],
-    search: { type: '', ownerDisplay: '', enabled: '' },
-    pageSize: 20,
-    currentPage: 1
-  };
+        var state = {
+          rows: cloneRows(MockData.routeTables),
+          filteredRows: [],
+          search: { type: '', ownerDisplay: '', enabled: '' },
+          pageSize: 20,
+          currentPage: 1,
+          sortKey: '',
+          sortOrder: ''
+        };
 
-  function cloneRows(list) {
-    return JSON.parse(JSON.stringify(list || []));
-  }
+        function cloneRows(list) {
+          return JSON.parse(JSON.stringify(list || []));
+        }
 
-  function getOwnerDisplay(item) {
-    if (item.type === 'global') return 'Global';
-    if (item.type === 'entity') {
-      var entity = (MockData.entities || []).find(function (e) {
-        return String(e.id) === String(item.owner);
-      });
-      return entity ? entity.name : item.owner;
-    }
-    if (item.type === 'api_key') {
-      var key = (MockData.apiKeys || []).find(function (k) {
-        return k.id === item.owner;
-      });
-      return key ? (key.description || key.id) : item.owner;
-    }
-    return item.owner;
-  }
+        function getOwnerDisplay(item) {
+          if (item.type === 'global') return 'Global';
+          if (item.type === 'entity') {
+            var entity = (MockData.entities || []).find(function (e) {
+              return String(e.id) === String(item.owner);
+            });
+            return entity ? entity.name : item.owner;
+          }
+          if (item.type === 'api_key') {
+            var key = (MockData.apiKeys || []).find(function (k) {
+              return k.id === item.owner;
+            });
+            return key ? (key.description || key.id) : item.owner;
+          }
+          return item.owner;
+        }
 
-  function findRouteTableIndex(type, owner) {
-    return MockData.routeTables.findIndex(function (item) {
-      return item.type === type && String(item.owner) === String(owner);
-    });
-  }
+        function findRouteTableIndex(type, owner) {
+          return MockData.routeTables.findIndex(function (item) {
+            return item.type === type && String(item.owner) === String(owner);
+          });
+        }
 
-  function filterRows() {
-    state.filteredRows = state.rows.filter(function (row) {
-      return Object.keys(state.search).every(function (key) {
-        var keyword = String(state.search[key] || '').trim();
-        if (!keyword) return true;
-        if (key === 'type') return String(row.type || '') === keyword;
-        if (key === 'ownerDisplay') return getOwnerDisplay(row).toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
-        if (key === 'enabled') return String(!!row.enabled) === keyword;
-        return true;
-      });
-    });
-  }
+        function filterRows() {
+          state.filteredRows = state.rows.filter(function (row) {
+            return Object.keys(state.search).every(function (key) {
+              var keyword = String(state.search[key] || '').trim();
+              if (!keyword) return true;
+              if (key === 'type') return String(row.type || '') === keyword;
+              if (key === 'ownerDisplay') return getOwnerDisplay(row).toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
+              if (key === 'enabled') return String(!!row.enabled) === keyword;
+              return true;
+            });
+          });
+        }
 
-  function getPageRows() {
-    var start = (state.currentPage - 1) * state.pageSize;
-    return state.filteredRows.slice(start, start + state.pageSize);
-  }
+        function getSortValue(row, key) {
+          if (key === 'type') return row.type || '';
+          if (key === 'ownerDisplay') return getOwnerDisplay(row);
+          if (key === 'enabled') return row.enabled ? 1 : 0;
+          return row[key] != null ? row[key] : '';
+        }
 
-  function renderTable() {
-    filterRows();
-    var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
-    if (state.currentPage > totalPages) state.currentPage = totalPages;
+        function sortRows(rows) {
+          if (!state.sortKey || !state.sortOrder) return rows;
+          var arr = rows.slice();
+          var order = state.sortOrder;
+          var key = state.sortKey;
+          arr.sort(function (a, b) {
+            var va = getSortValue(a, key);
+            var vb = getSortValue(b, key);
+            if (typeof va === 'number' && typeof vb === 'number') {
+              return order === 'asc' ? va - vb : vb - va;
+            }
+            var sa = String(va);
+            var sb = String(vb);
+            return order === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
+          });
+          return arr;
+        }
 
-    document.getElementById('route-table-list').innerHTML = IvuUI.pageTable({
-      tableId: 'route-table-page-table',
-      columns: [
+        function getPageRows() {
+          var sorted = sortRows(state.filteredRows);
+          var start = (state.currentPage - 1) * state.pageSize;
+          return sorted.slice(start, start + state.pageSize);
+        }
+
+        function renderTable() {
+          filterRows();
+          var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+          if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+          document.getElementById('route-table-list').innerHTML = IvuUI.pageTable({
+            tableId: 'route-table-page-table',
+            columns: [
         {
           title: '路由表类型',
           key: 'type',
           minWidth: 120,
+          sortable: true,
           searchable: true,
           searchType: 'select',
           searchPlaceholder: '请选择类型',
@@ -95,13 +128,14 @@ document.addEventListener('DOMContentLoaded', function () {
           ],
           render: function (row) { return TYPE_LABELS[row.type] || row.type; }
         },
-        { title: '路由表属主', key: 'ownerDisplay', minWidth: 180, searchable: true, searchPlaceholder: '请输入属主查询',
+        { title: '路由表属主', key: 'ownerDisplay', minWidth: 180, sortable: true, searchable: true, searchPlaceholder: '请输入属主查询',
           render: function (row) { return getOwnerDisplay(row); }
         },
         {
           title: '状态',
           key: 'enabled',
           minWidth: 100,
+          sortable: true,
           searchable: true,
           searchType: 'select',
           searchPlaceholder: '请选择状态',
@@ -113,104 +147,148 @@ document.addEventListener('DOMContentLoaded', function () {
             return IvuUI.tag(row.enabled ? '启用' : '停用', row.enabled ? 'success' : 'default');
           }
         },
-        {
-          title: '操作',
-          key: 'action',
-          width: 260,
-          render: function (row) {
-            var editHref = 'route.html?type=' + encodeURIComponent(row.type) + '&owner=' + encodeURIComponent(row.owner);
-            return IvuUI.btn('查看', 'primary', 'small', '', 'onclick="window.location.href=\'' + editHref + '\'"') + ' ' +
-              IvuUI.btn('启用', 'success', 'small', '', 'data-route-enable="' + row.type + ':' + row.owner + '"' + (row.enabled ? ' disabled' : '')) + ' ' +
-              IvuUI.btn('停用', 'warning', 'small', '', 'data-route-disable="' + row.type + ':' + row.owner + '"' + (row.enabled ? '' : ' disabled'));
-          }
+              {
+                title: '操作',
+                key: 'action',
+                width: 260,
+                render: function (row) {
+                  var editHref = 'route.html?type=' + encodeURIComponent(row.type) + '&owner=' + encodeURIComponent(row.owner);
+                  return IvuUI.btn('查看', 'primary', 'small', '', 'onclick="window.location.href=\'' + editHref + '\'"') + ' ' +
+                    IvuUI.btn('启用', 'success', 'small', '', 'data-route-enable="' + row.type + ':' + row.owner + '"' + (row.enabled ? ' disabled' : '')) + ' ' +
+                    IvuUI.btn('停用', 'warning', 'small', '', 'data-route-disable="' + row.type + ':' + row.owner + '"' + (row.enabled ? '' : ' disabled'));
+                }
+              }
+            ],
+            rows: getPageRows(),
+            total: state.filteredRows.length,
+            pageSize: state.pageSize,
+            currentPage: state.currentPage,
+            searchValues: state.search
+          });
+
+          bindTableEvents();
+          highlightSortIcons();
         }
-      ],
-      rows: getPageRows(),
-      total: state.filteredRows.length,
-      pageSize: state.pageSize,
-      currentPage: state.currentPage,
-      searchValues: state.search
-    });
 
-    bindTableEvents();
-  }
+        function highlightSortIcons() {
+          var tableRoot = document.getElementById('route-table-page-table');
+          if (!tableRoot) return;
+          var sortKeys = ['type', 'ownerDisplay', 'enabled'];
+          tableRoot.querySelectorAll('th').forEach(function (th, idx) {
+            var sortIcons = th.querySelectorAll('.ivu-table-sort i');
+            if (sortIcons.length < 2) return;
+            sortIcons[0].style.color = '#c5c8ce';
+            sortIcons[1].style.color = '#c5c8ce';
+            if (state.sortKey === sortKeys[idx]) {
+              if (state.sortOrder === 'asc') sortIcons[0].style.color = '#2d8cf0';
+              else if (state.sortOrder === 'desc') sortIcons[1].style.color = '#2d8cf0';
+            }
+          });
+        }
 
-  function bindTableEvents() {
-    var tableRoot = document.getElementById('route-table-page-table');
-    if (!tableRoot) return;
+        function bindTableEvents() {
+          var tableRoot = document.getElementById('route-table-page-table');
+          if (!tableRoot) return;
 
-    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
-      state.search[key] = value;
-      state.currentPage = 1;
-      renderTable();
-    });
+          Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+            state.search[key] = value;
+            state.currentPage = 1;
+            renderTable();
+          });
 
-    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
-      item.onclick = function () {
-        state.currentPage = parseInt(item.getAttribute('data-page'), 10);
+          var sortKeys = ['type', 'ownerDisplay', 'enabled'];
+          tableRoot.querySelectorAll('th').forEach(function (th, idx) {
+            if (sortKeys[idx] != null) {
+              th.style.cursor = 'pointer';
+              th.onclick = function () {
+                var key = sortKeys[idx];
+                if (state.sortKey === key) {
+                  if (state.sortOrder === 'asc') state.sortOrder = 'desc';
+                  else if (state.sortOrder === 'desc') { state.sortKey = ''; state.sortOrder = ''; }
+                  else state.sortOrder = 'asc';
+                } else {
+                  state.sortKey = key;
+                  state.sortOrder = 'asc';
+                }
+                state.currentPage = 1;
+                renderTable();
+              };
+            }
+          });
+
+          tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+            item.onclick = function () {
+              state.currentPage = parseInt(item.getAttribute('data-page'), 10);
+              renderTable();
+            };
+          });
+
+          var sizeSelect = tableRoot.querySelector('.proto-page-size');
+          if (sizeSelect) {
+            sizeSelect.onchange = function () {
+              state.pageSize = parseInt(sizeSelect.value, 10);
+              state.currentPage = 1;
+              renderTable();
+            };
+          }
+
+          tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+            btn.onclick = function () {
+              if (state.currentPage > 1) { state.currentPage -= 1; renderTable(); }
+            };
+          });
+
+          tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
+            btn.onclick = function () {
+              var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+              if (state.currentPage < totalPages) { state.currentPage += 1; renderTable(); }
+            };
+          });
+
+          tableRoot.querySelectorAll('[data-route-enable]').forEach(function (btn) {
+            btn.onclick = function () {
+              var parts = btn.getAttribute('data-route-enable').split(':');
+              setRouteTableEnabled(parts[0], parts.slice(1).join(':'), true);
+            };
+          });
+
+          tableRoot.querySelectorAll('[data-route-disable]').forEach(function (btn) {
+            btn.onclick = function () {
+              var parts = btn.getAttribute('data-route-disable').split(':');
+              setRouteTableEnabled(parts[0], parts.slice(1).join(':'), false);
+            };
+          });
+        }
+
+        function setRouteTableEnabled(type, owner, enabled) {
+          var tableIndex = findRouteTableIndex(type, owner);
+          if (tableIndex < 0) return;
+          MockData.routeTables[tableIndex].enabled = enabled;
+          if (type === 'global') {
+            MockData.globalRouteRules.enabled = enabled;
+          } else if (type === 'entity') {
+            var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(owner); });
+            if (entity && entity.route_rules) entity.route_rules.enabled = enabled;
+          } else if (type === 'api_key') {
+            var key = (MockData.apiKeys || []).find(function (k) { return k.id === owner; });
+            if (key && key.route_rules) key.route_rules.enabled = enabled;
+          }
+          state.rows = cloneRows(MockData.routeTables);
+          renderTable();
+          Prototype.toast('路由表已' + (enabled ? '启用' : '停用'));
+        }
+
+        // 从 URL 参数读取筛选条件
+        (function initFromUrlParams() {
+          var params = new URLSearchParams(window.location.search);
+          var type = params.get('type');
+          var owner = params.get('owner');
+          if (type) state.search.type = type;
+          if (owner) state.search.ownerDisplay = owner;
+        })();
+
         renderTable();
-      };
-    });
-
-    var sizeSelect = tableRoot.querySelector('.proto-page-size');
-    if (sizeSelect) {
-      sizeSelect.onchange = function () {
-        state.pageSize = parseInt(sizeSelect.value, 10);
-        state.currentPage = 1;
-        renderTable();
-      };
-    }
-
-    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
-      btn.onclick = function () {
-        if (state.currentPage > 1) { state.currentPage -= 1; renderTable(); }
-      };
-    });
-    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
-      btn.onclick = function () {
-        var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
-        if (state.currentPage < totalPages) { state.currentPage += 1; renderTable(); }
-      };
-    });
-
-    tableRoot.querySelectorAll('[data-route-enable]').forEach(function (btn) {
-      btn.onclick = function () {
-        var parts = btn.getAttribute('data-route-enable').split(':');
-        setRouteTableEnabled(parts[0], parts.slice(1).join(':'), true);
-      };
-    });
-
-    tableRoot.querySelectorAll('[data-route-disable]').forEach(function (btn) {
-      btn.onclick = function () {
-        var parts = btn.getAttribute('data-route-disable').split(':');
-        setRouteTableEnabled(parts[0], parts.slice(1).join(':'), false);
-      };
-    });
-  }
-
-  function setRouteTableEnabled(type, owner, enabled) {
-    var tableIndex = findRouteTableIndex(type, owner);
-    if (tableIndex < 0) return;
-
-    MockData.routeTables[tableIndex].enabled = enabled;
-
-    if (type === 'global') {
-      MockData.globalRouteRules.enabled = enabled;
-    } else if (type === 'entity') {
-      var entity = (MockData.entities || []).find(function (e) { return String(e.id) === String(owner); });
-      if (entity && entity.route_rules) entity.route_rules.enabled = enabled;
-    } else if (type === 'api_key') {
-      var key = (MockData.apiKeys || []).find(function (k) { return k.id === owner; });
-      if (key && key.route_rules) key.route_rules.enabled = enabled;
-    }
-
-    state.rows = cloneRows(MockData.routeTables);
-    renderTable();
-    Prototype.toast('路由表已' + (enabled ? '启用' : '停用'));
-  }
-
-  renderTable();
-});
-</script>
-</body>
+      });
+    </script>
+  </body>
 </html>
