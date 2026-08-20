@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 The rainway-ai-gateway Authors. 
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -451,7 +451,7 @@ export default {
             if (Number.isNaN(value)) return '-';
             const fractionDigits = decimals !== null ? decimals : (this.isRMB ? 4 : 0);
             return value.toLocaleString('zh-CN', {
-                minimumFractionDigits: fractionDigits,
+                minimumFractionDigits: 0,
                 maximumFractionDigits: fractionDigits
             });
         },

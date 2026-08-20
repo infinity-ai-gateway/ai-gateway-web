@@ -1,52 +1,77 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>登录 - AI网关</title>
-  <link rel="stylesheet" href="assets/static/css/app.css" />
-  <link rel="stylesheet" href="assets/static/css/login_password.css" />
-  <link rel="stylesheet" href="assets/css/prototype-overrides.css" />
-  <script src="assets/js/prototype.js"></script>
-</head>
-<body id="product-body">
-  <div class="bfe-login">
-    <div class="bfe-login-hearder"><p class="text">AI网关</p></div>
-    <div class="login-wrap">
-      <div class="title">用户登录</div>
-      <form class="ivu-form ivu-form-label-right" onsubmit="return false;">
-        <div class="ivu-form-item user_title">
-          <div class="ivu-form-item-content">
-            <div class="ivu-input-wrapper ivu-input-wrapper-large ivu-input-type-text ivu-input-group ivu-input-group-with-prepend">
-              <div class="ivu-input-group-prepend"><span><i class="ivu-icon ivu-icon-ios-person-outline"></i></span></div>
-              <input type="text" class="ivu-input ivu-input-large" placeholder="请输入用户名" value="admin" />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>登录 - 壬远 AI网关</title>
+    <link rel="stylesheet" href="assets/static/css/app.css" />
+    <link rel="stylesheet" href="assets/css/prototype-overrides.css" />
+    <script src="assets/js/prototype.js"></script>
+  </head>
+  <body id="product-body">
+    <div class="bfe-login">
+      <div class="bfe-login-hearder"><p class="text">壬远 AI网关</p></div>
+      <div class="login-wrap">
+        <div class="title">用户登录</div>
+        <form class="ivu-form ivu-form-label-right" onsubmit="return false;">
+          <div class="ivu-form-item user_title">
+            <div class="ivu-form-item-content">
+              <div
+                class="ivu-input-wrapper ivu-input-wrapper-large ivu-input-type-text ivu-input-group ivu-input-group-with-prepend"
+              >
+                <div class="ivu-input-group-prepend">
+                  <span
+                    ><i class="ivu-icon ivu-icon-ios-person-outline"></i
+                  ></span>
+                </div>
+                <input
+                  type="text"
+                  class="ivu-input ivu-input-large"
+                  placeholder="请输入用户名"
+                  value="admin"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="ivu-form-item">
-          <div class="ivu-form-item-content">
-            <div class="ivu-input-wrapper ivu-input-wrapper-large ivu-input-type-password ivu-input-group ivu-input-group-with-prepend">
-              <div class="ivu-input-group-prepend"><span><i class="ivu-icon ivu-icon-ios-lock-outline"></i></span></div>
-              <input type="password" class="ivu-input ivu-input-large" placeholder="请输入密码" value="password" />
+          <div class="ivu-form-item">
+            <div class="ivu-form-item-content">
+              <div
+                class="ivu-input-wrapper ivu-input-wrapper-large ivu-input-type-password ivu-input-group ivu-input-group-with-prepend"
+              >
+                <div class="ivu-input-group-prepend">
+                  <span
+                    ><i class="ivu-icon ivu-icon-ios-lock-outline"></i
+                  ></span>
+                </div>
+                <input
+                  type="password"
+                  class="ivu-input ivu-input-large"
+                  placeholder="请输入密码"
+                  value="password"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="ivu-form-item">
-          <div class="ivu-form-item-content">
-            <button type="button" class="ivu-btn ivu-btn-primary ivu-btn-large user_login_btn" id="btn-login">
-              <span>登录</span>
-            </button>
+          <div class="ivu-form-item">
+            <div class="ivu-form-item-content">
+              <button
+                type="button"
+                class="ivu-btn ivu-btn-primary ivu-btn-large user_login_btn"
+                id="btn-login"
+              >
+                <span>登录</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
+      <footer class="version">当前版本号 V0.0.4</footer>
     </div>
-    <footer class="version">当前版本号 V0.0.4</footer>
-  </div>
-  <script>
-    document.getElementById('btn-login').addEventListener('click', function () {
-      Prototype.setUser({ name: 'admin' });
-      window.location.href = 'pages/home.html';
-    });
-  </script>
-</body>
+    <script>
+      document.getElementById('btn-login').addEventListener('click', function () {
+        Prototype.setUser({ name: 'admin' });
+        window.location.href = 'pages/home.html';
+      });
+    </script>
+  </body>
 </html>

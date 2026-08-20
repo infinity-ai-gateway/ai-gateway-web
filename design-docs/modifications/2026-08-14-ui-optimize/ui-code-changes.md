@@ -232,6 +232,7 @@
 
 **`llm_config.keys` 跨元素约束**：
 
+- 同一 `keys` 数组内，`name` 不能重复。
 - 所有 Key 的 `weight` 之和必须等于 `100`。
 - `llm_config.model_endpoint.headers` 中若包含 `${API_KEY}` 占位符，则 `keys` 不能为空，否则返回 `422`。
 

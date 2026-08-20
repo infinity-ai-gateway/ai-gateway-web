@@ -399,7 +399,7 @@ export default {
                 }
             }
             return value.toLocaleString('zh-CN', {
-                minimumFractionDigits: decimals,
+                minimumFractionDigits: 0,
                 maximumFractionDigits: decimals
             });
         },
