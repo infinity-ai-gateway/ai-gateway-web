@@ -5,7 +5,7 @@ window.Prototype = {
 
   messages: {
     zh: {
-      'login.gateway': 'AI网关',
+      'login.gateway': '壬远 AI网关',
       'login.tipConfirmLogout': '确认注销？',
       'com.informationTips': '信息提示',
       'com.confirm': '确定',
@@ -30,7 +30,7 @@ window.Prototype = {
       'nav.UserManage': '用户管理',
     },
     en: {
-      'login.gateway': 'AI Gateway',
+      'login.gateway': 'Rainway AI Gateway',
       'login.tipConfirmLogout': 'Confirm logout?',
       'com.informationTips': 'Tips',
       'com.confirm': 'Confirm',

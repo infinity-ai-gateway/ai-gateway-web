@@ -214,7 +214,7 @@ export default {
     verificationCode: '验证码',
     changeOne: '换一张',
     name: '登录',
-    gateway: 'AI网关',
+    gateway: '壬远 AI网关',
 
     tipConfirmLogout: '确认注销？',
     tipCodeError: '验证码输入错误',

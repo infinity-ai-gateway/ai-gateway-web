@@ -252,7 +252,7 @@ export default {
             const value = Number(num);
             if (Number.isNaN(value)) return '-';
             return value.toLocaleString('zh-CN', {
-                minimumFractionDigits: decimals,
+                minimumFractionDigits: 0,
                 maximumFractionDigits: decimals
             });
         },

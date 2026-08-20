@@ -386,11 +386,29 @@ export default {
     },
 
     exitEditMode() {
+      if (this.isDirty) {
+        this.$Modal.confirm({
+          title: this.$t('com.informationTips'),
+          content: this.$t('route.tipUnsavedLeave'),
+          onOk: () => {
+            this.performExitEditMode();
+          }
+        });
+        return;
+      }
+      this.performExitEditMode();
+    },
+
+    performExitEditMode() {
       this.mode = 'view';
       if (this.originalRules) {
-        this.rules = this.originalRules;
+        this.rules = cloneDeep(this.originalRules);
         this.originalRules = null;
         this.refreshRuleIndex();
+      }
+      if (this.originalEnabled !== null) {
+        this.enabled = this.originalEnabled;
+        this.originalEnabled = null;
       }
       this.fetchRules();
     },

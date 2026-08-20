@@ -1,30 +1,48 @@
+/* 菜单图标对齐 src/layout/sidebar/navItem.vue */
+var NAV_ICONS = {
+  'AIGatewayInstancePool.list': 'iconfont icon-instancePool',
+  'AICluster.list': 'iconfont icon-jiqun',
+  'AdvanceRouteRule.list': 'iconfont icon-zhuanfa',
+  'user.list': 'iconfont icon-user',
+  'APIKey.list': 'ivu-icon ivu-icon-ios-key',
+  'Entity.list': 'ivu-icon ivu-icon-ios-settings',
+  'consumer.admin.list': 'ivu-icon ivu-icon-md-people',
+  'route.admin.list': 'ivu-icon ivu-icon-ios-cube',
+  'resource.admin.list': 'ivu-icon ivu-icon-md-appstore',
+  'ModelPrice.list': 'ivu-icon ivu-icon-logo-yen',
+};
+
+function navIcon(id, fallback) {
+  return NAV_ICONS[id] || fallback || '';
+}
+
 window.PrototypeNav = [
   {
     id: 'resource.admin.list',
     i18n: 'ResourceManage',
     text: '资源管理',
-    icon: 'ivu-icon ivu-icon-ios-briefcase',
+    icon: navIcon('resource.admin.list'),
     children: [
       {
         id: 'AIGatewayInstancePool.list',
         i18n: 'AIGatewayInstancePoolManage',
         page: 'instance-pool-ai.html',
         text: 'AI网关实例池',
-        icon: 'ivu-icon ivu-icon-md-layers',
+        icon: navIcon('AIGatewayInstancePool.list'),
       },
       {
         id: 'AICluster.list',
         i18n: 'AIClusterManage',
         page: 'cluster-list.html',
         text: 'AI业务集群',
-        icon: 'ivu-icon ivu-icon-md-share-alt',
+        icon: navIcon('AICluster.list'),
       },
       {
         id: 'ModelPrice.list',
         i18n: 'ModelPriceManage',
         page: 'model-prices.html',
         text: '模型定价',
-        icon: 'ivu-icon ivu-icon-logo-yen',
+        icon: navIcon('ModelPrice.list'),
       },
     ],
   },
@@ -32,14 +50,14 @@ window.PrototypeNav = [
     id: 'route.admin.list',
     i18n: 'RouteManage',
     text: '路由管理',
-    icon: 'ivu-icon ivu-icon-md-git-branch',
+    icon: navIcon('route.admin.list'),
     children: [
       {
         id: 'AdvanceRouteRule.list',
         i18n: 'RouteTableManage',
         page: 'route-tables.html',
         text: '路由表',
-        icon: 'ivu-icon ivu-icon-md-redo',
+        icon: navIcon('AdvanceRouteRule.list'),
       },
     ],
   },
@@ -47,21 +65,21 @@ window.PrototypeNav = [
     id: 'consumer.admin.list',
     i18n: 'ConsumerManage',
     text: '消费者管理',
-    icon: 'ivu-icon ivu-icon-md-people',
+    icon: navIcon('consumer.admin.list'),
     children: [
       {
         id: 'APIKey.list',
         i18n: 'APIKeyManage',
         page: 'api-key.html',
         text: 'API Key 管理',
-        icon: 'ivu-icon ivu-icon-ios-key',
+        icon: navIcon('APIKey.list'),
       },
       {
         id: 'Entity.list',
         i18n: 'EntityManage',
         page: 'entity.html',
         text: 'Entity管理',
-        icon: 'ivu-icon ivu-icon-ios-settings',
+        icon: navIcon('Entity.list'),
       },
     ],
   },
@@ -70,7 +88,7 @@ window.PrototypeNav = [
     i18n: 'UserManage',
     page: 'user.html',
     text: '用户管理',
-    icon: 'ivu-icon ivu-icon-md-person',
+    icon: navIcon('user.list'),
   },
 ];
 
@@ -163,10 +181,17 @@ window.Layout = {
     var breadcrumb = options.breadcrumb || findNavLabel(pageId);
     var productTitle = window.Prototype
       ? Prototype.t('login.gateway')
-      : 'AI网关';
+      : '壬远 AI网关';
     var langLabel = lang === 'en' ? 'English' : '简体中文';
     document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
     document.title = breadcrumb + ' - ' + productTitle;
+
+    if (!document.querySelector('link[href*="iconfont.css"]')) {
+      var iconLink = document.createElement('link');
+      iconLink.rel = 'stylesheet';
+      iconLink.href = basePath + 'assets/font/iconfont.css';
+      document.head.appendChild(iconLink);
+    }
 
     var menuHtml = PrototypeNav.map(function (item) {
       return renderMenuItem(item, pageId, basePath);

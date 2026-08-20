@@ -149,5 +149,7 @@ export default {
     text-align: center;
     color: white;
     background: #1a1a1ade;
+    font-size: 18px;
+    white-space: nowrap;
 }
 </style>

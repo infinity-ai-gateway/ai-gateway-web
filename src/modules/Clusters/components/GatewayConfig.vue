@@ -283,6 +283,8 @@
                         v-model="keyItem.key"
                         :placeholder="$t('gatewayConfig.keyValuePlaceholder')"
                         autocomplete="new-password"
+                        @on-focus="onKeyValueFocus(keyItem)"
+                        @on-change="onKeyValueChange(keyItem)"
                       />
                     </FormItem>
                   </td>
@@ -421,6 +423,12 @@ export default {
             type: Object,
             default() {
                 return {};
+            }
+        },
+        originalLlmConfigKeys: {
+            type: Array,
+            default() {
+                return [];
             }
         },
         isAdd: {
@@ -589,7 +597,10 @@ export default {
             keysPlaceholderError: false,
             keyNameRules: index => {
                 const item = this.formData.keys[index] || {};
-                const hasContent = String(item.name || '').trim() || String(item.key || '').trim();
+                const hasContent =
+                    String(item.name || '').trim() ||
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item));
                 return [
                     { required: !!hasContent, message: this.$t('gatewayConfig.keyNameRequired'), trigger: 'blur' },
                     { type: 'string', min: 1, max: 128, message: this.$t('gatewayConfig.keyNameTooLong'), trigger: 'blur' },
@@ -598,15 +609,32 @@ export default {
             },
             keyValueRules: index => {
                 const item = this.formData.keys[index] || {};
-                const hasContent = String(item.name || '').trim() || String(item.key || '').trim();
+                const hasContent =
+                    String(item.name || '').trim() ||
+                    String(item.key || '').trim() ||
+                    item.originalKeyValue;
+                const keyUnchanged = item.originalKeyValue && this.isKeyValueUnchanged(item);
                 return [
-                    { required: !!hasContent, message: this.$t('gatewayConfig.keyValueRequired'), trigger: 'blur' },
-                    { type: 'string', min: 1, max: 512, message: this.$t('gatewayConfig.keyValueTooLong'), trigger: 'blur' }
+                    {
+                        required: !!hasContent && !keyUnchanged,
+                        message: this.$t('gatewayConfig.keyValueRequired'),
+                        trigger: 'blur'
+                    },
+                    {
+                        type: 'string',
+                        min: 1,
+                        max: 512,
+                        message: this.$t('gatewayConfig.keyValueTooLong'),
+                        trigger: 'blur'
+                    }
                 ];
             },
             keyWeightRules: index => {
                 const item = this.formData.keys[index] || {};
-                const hasContent = String(item.name || '').trim() || String(item.key || '').trim();
+                const hasContent =
+                    String(item.name || '').trim() ||
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item));
                 return [
                     { required: !!hasContent, type: 'number', min: 0, max: 100, message: this.$t('gatewayConfig.keyWeightRangeError'), trigger: 'change' }
                 ];
@@ -750,7 +778,13 @@ export default {
             if (!Array.isArray(this.formData.keys)) {
                 this.$set(this.formData, 'keys', []);
             }
-            this.formData.keys.push({ name: '', key: '', weight: 0 });
+            this.formData.keys.push({
+                name: '',
+                key: '',
+                weight: 0,
+                originalKeyValue: '',
+                keyModifiedInSession: false
+            });
             this.$nextTick(() => {
                 this.validateKeysState();
             });
@@ -793,7 +827,9 @@ export default {
             const keys = this.formData.keys || [];
             const validKeys = keys.filter(item => {
                 const name = String(item.name || '').trim();
-                const key = String(item.key || '').trim();
+                const key =
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item) ? item.originalKeyValue : '');
                 return name || key;
             });
 
@@ -811,7 +847,9 @@ export default {
             const keys = value || [];
             const validKeys = keys.filter(item => {
                 const name = String(item.name || '').trim();
-                const key = String(item.key || '').trim();
+                const key =
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item) ? item.originalKeyValue : '');
                 return name || key;
             });
             const sum = validKeys.reduce((acc, k) => acc + (Number(k.weight) || 0), 0);
@@ -885,6 +923,7 @@ export default {
             if (!Array.isArray(this.formData.keys) || this.formData.keys.length === 0) {
                 this.$set(this.formData, 'keys', [{ name: '', key: '', weight: 100 }]);
             }
+            this.initKeys();
 
             if (!this.formData.key_policy) {
                 this.$set(this.formData, 'key_policy', {
@@ -902,6 +941,85 @@ export default {
             this.mergeSelectedModelsIntoList();
             this.validateKeysState();
             this.previousProviderType = this.formData.provider_type || '';
+        },
+        initKeys() {
+            if (this.isAdd || !Array.isArray(this.originalLlmConfigKeys) || this.originalLlmConfigKeys.length === 0) {
+                return;
+            }
+
+            const originalByName = {};
+            this.originalLlmConfigKeys.forEach(item => {
+                const name = String(item.name || '').trim();
+                if (name) {
+                    originalByName[name] = String(item.key || '');
+                }
+            });
+
+            this.formData.keys = (this.formData.keys || []).map(keyItem => {
+                const name = String(keyItem.name || '').trim();
+                const originalKeyValue =
+                    keyItem.originalKeyValue || originalByName[name] || '';
+                const currentKey = keyItem.key != null ? String(keyItem.key) : '';
+                const hasOriginal = !!originalKeyValue;
+                const isUnchangedFromApi = hasOriginal && currentKey === originalKeyValue;
+                const isShowingMasked =
+                    hasOriginal && currentKey === maskSecretKey(originalKeyValue);
+                const isUnchanged =
+                    hasOriginal &&
+                    (isUnchangedFromApi || isShowingMasked || !keyItem.keyModifiedInSession);
+
+                return {
+                    name: keyItem.name != null ? keyItem.name : '',
+                    key: isUnchanged ? maskSecretKey(originalKeyValue) : currentKey,
+                    weight: keyItem.weight != null ? keyItem.weight : 0,
+                    originalKeyValue: hasOriginal ? originalKeyValue : '',
+                    keyModifiedInSession: hasOriginal ? !isUnchanged : !!currentKey
+                };
+            });
+        },
+        getKeyMaskedValue(keyItem) {
+            return keyItem.originalKeyValue ? maskSecretKey(keyItem.originalKeyValue) : '';
+        },
+        isKeyValueUnchanged(keyItem) {
+            if (!keyItem.originalKeyValue) {
+                return !String(keyItem.key || '').trim();
+            }
+            if (!keyItem.keyModifiedInSession) {
+                return true;
+            }
+            const trimmed = String(keyItem.key || '').trim();
+            if (!trimmed) {
+                return true;
+            }
+            return trimmed === keyItem.originalKeyValue;
+        },
+        resolveKeyForSubmit(keyItem) {
+            if (!keyItem.originalKeyValue) {
+                return keyItem.key;
+            }
+            if (this.isKeyValueUnchanged(keyItem)) {
+                return keyItem.originalKeyValue;
+            }
+            return keyItem.key;
+        },
+        onKeyValueFocus(keyItem) {
+            if (keyItem.originalKeyValue && !keyItem.keyModifiedInSession) {
+                const masked = this.getKeyMaskedValue(keyItem);
+                if (keyItem.key === masked) {
+                    keyItem.key = '';
+                    keyItem.keyModifiedInSession = true;
+                }
+            }
+        },
+        onKeyValueChange(keyItem) {
+            if (keyItem.originalKeyValue && !keyItem.keyModifiedInSession) {
+                const masked = this.getKeyMaskedValue(keyItem);
+                if (keyItem.key !== masked) {
+                    keyItem.keyModifiedInSession = true;
+                }
+            } else if (!keyItem.originalKeyValue && String(keyItem.key || '').trim()) {
+                keyItem.keyModifiedInSession = true;
+            }
         },
         initHeaders() {
             const headers =
@@ -1146,7 +1264,7 @@ export default {
                 tmpData.keys = tmpData.keys
                     .map(item => ({
                         name: String(item.name || '').trim(),
-                        key: String(item.key || '').trim(),
+                        key: String(this.resolveKeyForSubmit(item) || '').trim(),
                         weight: Number(item.weight) || 0
                     }))
                     .filter(item => item.name || item.key);

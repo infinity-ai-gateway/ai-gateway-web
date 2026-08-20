@@ -211,7 +211,7 @@ export default {
     verificationCode: 'Verification Code',
     changeOne: 'Change',
     name: 'Login',
-    gateway: 'AI Gateway',
+    gateway: 'Rainway AI Gateway',
 
     tipConfirmLogout: 'Confirm logout？',
     tipCodeError: 'Wrong verification code',

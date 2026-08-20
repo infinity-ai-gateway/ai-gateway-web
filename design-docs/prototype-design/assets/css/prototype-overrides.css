@@ -282,6 +282,60 @@ body {
   margin-left: 8px;
 }
 
+/* 登录页标题：对齐 loginPassword.vue scoped .text */
+.bfe-login .bfe-login-hearder .text {
+  width: 240px;
+  margin-left: 20px;
+  text-align: center;
+  color: #fff;
+  background: #1a1a1ade;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 侧栏标题：对齐 navBar.less .bfe-sidebar .header .text */
+.bfe-sidebar .header .text {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 0 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 侧栏菜单图标间距：对齐 iView MenuItem */
+.bfe-sidebar .Menu .ivu-menu-item i,
+.bfe-sidebar .Menu .ivu-menu-submenu-title i:not(.ivu-menu-submenu-title-icon) {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* 侧栏菜单链接：保持与 MenuItem 相同的点击区域 */
+.bfe-sidebar .Menu .ivu-menu-item .menu-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin: -14px -24px;
+  padding: 14px 24px;
+}
+
+/* 侧栏选中项：对齐 sidebarNav.vue scoped 样式 */
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active,
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active:hover,
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu),
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu):hover {
+  border-right: none;
+  color: #fff;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 125, 221, 0.2),
+    rgba(59, 125, 221, 0.0875) 60%,
+    transparent
+  ) !important;
+  border-left: 3px solid #515a6e;
+  border-left-color: #a0cfff !important;
+}
+
 /* 侧边栏分组：子项缩进 */
 .bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu {
   display: block !important;

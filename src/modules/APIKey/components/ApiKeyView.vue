@@ -480,7 +480,7 @@ export default {
             if (Number.isNaN(value)) return '-';
             const fractionDigits = decimals !== null ? decimals : (this.isRMB ? 4 : 0);
             return value.toLocaleString('zh-CN', {
-                minimumFractionDigits: fractionDigits,
+                minimumFractionDigits: 0,
                 maximumFractionDigits: fractionDigits
             });
         },
