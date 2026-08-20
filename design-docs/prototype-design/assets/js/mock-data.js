@@ -16,20 +16,35 @@ window.MockData = {
         balance: { used: 1200 },
         unit: 'total_token',
         reset_period: 'monthly',
-        pass_when_no_enough_quota: false
+        pass_when_no_enough_quota: false,
       },
       rate_limit_policy: {
         enabled: true,
         rules: {
           max_concurrency: 50,
-          tpm: [{ name: 'tpm-default', model: '*', window_minutes: 1, max_tokens: 100000, step_minutes: 1 }],
-          rpm: [{ name: 'rpm-default', model: '*', window_minutes: 1, max_requests: 1000 }]
-        }
+          tpm: [
+            {
+              name: 'tpm-default',
+              model: '*',
+              window_minutes: 1,
+              max_tokens: 100000,
+              step_minutes: 1,
+            },
+          ],
+          rpm: [
+            {
+              name: 'rpm-default',
+              model: '*',
+              window_minutes: 1,
+              max_requests: 1000,
+            },
+          ],
+        },
       },
       route_rules: {
         enabled: false,
-        rules: []
-      }
+        rules: [],
+      },
     },
     {
       id: 2,
@@ -40,23 +55,29 @@ window.MockData = {
       block_models: [],
       create_time: 1704844800,
       update_time: 1735689600,
-      quota_plan: { unlimited: true, quota: 0, balance: { used: 0 }, unit: 'total_token', reset_period: 'never', pass_when_no_enough_quota: false },
-      rate_limit_policy: { enabled: false, rules: { max_concurrency: -1, tpm: [], rpm: [] } },
+      quota_plan: {
+        unlimited: true,
+        quota: 0,
+        balance: { used: 0 },
+        unit: 'total_token',
+        reset_period: 'never',
+        pass_when_no_enough_quota: false,
+      },
+      rate_limit_policy: {
+        enabled: false,
+        rules: { max_concurrency: -1, tpm: [], rpm: [] },
+      },
       route_rules: {
         enabled: true,
         rules: [
           {
             name: 'algo-default',
-            Cond: 'default_t()',
-            targets: [
-              { ClusterName: 'cluster-algo', Model: '', Weight: 100 }
-            ],
-            fallbacks: [
-              { ClusterName: 'cluster-algo-fallback', Model: '' }
-            ]
-          }
-        ]
-      }
+            cond: 'default_t()',
+            targets: [{ cluster_name: 'cluster-algo', model: '', weight: 100 }],
+            fallbacks: [{ cluster_name: 'cluster-algo-fallback', model: '' }],
+          },
+        ],
+      },
     },
     {
       id: 3,
@@ -73,25 +94,35 @@ window.MockData = {
         balance: { used: 500 },
         unit: 'total_token',
         reset_period: 'monthly',
-        pass_when_no_enough_quota: false
+        pass_when_no_enough_quota: false,
       },
       rate_limit_policy: {
         enabled: true,
-        rules: { max_concurrency: 100, tpm: [], rpm: [] }
+        rules: { max_concurrency: 100, tpm: [], rpm: [] },
       },
       route_rules: {
         enabled: false,
-        rules: []
-      }
-    }
+        rules: [],
+      },
+    },
   ],
   entityTypes: [
-    { type_name: 'dep', level: 1, description: '一级部门', create_time: 1704844800 },
-    { type_name: 'team', level: 2, description: '二级团队', create_time: 1704844800 }
+    {
+      type_name: 'dep',
+      level: 1,
+      description: '一级部门',
+      create_time: 1704844800,
+    },
+    {
+      type_name: 'team',
+      level: 2,
+      description: '二级团队',
+      create_time: 1704844800,
+    },
   ],
   modelGroups: [
     { label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini'] },
-    { label: 'Anthropic', models: ['claude-3-5-sonnet'] }
+    { label: 'Anthropic', models: ['claude-3-5-sonnet'] },
   ],
   apiKeys: [
     {
@@ -100,6 +131,9 @@ window.MockData = {
       description: '研发部主 Key',
       enabled: true,
       unlimited_quota: false,
+      expire_time: 0,
+      create_time: 1736467200,
+      update_time: 1743494400,
       subnet: '*',
       models: ['*'],
       entity: { id: 'e1', name: '研发部', type: 'dep' },
@@ -109,29 +143,44 @@ window.MockData = {
         balance: { used: 120000 },
         unit: 'total_token',
         reset_period: 'monthly',
-        pass_when_no_enough_quota: false
+        pass_when_no_enough_quota: false,
       },
       rate_limit_policy: {
         enabled: true,
         rules: {
           max_concurrency: 100,
-          tpm: [{ name: 'tpm-gpt4', model: 'gpt-4o', window_minutes: 1, max_tokens: 100000, step_minutes: 1 }],
-          rpm: [{ name: 'rpm-default', model: '*', window_minutes: 1, max_requests: 1000 }]
-        }
+          tpm: [
+            {
+              name: 'tpm-gpt4',
+              model: 'gpt-4o',
+              window_minutes: 1,
+              max_tokens: 100000,
+              step_minutes: 1,
+            },
+          ],
+          rpm: [
+            {
+              name: 'rpm-default',
+              model: '*',
+              window_minutes: 1,
+              max_requests: 1000,
+            },
+          ],
+        },
       },
       route_rules: {
         enabled: true,
         rules: [
           {
             name: 'apikey-default',
-            Cond: 'default_t()',
+            cond: 'default_t()',
             targets: [
-              { ClusterName: 'cluster_apikey', Model: '', Weight: 100 }
+              { cluster_name: 'cluster_apikey', model: '', weight: 100 },
             ],
-            fallbacks: []
-          }
-        ]
-      }
+            fallbacks: [],
+          },
+        ],
+      },
     },
     {
       id: 'ak-002',
@@ -139,78 +188,380 @@ window.MockData = {
       description: '测试环境 Key',
       enabled: false,
       unlimited_quota: true,
+      expire_time: 0,
+      create_time: 1737849600,
+      update_time: 1741276800,
       subnet: '10.0.0.0/24',
       models: ['gpt-4o'],
       entity: { id: 'e3', name: '测试组', type: 'team' },
-      quota_plan: { unlimited: true, quota: 0, balance: { used: 0 }, unit: 'total_token', reset_period: 'never' },
-      rate_limit_policy: { enabled: false, rules: { max_concurrency: -1, tpm: [], rpm: [] } },
+      quota_plan: {
+        unlimited: true,
+        quota: 0,
+        balance: { used: 0 },
+        unit: 'total_token',
+        reset_period: 'never',
+      },
+      rate_limit_policy: {
+        enabled: false,
+        rules: { max_concurrency: -1, tpm: [], rpm: [] },
+      },
       route_rules: {
         enabled: false,
-        rules: []
-      }
-    }
+        rules: [],
+      },
+    },
   ],
   clusters: [
     { name: 'test', description: '' },
-    { name: 'cluster-test1', description: '测试更新' }
+    { name: 'cluster-test1', description: '测试更新' },
   ],
   routeTables: [
     { type: 'global', owner: 'global', enabled: true },
     { type: 'entity', owner: 1, enabled: false },
     { type: 'entity', owner: 2, enabled: true },
     { type: 'api_key', owner: 'ak-001', enabled: true },
-    { type: 'api_key', owner: 'ak-002', enabled: false }
+    { type: 'api_key', owner: 'ak-002', enabled: false },
   ],
   globalRouteRules: {
     enabled: true,
     rules: [
       {
         name: 'global-default',
-        Cond: 'default_t()',
-        targets: [
-          { ClusterName: 'cluster-test1', Model: '', Weight: 100 }
-        ],
-        fallbacks: [
-          { ClusterName: 'test', Model: '' }
-        ]
-      }
-    ]
+        cond: 'default_t()',
+        targets: [{ cluster_name: 'cluster-test1', model: '', weight: 100 }],
+        fallbacks: [{ cluster_name: 'test', model: '' }],
+      },
+    ],
   },
   forwardRules: [
     {
       name: 'vip-user-route',
       expression: 'req_header_value_in("user", "vip", false)',
       cluster_name: 'cluster-test1',
-      description: 'VIP 用户路由'
+      description: 'VIP 用户路由',
     },
     {
       name: 'beta-path-route',
       expression: 'req_path_prefix_in("/beta", false)',
       cluster_name: 'test',
-      description: 'Beta 流量'
-    }
+      description: 'Beta 流量',
+    },
   ],
   aiRules: [
-    { name: 'model-route-1', priority: 1, enabled: true, description: 'GPT 模型路由' },
-    { name: 'model-route-2', priority: 2, enabled: false, description: 'Claude 模型路由' }
+    {
+      name: 'model-route-1',
+      priority: 1,
+      enabled: true,
+      description: 'GPT 模型路由',
+    },
+    {
+      name: 'model-route-2',
+      priority: 2,
+      enabled: false,
+      description: 'Claude 模型路由',
+    },
   ],
   gatewayInstances: [
-    { hostname: 'gateway-01', ip: '10.0.1.10', port: 8080 },
-    { hostname: 'gateway-02', ip: '10.0.1.11', port: 8080 }
+    { hostname: '127.0.0.1', ip: '127.0.0.1', port: 8080 },
   ],
   users: [
     { user_name: 'admin', is_admin: true },
     { user_name: 'operator', is_admin: true },
-    { user_name: 'viewer', is_admin: false }
+    { user_name: 'viewer', is_admin: false },
   ],
   tokens: [
-    { name: 'gateway-internal', scope: 'System', token: 'sys-token-a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
-    { name: 'support-bot', scope: 'Support', token: 'sup-token-9876fedc-ba09-8765-4321-10abcdef9876' }
+    {
+      name: 'gateway-internal',
+      scope: 'System',
+      token: 'sys-token-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    },
+    {
+      name: 'support-bot',
+      scope: 'Support',
+      token: 'sup-token-9876fedc-ba09-8765-4321-10abcdef9876',
+    },
   ],
   clusterInstances: [
-    { ip: '172.18.1.140', port: 16516 },
-    { ip: '172.18.1.140', port: 16517 },
-    { ip: '172.18.1.140', port: 16518 },
-    { ip: '', port: 80, error: true }
-  ]
+    { ip: '172.18.1.140', port: 16516, weight: 50 },
+    { ip: '172.18.1.140', port: 16517, weight: 30 },
+    { ip: '172.18.1.140', port: 16518, weight: 20 },
+    { ip: '', port: 80, weight: 0, error: true },
+  ],
+  modelPrices: [
+    {
+      id: 1,
+      provider: 'openai',
+      model: 'GPT-4o',
+      base_model: 'gpt-4o',
+      mode: 'chat',
+      capabilities: [
+        'chat',
+        'vision',
+        'tools',
+        'function_calling',
+        'structured_outputs',
+        'prompt_caching',
+      ],
+      supported_parameters: [
+        'temperature',
+        'top_p',
+        'max_tokens',
+        'tools',
+        'tool_choice',
+        'response_format',
+      ],
+      limits: {
+        context_window: 128000,
+        max_output_tokens: 4096,
+      },
+      prices: {
+        input_cost_per_token: 0.000005,
+        output_cost_per_token: 0.000015,
+        cache_read_input_token_cost: 0.0000025,
+        cache_creation_input_token_cost: 0.0000075,
+      },
+      metadata: {
+        source: 'https://openai.com/api/pricing/',
+        notes: 'OpenAI 官方定价，2024年更新',
+      },
+      create_time: 1704067200,
+      update_time: 1717209600,
+    },
+    {
+      id: 2,
+      provider: 'openai',
+      model: 'GPT-4o mini',
+      base_model: 'gpt-4o-mini',
+      mode: 'chat',
+      capabilities: [
+        'chat',
+        'vision',
+        'tools',
+        'function_calling',
+        'structured_outputs',
+      ],
+      supported_parameters: [
+        'temperature',
+        'top_p',
+        'max_tokens',
+        'tools',
+        'tool_choice',
+        'response_format',
+      ],
+      limits: {
+        context_window: 128000,
+        max_output_tokens: 16384,
+      },
+      prices: {
+        input_cost_per_token: 0.00000015,
+        output_cost_per_token: 0.0000006,
+      },
+      metadata: {
+        source: 'https://openai.com/api/pricing/',
+        notes: '',
+      },
+      create_time: 1704067200,
+      update_time: 1717209600,
+    },
+    {
+      id: 3,
+      provider: 'anthropic',
+      model: 'Claude 3.5 Sonnet',
+      base_model: 'claude-3-5-sonnet-20240620',
+      mode: 'chat',
+      capabilities: [
+        'chat',
+        'vision',
+        'tools',
+        'function_calling',
+        'structured_outputs',
+        'prompt_caching',
+      ],
+      supported_parameters: [
+        'temperature',
+        'top_p',
+        'max_tokens',
+        'tools',
+        'tool_choice',
+      ],
+      limits: {
+        context_window: 200000,
+        max_output_tokens: 8192,
+      },
+      prices: {
+        input_cost_per_token: 0.000003,
+        output_cost_per_token: 0.000015,
+        cache_read_input_token_cost: 0.0000003,
+        cache_creation_input_token_cost: 0.00000375,
+      },
+      metadata: {
+        source: 'https://www.anthropic.com/pricing',
+        notes: 'Anthropic 官方定价',
+      },
+      create_time: 1714521600,
+      update_time: 1719878400,
+    },
+    {
+      id: 4,
+      provider: 'deepseek',
+      model: 'DeepSeek V3',
+      base_model: 'deepseek-v3',
+      mode: 'chat',
+      capabilities: [
+        'chat',
+        'tools',
+        'function_calling',
+        'structured_outputs',
+        'reasoning',
+      ],
+      supported_parameters: [
+        'temperature',
+        'top_p',
+        'max_tokens',
+        'tools',
+        'tool_choice',
+        'response_format',
+        'reasoning',
+      ],
+      limits: {
+        context_window: 64000,
+        max_output_tokens: 8192,
+      },
+      prices: {
+        input_cost_per_token: 0.00000027,
+        output_cost_per_token: 0.0000011,
+      },
+      metadata: {
+        source: 'https://platform.deepseek.com/pricing',
+        notes: 'DeepSeek 官方定价',
+      },
+      create_time: 1717209600,
+      update_time: 1722470400,
+    },
+    {
+      id: 5,
+      provider: 'openai',
+      model: 'GPT-4o (图像生成)',
+      base_model: 'gpt-4o',
+      mode: 'image_generation',
+      capabilities: ['image_generation'],
+      supported_parameters: ['size', 'quality', 'style'],
+      limits: {},
+      prices: {
+        output_cost_per_image: 0.04,
+        output_cost_per_image_hd: 0.08,
+      },
+      metadata: {
+        source: 'https://openai.com/api/pricing/',
+        notes: 'DALL-E 3 图像生成定价',
+      },
+      create_time: 1704067200,
+      update_time: 1717209600,
+    },
+    {
+      id: 6,
+      provider: 'openai',
+      model: 'text-embedding-3-large',
+      base_model: 'text-embedding-3-large',
+      mode: 'embedding',
+      capabilities: ['embedding'],
+      supported_parameters: [],
+      limits: {
+        max_input_tokens: 8191,
+      },
+      prices: {
+        input_cost_per_token: 0.00000013,
+      },
+      metadata: {
+        source: 'https://openai.com/api/pricing/',
+        notes: '3072 维向量',
+      },
+      create_time: 1704067200,
+      update_time: 1717209600,
+    },
+  ],
+  modelProviderTypes: [
+    { type: 'openai_compatible', label: 'OpenAI 兼容' },
+    { type: 'anthropic', label: 'Anthropic' },
+    { type: 'azure_openai', label: 'Azure OpenAI' },
+  ],
+  modelModeOptions: [
+    'chat',
+    'completion',
+    'responses',
+    'image_generation',
+    'image_edit',
+    'embedding',
+    'rerank',
+    'audio_speech',
+    'audio_transcription',
+    'video_generation',
+    'ocr',
+    'search',
+    'realtime',
+  ],
+  modelCapabilities: [
+    'chat',
+    'vision',
+    'audio_input',
+    'video_input',
+    'reasoning',
+    'tools',
+    'structured_outputs',
+    'function_calling',
+    'prompt_caching',
+    'computer_use',
+    'web_search',
+    'serverless',
+    'image_generation',
+    'embedding',
+    'rerank',
+    'audio_speech',
+    'audio_transcription',
+    'video_generation',
+    'ocr',
+    'search',
+    'realtime',
+  ],
+  modelSupportedParameters: [
+    'temperature',
+    'top_p',
+    'max_tokens',
+    'tools',
+    'tool_choice',
+    'response_format',
+    'reasoning',
+    'image_input',
+    'video_input',
+    'audio_input',
+    'voice',
+    'speed',
+    'size',
+    'quality',
+    'style',
+  ],
+  modelLimitKeys: [
+    'context_window',
+    'max_input_tokens',
+    'max_output_tokens',
+    'max_tokens',
+  ],
+  modelPriceKeys: [
+    'input_cost_per_token',
+    'output_cost_per_token',
+    'cache_read_input_token_cost',
+    'cache_creation_input_token_cost',
+    'input_cost_per_token_above_200k_tokens',
+    'output_cost_per_token_above_200k_tokens',
+    'output_cost_per_image',
+    'output_cost_per_pixel',
+    'output_cost_per_second',
+    'input_cost_per_query',
+    'search_context_cost_per_query',
+    'ocr_cost_per_page',
+    'output_cost_per_character',
+    'output_cost_per_image_hd',
+    'output_cost_per_video',
+    'output_cost_per_video_per_second',
+  ],
 };

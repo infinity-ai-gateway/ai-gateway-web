@@ -43,6 +43,24 @@
 | PATCH | 部分更新 |
 | DELETE | 删除 |
 
+# 字段命名规范
+
+为保证 OpenAPI 接口风格一致，所有 JSON 字段名须遵循以下规范：
+
+1. **统一使用小写 + 下划线（snake_case）**
+   - 例如：`inner_id`、`allow_models`、`quota_plan`、`cluster_name`、`route_rules`。
+   - 禁止在 OpenAPI 的请求/响应字段中使用大写开头或驼峰命名，如 `Cond`、`ClusterName`、`Model`、`Weight` 等。
+
+2. **已全局固化的响应包装字段维持不变**
+   - `ErrNum`、`ErrMsg`、`Data` 为所有接口统一的响应包装字段，属于历史约定，继续保留。
+
+3. **外部系统强制要求的字段可为例外，但须显式说明**
+   - 若字段名由下游系统（如 BFE）强制规定，可在特定场景下使用非 snake_case 命名，但必须在文档中标注为例外并说明原因。
+   - 例如：`alb-pool.md` 中 `ports` 的 `Default` 键为 BFE 实例池端口名称；InnerAPI 导出给 BFE 的路由配置保持 `Cond`、`ClusterName`、`Model`、`Weight` 不变。
+
+4. **新增字段须先行核对本规范**
+   - 新增公共类型、请求体或响应体字段时，须先检查是否与本规范冲突；若冲突，应采用 snake_case 命名。
+
 # 通用Query参数（列表接口）
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
@@ -94,34 +112,43 @@
 | 字段 | 类型 | 必填 | 说明 | 合法性条件 |
 |------|------|------|------|------------|
 | `name` | string | Y | 规则名称，用于日志和监控 | 必填、非空；在同一组 `route_rules` 内唯一 |
-| `Cond` | string | Y | BFE 条件表达式；命中则使用该规则 | 必填、非空；须为合法 BFE 条件表达式 |
+| `cond` | string | Y | BFE 条件表达式；命中则使用该规则 | 必填、非空；须为合法 BFE 条件表达式 |
 | `targets` | array | Y | 转发目标列表 | 必填，至少 1 个元素；每个元素类型见下表 |
+| `fallbacks` | array | N | 降级目标列表 | 可选；允许为空；每个元素类型见下表 |
 
 `targets` 元素结构：
 
 | 字段 | 类型 | 必填 | 说明 | 合法性条件 |
 |------|------|------|------|------------|
-| `ClusterName` | string | Y | 后端集群名称 | 必填；类型为 [ClusterName](#15-集群名称clustername)；须为 `/clusters` 中已存在的集群名称 |
-| `Model` | string | N | 模型名称；空字符串表示透传原始模型 | 非空时，须为对应集群 `llm_config.models` 中已配置的模型名称 |
-| `Weight` | int | Y | 权重 | 取值范围 [0,100]；同一规则内所有 `Weight` 之和必须等于 100 |
+| `cluster_name` | string | Y | 后端集群名称 | 必填；类型为 [ClusterName](#15-集群名称clustername)；须为 `/clusters` 中已存在的集群名称 |
+| `model` | string | N | 模型名称；空字符串表示透传原始模型 | 非空时，须为对应集群 `llm_config.models` 中已配置的模型名称 |
+| `weight` | int | Y | 权重 | 取值范围 [0,100]；同一规则内所有 `weight` 之和必须等于 100 |
 
 `targets` 跨元素约束：
 
-- 同一 `targets` 数组内，`(ClusterName, Model)` 组合不能重复。
+- 同一 `targets` 数组内，`(cluster_name, model)` 组合不能重复。
+
+`fallbacks` 元素结构：
+
+| 字段 | 类型 | 必填 | 说明 | 合法性条件 |
+|------|------|------|------|------------|
+| `cluster_name` | string | Y | 后端集群名称 | 必填；类型为 [ClusterName](#15-集群名称clustername)；须为 `/clusters` 中已存在的集群名称 |
+| `model` | string | N | 模型名称；空字符串表示透传原始模型 | 非空时，须为对应集群 `llm_config.models` 中已配置的模型名称 |
 
 示例：
 
 ```json
 {
   "name": "apikey-default",
-  "Cond": "default_t()",
+  "cond": "default_t()",
   "targets": [
     {
-      "ClusterName": "cluster_apikey",
-      "Model": "",
-      "Weight": 100
+      "cluster_name": "cluster_apikey",
+      "model": "",
+      "weight": 100
     }
-  ]
+  ],
+  "fallbacks": []
 }
 ```
 
@@ -142,14 +169,15 @@
   "rules": [
     {
       "name": "apikey-default",
-      "Cond": "default_t()",
+      "cond": "default_t()",
       "targets": [
         {
-          "ClusterName": "cluster_apikey",
-          "Model": "",
-          "Weight": 100
+          "cluster_name": "cluster_apikey",
+          "model": "",
+          "weight": 100
         }
-      ]
+      ],
+      "fallbacks": []
     }
   ]
 }
@@ -163,12 +191,23 @@
 |------|------|------|------|------------|
 | `unlimited` | bool | N | 是否无限配额 | 默认 `true` |
 | `pass_when_no_enough_quota` | bool | N | 配额不足时是否放行 | 默认 `false` |
-| `quota` | int64 | N | 配额总量 | 非负整数（>=0） |
-| `unit` | string | N | 配额单位 | 默认 `total_token`，暂时只支持 `total_token` |
+| `quota` | number | N | 配额总量 | 非负数；`unit=total_token` 时必须为整数；`unit=RMB` 时取值范围 0 ~ 90000000.00（9000 万元），内部最多保留 8 位小数，对外统一按 4 位小数展示 |
+| `unit` | string | N | 配额单位 | 默认 `total_token`；可选值：`total_token`、`RMB` |
 | `reset_period` | string | N | 配额重置周期 | 默认 `never`；可选值：`never`、`weekly`、`monthly` |
 | `balance` | object | N | 余额状态（只读），包含 `used` 和 `remaining` | 作为输入时无需传入 |
 
-示例：
+**balance 结构**
+
+| 字段 | 类型 | 说明 | 合法性条件 |
+|------|------|------|------------|
+| `used` | number | 已用量 | 非负数；内部最多 8 位小数，对外统一按 4 位小数展示 |
+| `remaining` | number | 剩余量 | 非负数；内部最多 8 位小数，对外统一按 4 位小数展示 |
+
+> **关于 RMB 配额 9000 万元上限的说明**
+>
+> RMB 配额在 Redis 中以定点整数存储，精度为 **1e-8 元**（即 1 单位 = 0.00000001 元）。当前 Lua 脚本使用单 Key 定点数方案，Lua number 为 IEEE 754 double，整数精确表示上限约为 **2^53 ≈ 9.007 × 10^15**。按 1e-8 元换算，理论余额上限约为 9007.20 万元；业务上统一限定为 **9000 万元（90,000,000.00 元）**，以保证所有场景下余额计算均无精度损失。若后续业务需要更大余额，需改用 Hash 拆分整数部分与小数部分的存储方案。
+
+示例（Token 配额）：
 
 ```json
 {
@@ -180,6 +219,22 @@
   "balance": {
     "used": 50000000,
     "remaining": 50000000
+  }
+}
+```
+
+示例（RMB 配额）：
+
+```json
+{
+  "unlimited": false,
+  "pass_when_no_enough_quota": false,
+  "quota": 10000.00,
+  "unit": "RMB",
+  "reset_period": "monthly",
+  "balance": {
+    "used": 1234.56,
+    "remaining": 8765.44
   }
 }
 ```

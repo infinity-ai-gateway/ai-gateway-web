@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd. 
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -23,160 +23,366 @@
       @submit.native.prevent
     >
       <div>
-        <FormItem
-          :label="$t('gatewayConfig.modelServiceProvider')"
-          prop="provider_type"
+        <Card
+          :title="$t('gatewayConfig.modelServiceConfig')"
+          class="llm-section-card"
         >
-          <Select v-model="formData.provider_type">
-            <Option v-for="item in providers" :value="item.id" :key="item.id">
-              {{ item.name }}
-            </Option>
-          </Select>
-        </FormItem>
-        <FormItem
-          :label="$t('gatewayConfig.modelListEndpoint')"
-          prop="model_endpoint"
-        >
-          <div class="endpoint-url-group">
-            <Select class="endpoint-protocol" v-model="formData.model_endpoint.schema">
-              <Option value="http">http://</Option>
-              <Option value="https">https://</Option>
+          <FormItem prop="provider_type">
+            <span slot="label" class="provider-label">
+              {{ $t('gatewayConfig.modelServiceProvider') }}
+              <Tooltip placement="top" transfer max-width="320">
+                <div slot="content" class="provider-tip-content">
+                  {{ $t('gatewayConfig.providerTypeTip') }}
+                </div>
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="provider-help-icon"
+                />
+              </Tooltip>
+            </span>
+            <Select v-model="formData.provider_type">
+              <Option v-for="item in providers" :value="item.id" :key="item.id">
+                {{ item.name }}
+              </Option>
             </Select>
-            <span class="endpoint-host" :title="endpointHostDisplay">{{ endpointHostDisplay }}</span>
-            <Input class="endpoint-uri" v-model="formData.model_endpoint.uri" />
-          </div>
-          <Button
-            type="primary"
-            style="margin-top: 14px; margin-bottom: 14px;"
-            @click="addHeader"
-            size="small"
-            >+{{ $t('com.createX', { obj: 'Header' }) }}</Button
+          </FormItem>
+          <FormItem prop="provider">
+            <span slot="label" class="provider-label">
+              {{ $t('gatewayConfig.provider') }}
+              <Tooltip placement="top" transfer max-width="320">
+                <div slot="content" class="provider-tip-content">
+                  {{ $t('gatewayConfig.providerTip') }}
+                </div>
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="provider-help-icon"
+                />
+              </Tooltip>
+            </span>
+            <Input v-model="formData.provider" />
+          </FormItem>
+          <FormItem prop="strip_prefix">
+            <span slot="label" class="provider-label">
+              {{ $t('gatewayConfig.stripPrefix') }}
+              <Tooltip placement="top" transfer max-width="320">
+                <div slot="content" class="provider-tip-content">
+                  {{ $t('gatewayConfig.stripPrefixTip') }}
+                </div>
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="provider-help-icon"
+                />
+              </Tooltip>
+            </span>
+            <i-switch v-model="formData.strip_prefix" />
+          </FormItem>
+          <FormItem v-if="formData.strip_prefix" prop="match_prefix">
+            <span slot="label" class="provider-label">
+              {{ $t('gatewayConfig.matchPrefix') }}
+              <Tooltip placement="top" transfer max-width="320">
+                <div slot="content" class="provider-tip-content">
+                  {{ $t('gatewayConfig.matchPrefixTip') }}
+                </div>
+                <Icon
+                  type="ios-help-circle-outline"
+                  class="provider-help-icon"
+                />
+              </Tooltip>
+            </span>
+            <Input
+              v-model="formData.match_prefix"
+              :placeholder="$t('gatewayConfig.matchPrefixPlaceholder')"
+            />
+          </FormItem>
+          <FormItem
+            :label="$t('gatewayConfig.modelListEndpoint')"
+            prop="model_endpoint"
           >
-          <div class="header-controls">
-            <div
-              v-for="(header, index) in headerList"
-              :key="index"
-              class="header-pair"
-            >
-              <Input
-                class="header-input"
-                v-model="header.key"
-                placeholder="Header Key"
-                @on-change="onHeaderKeyChange(header)"
-              />
-              <span class="header-separator">:</span>
-              <Input
-                class="header-input"
-                v-model="header.value"
-                placeholder="Header Value"
-                autocomplete="new-password"
-                @on-focus="onHeaderValueFocus(header)"
-                @on-change="onHeaderValueChange(header)"
-              />
-              <Button type="error" @click="removeHeader(index)" size="small"
-                >-</Button
+            <div class="endpoint-url-group">
+              <Select
+                class="endpoint-protocol"
+                v-model="formData.model_endpoint.schema"
               >
+                <Option value="http">http://</Option>
+                <Option value="https">https://</Option>
+              </Select>
+              <span
+                class="endpoint-host"
+                :title="endpointHostDisplay"
+                >{{ endpointHostDisplay }}</span
+              >
+              <Input
+                class="endpoint-uri"
+                v-model="formData.model_endpoint.uri"
+              />
             </div>
-          </div>
-        </FormItem>
-        <FormItem :label="$t('apiKey.models')" prop="models">
-          <el-select
-            v-model="formData.models"
-            style="width: 487px;"
-            size="small"
-            multiple
-            clearable
-            filterable
-            @change="onModelsChange"
-          >
-            <el-option
-              v-for="item in modelsList"
-              :value="item.id"
-              :key="item.id"
-              :label="item.id"
+            <Button
+              type="primary"
+              style="margin-top: 14px; margin-bottom: 14px;"
+              @click="addHeader"
+              size="small"
+              >+{{ $t('com.createX', { obj: 'Header' }) }}</Button
             >
-            </el-option>
-          </el-select>
-          <Button
-            type="primary"
-            :disabled="!endpointHostDisplay || !formData.provider_type"
-            :loading="btnLoading"
-            @click="queryModels"
-            >{{ $t('gatewayConfig.get') }}
-          </Button>
-        </FormItem>
-        <FormItem
-          :label="$t('gatewayConfig.modelRedirect')"
-          prop="model_mappings"
-        >
-          <table>
-            <thead>
-              <tr>
-                <th>{{ $t('gatewayConfig.originalModelName') }}</th>
-                <th>{{ $t('gatewayConfig.backendModelName') }}</th>
-                <th>{{ $t('com.operation') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(model, index) in formData.model_mappings"
+            <div class="header-controls">
+              <div
+                v-for="(header, index) in headerList"
                 :key="index"
+                class="header-pair"
               >
-                <td>
-                  <Input
-                    :value="model.source_model"
-                    @on-change="e => changeMappingSource(index, e.target.value)"
-                    :placeholder="$t('gatewayConfig.enterOriginalModelName')"
-                  />
-                </td>
-                <td>
-                  <Select
-                    v-model="model.target_model"
-                    :placeholder="$t('gatewayConfig.selectTargetModel')"
-                    @on-change="value => changeMappingTarget(index, value)"
-                  >
-                    <Option
-                      v-for="(item, idx) in formData.models"
-                      :value="item"
-                      :key="idx"
+                <Input
+                  class="header-input"
+                  v-model="header.key"
+                  placeholder="Header Key"
+                  @on-change="onHeaderKeyChange(header)"
+                />
+                <span class="header-separator">:</span>
+                <Input
+                  class="header-input"
+                  v-model="header.value"
+                  placeholder="Header Value"
+                  autocomplete="new-password"
+                  @on-focus="onHeaderValueFocus(header)"
+                  @on-change="onHeaderValueChange(header)"
+                />
+                <Button type="error" @click="removeHeader(index)" size="small"
+                  >-</Button
+                >
+              </div>
+            </div>
+          </FormItem>
+          <FormItem :label="$t('apiKey.models')" prop="models">
+            <el-select
+              v-model="formData.models"
+              style="width: 487px;"
+              size="small"
+              multiple
+              clearable
+              filterable
+              @change="onModelsChange"
+            >
+              <el-option
+                v-for="item in modelsList"
+                :value="item.id"
+                :key="item.id"
+                :label="item.id"
+              >
+              </el-option>
+            </el-select>
+            <Button
+              type="primary"
+              :disabled="!endpointHostDisplay || !formData.provider_type"
+              :loading="btnLoading"
+              @click="queryModels"
+              >{{ $t('gatewayConfig.get') }}
+            </Button>
+          </FormItem>
+        </Card>
+        <Card
+          :title="$t('gatewayConfig.modelRedirect')"
+          class="llm-section-card"
+        >
+          <FormItem prop="model_mappings">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ $t('gatewayConfig.originalModelName') }}</th>
+                  <th>{{ $t('gatewayConfig.backendModelName') }}</th>
+                  <th>{{ $t('com.operation') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(model, index) in formData.model_mappings"
+                  :key="index"
+                >
+                  <td>
+                    <Input
+                      :value="model.source_model"
+                      @on-change="e => changeMappingSource(index, e.target.value)"
+                      :placeholder="$t('gatewayConfig.enterOriginalModelName')"
+                    />
+                  </td>
+                  <td>
+                    <Select
+                      v-model="model.target_model"
+                      :placeholder="$t('gatewayConfig.selectTargetModel')"
+                      @on-change="value => changeMappingTarget(index, value)"
                     >
-                      {{ item }}
-                    </Option>
-                  </Select>
-                </td>
-                <td>
-                  <Button
-                    type="error"
-                    size="small"
-                    @click="removeModelMapping(index)"
-                    >{{ $t('com.del') }}</Button
-                  >
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <Button
-            class="mt20"
-            size="small"
-            type="primary"
-            @click="addModelRedirect"
-            >{{
-                        $t('gatewayConfig.add')
-            }}</Button
-          >
-        </FormItem>
-        <FormItem :label="$t('gatewayConfig.serviceAuthKey')" prop="keyInput">
-          <Input
-            v-model="formData.keyInput"
-            :placeholder="$t('gatewayConfig.serviceAuthKeyPlaceholder')"
-            autocomplete="new-password"
-            @on-focus="onKeyInputFocus"
-            @on-change="onKeyInputChange"
-          />
-          <p v-if="hasExistingKey" class="form-tip">
-            {{ $t('gatewayConfig.serviceAuthKeyEditTip') }}
-          </p>
-        </FormItem>
+                      <Option
+                        v-for="(item, idx) in formData.models"
+                        :value="item"
+                        :key="idx"
+                      >
+                        {{ item }}
+                      </Option>
+                    </Select>
+                  </td>
+                  <td>
+                    <Button
+                      type="error"
+                      size="small"
+                      @click="removeModelMapping(index)"
+                      >{{ $t('com.del') }}</Button
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <Button
+              class="mt20"
+              size="small"
+              type="primary"
+              @click="addModelRedirect"
+              >{{
+                          $t('gatewayConfig.add')
+              }}</Button
+            >
+          </FormItem>
+        </Card>
+        <Card
+          :title="$t('gatewayConfig.serviceAuthKeys')"
+          class="llm-section-card"
+        >
+          <FormItem prop="keys">
+            <table class="keys-table">
+              <thead>
+                <tr>
+                  <th>{{ $t('gatewayConfig.keyName') }}</th>
+                  <th>{{ $t('gatewayConfig.keyValue') }}</th>
+                  <th style="width: 120px;">
+                    {{ $t('gatewayConfig.keyWeight') }}
+                  </th>
+                  <th style="width: 80px;">{{ $t('com.operation') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(keyItem, index) in formData.keys"
+                  :key="`key-${index}`"
+                >
+                  <td>
+                    <FormItem
+                      :prop="`keys.${index}.name`"
+                      :rules="keyNameRules(index)"
+                      class="inline-form-item"
+                    >
+                      <Input
+                        v-model="keyItem.name"
+                        :placeholder="$t('gatewayConfig.keyNamePlaceholder')"
+                        @on-blur="validateKeysState"
+                      />
+                    </FormItem>
+                  </td>
+                  <td>
+                    <FormItem
+                      :prop="`keys.${index}.key`"
+                      :rules="keyValueRules(index)"
+                      class="inline-form-item"
+                    >
+                      <Input
+                        v-model="keyItem.key"
+                        :placeholder="$t('gatewayConfig.keyValuePlaceholder')"
+                        autocomplete="new-password"
+                        @on-focus="onKeyValueFocus(keyItem)"
+                        @on-change="onKeyValueChange(keyItem)"
+                      />
+                    </FormItem>
+                  </td>
+                  <td>
+                    <FormItem
+                      :prop="`keys.${index}.weight`"
+                      :rules="keyWeightRules(index)"
+                      class="inline-form-item"
+                    >
+                      <InputNumber
+                        v-model="keyItem.weight"
+                        :min="0"
+                        :max="100"
+                        :precision="0"
+                        style="width: 100%;"
+                        @on-change="validateKeysState"
+                      />
+                    </FormItem>
+                  </td>
+                  <td>
+                    <Button
+                      type="error"
+                      size="small"
+                      @click="removeKey(index)"
+                      >{{ $t('com.del') }}</Button
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="keysWeightError" class="weight-error">
+              {{ $t('gatewayConfig.keysWeightSumError') }}
+            </p>
+            <p v-if="keysPlaceholderError" class="weight-error">
+              {{ $t('gatewayConfig.keysPlaceholderError') }}
+            </p>
+            <Button class="mt20" size="small" type="primary" @click="addKey"
+              >+ {{ $t('gatewayConfig.addKey') }}</Button
+            >
+          </FormItem>
+        </Card>
+
+        <Card :title="$t('gatewayConfig.keyPolicy')" class="llm-section-card">
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.keyPolicyStrategy')"
+                prop="key_policy.strategy"
+              >
+                <Select v-model="formData.key_policy.strategy">
+                  <Option value="weighted_random">weighted_random</Option>
+                </Select>
+              </FormItem>
+            </Col>
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.keyPolicyMaxRetries')"
+                prop="key_policy.max_retries"
+              >
+                <InputNumber
+                  v-model="formData.key_policy.max_retries"
+                  :min="0"
+                  :precision="0"
+                  style="width: 100%;"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.keyPolicyRetryBackoffInitial')"
+                prop="key_policy.retry_backoff_initial"
+              >
+                <InputNumber
+                  v-model="formData.key_policy.retry_backoff_initial"
+                  :min="0"
+                  :precision="0"
+                  style="width: 100%;"
+                  @on-change="onRetryBackoffInitialChange"
+                />
+              </FormItem>
+            </Col>
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.keyPolicyRetryBackoffMax')"
+                prop="key_policy.retry_backoff_max"
+              >
+                <InputNumber
+                  v-model="formData.key_policy.retry_backoff_max"
+                  :min="0"
+                  :precision="0"
+                  style="width: 100%;"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        </Card>
       </div>
     </Form>
   </div>
@@ -217,6 +423,12 @@ export default {
             type: Object,
             default() {
                 return {};
+            }
+        },
+        originalLlmConfigKeys: {
+            type: Array,
+            default() {
+                return [];
             }
         },
         isAdd: {
@@ -271,20 +483,6 @@ export default {
             callback();
         };
 
-        const validKey = (rule, value, callback) => {
-            const keyValue = String(this.formData.keyInput || '').trim();
-            if (this.isServiceAuthKeyUnchanged()) {
-                callback();
-                return;
-            }
-            if (keyValue.length > 512) {
-                callback(new Error(this.$t('gatewayConfig.formatInvalid')));
-                return;
-            }
-
-            callback();
-        };
-
         const validModelMappings = (rule, value, callback) => {
             if (!value || !Array.isArray(value) || value.length === 0) {
                 callback();
@@ -295,6 +493,10 @@ export default {
                 const item = value[i];
                 const key = (item.source_model || '').trim();
                 const val = (item.target_model || '').trim();
+
+                if (!key && !val) {
+                    continue;
+                }
 
                 if (!key) {
                     callback(new Error(this.$t('gatewayConfig.modelMappingKeyRequired', { line: i + 1 })));
@@ -338,20 +540,111 @@ export default {
                         message: this.$t('gatewayConfig.modelsRequired')
                     }
                 ],
-                keyInput: [
+                keys: [
                     {
                         required: false,
-                        validator: validKey,
+                        validator: this.validateKeys,
                         trigger: 'change'
+                    }
+                ],
+                'key_policy.strategy': [
+                    {
+                        required: false,
+                        message: this.$t('gatewayConfig.keyPolicyStrategyInvalid') || '选择策略仅支持 weighted_random',
+                        trigger: 'change'
+                    }
+                ],
+                'key_policy.max_retries': [
+                    {
+                        required: false,
+                        type: 'number',
+                        min: 0,
+                        message: this.$t('gatewayConfig.keyPolicyMaxRetriesInvalid') || '最大重试次数必须大于或等于 0',
+                        trigger: 'change'
+                    }
+                ],
+                'key_policy.retry_backoff_initial': [
+                    {
+                        required: false,
+                        type: 'number',
+                        min: 0,
+                        message: this.$t('gatewayConfig.keyPolicyBackoffInvalid') || '退避时间必须大于或等于 0',
+                        trigger: 'change'
+                    }
+                ],
+                'key_policy.retry_backoff_max': [
+                    {
+                        required: false,
+                        type: 'number',
+                        min: 0,
+                        message: this.$t('gatewayConfig.keyPolicyBackoffInvalid') || '退避时间必须大于或等于 0',
+                        trigger: 'change'
+                    },
+                    {
+                        validator: this.validateRetryBackoffMax,
+                        trigger: 'change'
+                    }
+                ],
+                match_prefix: [
+                    {
+                        validator: this.validateMatchPrefix,
+                        trigger: 'blur'
                     }
                 ]
             },
             selectData: [],
-            hasExistingKey: false,
-            maskedExistingKey: '',
-            keyModifiedInSession: false,
+            keysWeightError: false,
+            keysPlaceholderError: false,
+            keyNameRules: index => {
+                const item = this.formData.keys[index] || {};
+                const hasContent =
+                    String(item.name || '').trim() ||
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item));
+                return [
+                    { required: !!hasContent, message: this.$t('gatewayConfig.keyNameRequired'), trigger: 'blur' },
+                    { type: 'string', min: 1, max: 128, message: this.$t('gatewayConfig.keyNameTooLong'), trigger: 'blur' },
+                    { validator: this.validateKeyNameUnique, trigger: 'blur' }
+                ];
+            },
+            keyValueRules: index => {
+                const item = this.formData.keys[index] || {};
+                const hasContent =
+                    String(item.name || '').trim() ||
+                    String(item.key || '').trim() ||
+                    item.originalKeyValue;
+                const keyUnchanged = item.originalKeyValue && this.isKeyValueUnchanged(item);
+                return [
+                    {
+                        required: !!hasContent && !keyUnchanged,
+                        message: this.$t('gatewayConfig.keyValueRequired'),
+                        trigger: 'blur'
+                    },
+                    {
+                        type: 'string',
+                        min: 1,
+                        max: 512,
+                        message: this.$t('gatewayConfig.keyValueTooLong'),
+                        trigger: 'blur'
+                    }
+                ];
+            },
+            keyWeightRules: index => {
+                const item = this.formData.keys[index] || {};
+                const hasContent =
+                    String(item.name || '').trim() ||
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item));
+                return [
+                    { required: !!hasContent, type: 'number', min: 0, max: 100, message: this.$t('gatewayConfig.keyWeightRangeError'), trigger: 'change' }
+                ];
+            },
+            previousProviderType: '',
             formData: {
                 provider_type: '',
+                provider: '',
+                match_prefix: '',
+                strip_prefix: false,
                 model_endpoint: {
                     schema: 'https',
                     uri: '/v1/models',
@@ -364,7 +657,15 @@ export default {
                         target_model: ''
                     }
                 ],
-                keyInput: ''
+                keys: [
+                    { name: '', key: '', weight: 100 }
+                ],
+                key_policy: {
+                    strategy: 'weighted_random',
+                    max_retries: 0,
+                    retry_backoff_initial: 500,
+                    retry_backoff_max: 5000
+                }
             },
             headerList: [],
             modelsList: [],
@@ -391,6 +692,11 @@ export default {
         }
     },
     watch: {
+        'formData.strip_prefix'(val) {
+            if (!val) {
+                this.formData.match_prefix = '';
+            }
+        },
         reportFlag: {
             handler(v) {
                 this.handleSubmit('formData');
@@ -438,6 +744,10 @@ export default {
     methods: {
         resetLlmForm() {
             this.formData = {
+                provider_type: '',
+                provider: '',
+                match_prefix: '',
+                strip_prefix: false,
                 model_endpoint: {
                     schema: 'https',
                     uri: '/v1/models',
@@ -450,70 +760,138 @@ export default {
                         target_model: ''
                     }
                 ],
-                keyInput: ''
+                keys: [
+                    { name: '', key: '', weight: 100 }
+                ],
+                key_policy: {
+                    strategy: 'weighted_random',
+                    max_retries: 0,
+                    retry_backoff_initial: 500,
+                    retry_backoff_max: 5000
+                }
             };
-            this.hasExistingKey = false;
-            this.maskedExistingKey = '';
-            this.keyModifiedInSession = false;
+            this.keysWeightError = false;
+            this.keysPlaceholderError = false;
             this.headerList = [];
         },
-        isServiceAuthKeyUnchanged() {
-            if (!this.hasExistingKey) {
-                return !String(this.formData.keyInput || '').trim();
+        addKey() {
+            if (!Array.isArray(this.formData.keys)) {
+                this.$set(this.formData, 'keys', []);
             }
-            if (!this.keyModifiedInSession) {
-                return true;
-            }
-            const trimmed = String(this.formData.keyInput || '').trim();
-            if (!trimmed) {
-                return true;
-            }
-            return trimmed === this.originalLlmConfigKey;
-        },
-        onKeyInputFocus() {
-            if (
-                this.hasExistingKey &&
-                !this.keyModifiedInSession &&
-                this.formData.keyInput === this.maskedExistingKey
-            ) {
-                this.formData.keyInput = '';
-                this.keyModifiedInSession = true;
-            }
-        },
-        onKeyInputChange() {
-            if (this.hasExistingKey && !this.keyModifiedInSession) {
-                const current = String(this.formData.keyInput || '');
-                if (current !== this.maskedExistingKey) {
-                    this.keyModifiedInSession = true;
-                }
-            } else if (!this.hasExistingKey && String(this.formData.keyInput || '').trim()) {
-                this.keyModifiedInSession = true;
-            }
+            this.formData.keys.push({
+                name: '',
+                key: '',
+                weight: 0,
+                originalKeyValue: '',
+                keyModifiedInSession: false
+            });
             this.$nextTick(() => {
-                if (this.$refs.formData) {
-                    this.$refs.formData.validateField('keyInput');
-                }
+                this.validateKeysState();
             });
         },
-        applyKeyInputFromData(data) {
-            const apiKey = this.originalLlmConfigKey || '';
-            if (!data.key) {
-                this.hasExistingKey = false;
-                this.maskedExistingKey = '';
-                this.formData.keyInput = '';
-                this.keyModifiedInSession = false;
+
+        removeKey(index) {
+            this.formData.keys.splice(index, 1);
+            this.validateKeysState();
+        },
+
+        getKeyFieldIndex(field) {
+            const match = field.match(/keys\.(\d+)\.name/);
+            return match ? parseInt(match[1], 10) : -1;
+        },
+
+        validateKeyNameUnique(rule, value, callback) {
+            const index = this.getKeyFieldIndex(rule.field);
+            if (index < 0) {
+                callback();
                 return;
             }
-            this.hasExistingKey = !!apiKey;
-            this.maskedExistingKey = apiKey ? maskSecretKey(apiKey) : '';
-            const isUnchangedFromApi = apiKey && data.key === apiKey;
-            if (isUnchangedFromApi) {
-                this.keyModifiedInSession = false;
-                this.formData.keyInput = this.maskedExistingKey;
-            } else {
-                this.keyModifiedInSession = true;
-                this.formData.keyInput = data.key;
+            const currentName = String(value || '').trim();
+            if (!currentName) {
+                callback();
+                return;
             }
+            const keys = this.formData.keys || [];
+            const duplicate = keys.some((item, idx) => {
+                if (idx === index) return false;
+                return String(item.name || '').trim() === currentName;
+            });
+            if (duplicate) {
+                callback(new Error(this.$t('gatewayConfig.keyNameDuplicate') || 'Key 名称不能重复'));
+                return;
+            }
+            callback();
+        },
+
+        validateKeysState() {
+            const keys = this.formData.keys || [];
+            const validKeys = keys.filter(item => {
+                const name = String(item.name || '').trim();
+                const key =
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item) ? item.originalKeyValue : '');
+                return name || key;
+            });
+
+            // 权重之和校验
+            const sum = validKeys.reduce((acc, k) => acc + (Number(k.weight) || 0), 0);
+            this.keysWeightError = validKeys.length > 0 && sum !== 100;
+
+            const headers = (this.formData.model_endpoint && this.formData.model_endpoint.headers) || {};
+            const hasPlaceholder = Object.values(headers).some(v => String(v).includes('${API_KEY}'));
+            this.keysPlaceholderError = hasPlaceholder && validKeys.length === 0;
+        },
+
+        validateKeys(rule, value, callback) {
+            this.validateKeysState();
+            const keys = value || [];
+            const validKeys = keys.filter(item => {
+                const name = String(item.name || '').trim();
+                const key =
+                    String(item.key || '').trim() ||
+                    (item.originalKeyValue && this.isKeyValueUnchanged(item) ? item.originalKeyValue : '');
+                return name || key;
+            });
+            const sum = validKeys.reduce((acc, k) => acc + (Number(k.weight) || 0), 0);
+            if (validKeys.length > 0 && sum !== 100) {
+                callback(new Error(this.$t('gatewayConfig.keysWeightSumError') || '所有 Key 的权重之和必须等于 100'));
+                return;
+            }
+            callback();
+        },
+
+        validateRetryBackoffMax(rule, value, callback) {
+            const initial = this.formData && this.formData.key_policy && this.formData.key_policy.retry_backoff_initial;
+            if (value !== undefined && value !== null && initial !== undefined && initial !== null && value < initial) {
+                callback(new Error(this.$t('gatewayConfig.keyPolicyBackoffMaxInvalid') || '最大退避时间必须大于或等于初始退避时间'));
+                return;
+            }
+            callback();
+        },
+
+        validateMatchPrefix(rule, value, callback) {
+            const prefix = String(value || '').trim();
+            if (!prefix) {
+                if (this.formData.strip_prefix) {
+                    callback(new Error(this.$t('gatewayConfig.matchPrefixRequiredWhenStrip') || '开启裁剪前缀时，模型前缀匹配必填'));
+                    return;
+                }
+                callback();
+                return;
+            }
+            if (!prefix.endsWith('/')) {
+                callback(new Error(this.$t('gatewayConfig.matchPrefixMustEndWithSlash') || '模型前缀匹配必须以 / 结尾'));
+                return;
+            }
+            callback();
+        },
+
+        onRetryBackoffInitialChange() {
+            this.$nextTick(() => {
+                if (this.$refs.formData) {
+                    this.$refs.formData.validateField('key_policy.retry_backoff_max');
+                }
+            });
         },
         applyLlmConfigData(data) {
             this.formData = cloneDeep(data);
@@ -541,8 +919,107 @@ export default {
                     }
                 ]);
             }
+
+            if (!Array.isArray(this.formData.keys) || this.formData.keys.length === 0) {
+                this.$set(this.formData, 'keys', [{ name: '', key: '', weight: 100 }]);
+            }
+            this.initKeys();
+
+            if (!this.formData.key_policy) {
+                this.$set(this.formData, 'key_policy', {
+                    strategy: 'weighted_random',
+                    max_retries: 0,
+                    retry_backoff_initial: 500,
+                    retry_backoff_max: 5000
+                });
+            }
+
+            this.formData.provider = this.formData.provider || '';
+            this.formData.match_prefix = this.formData.match_prefix || '';
+            this.formData.strip_prefix = !!this.formData.strip_prefix;
+
             this.mergeSelectedModelsIntoList();
-            this.applyKeyInputFromData(data);
+            this.validateKeysState();
+            this.previousProviderType = this.formData.provider_type || '';
+        },
+        initKeys() {
+            if (this.isAdd || !Array.isArray(this.originalLlmConfigKeys) || this.originalLlmConfigKeys.length === 0) {
+                return;
+            }
+
+            const originalByName = {};
+            this.originalLlmConfigKeys.forEach(item => {
+                const name = String(item.name || '').trim();
+                if (name) {
+                    originalByName[name] = String(item.key || '');
+                }
+            });
+
+            this.formData.keys = (this.formData.keys || []).map(keyItem => {
+                const name = String(keyItem.name || '').trim();
+                const originalKeyValue =
+                    keyItem.originalKeyValue || originalByName[name] || '';
+                const currentKey = keyItem.key != null ? String(keyItem.key) : '';
+                const hasOriginal = !!originalKeyValue;
+                const isUnchangedFromApi = hasOriginal && currentKey === originalKeyValue;
+                const isShowingMasked =
+                    hasOriginal && currentKey === maskSecretKey(originalKeyValue);
+                const isUnchanged =
+                    hasOriginal &&
+                    (isUnchangedFromApi || isShowingMasked || !keyItem.keyModifiedInSession);
+
+                return {
+                    name: keyItem.name != null ? keyItem.name : '',
+                    key: isUnchanged ? maskSecretKey(originalKeyValue) : currentKey,
+                    weight: keyItem.weight != null ? keyItem.weight : 0,
+                    originalKeyValue: hasOriginal ? originalKeyValue : '',
+                    keyModifiedInSession: hasOriginal ? !isUnchanged : !!currentKey
+                };
+            });
+        },
+        getKeyMaskedValue(keyItem) {
+            return keyItem.originalKeyValue ? maskSecretKey(keyItem.originalKeyValue) : '';
+        },
+        isKeyValueUnchanged(keyItem) {
+            if (!keyItem.originalKeyValue) {
+                return !String(keyItem.key || '').trim();
+            }
+            if (!keyItem.keyModifiedInSession) {
+                return true;
+            }
+            const trimmed = String(keyItem.key || '').trim();
+            if (!trimmed) {
+                return true;
+            }
+            return trimmed === keyItem.originalKeyValue;
+        },
+        resolveKeyForSubmit(keyItem) {
+            if (!keyItem.originalKeyValue) {
+                return keyItem.key;
+            }
+            if (this.isKeyValueUnchanged(keyItem)) {
+                return keyItem.originalKeyValue;
+            }
+            return keyItem.key;
+        },
+        onKeyValueFocus(keyItem) {
+            if (keyItem.originalKeyValue && !keyItem.keyModifiedInSession) {
+                const masked = this.getKeyMaskedValue(keyItem);
+                if (keyItem.key === masked) {
+                    keyItem.key = '';
+                    keyItem.keyModifiedInSession = true;
+                }
+            }
+        },
+        onKeyValueChange(keyItem) {
+            if (keyItem.originalKeyValue && !keyItem.keyModifiedInSession) {
+                const masked = this.getKeyMaskedValue(keyItem);
+                if (keyItem.key !== masked) {
+                    keyItem.keyModifiedInSession = true;
+                }
+            } else if (!keyItem.originalKeyValue && String(keyItem.key || '').trim()) {
+                keyItem.keyModifiedInSession = true;
+            }
         },
         initHeaders() {
             const headers =
@@ -781,24 +1258,48 @@ export default {
                     );
                 }
 
-                const trimmedKey = String(this.formData.keyInput || '').trim();
-                const unchanged = this.isServiceAuthKeyUnchanged();
-                if (!unchanged && trimmedKey) {
-                    tmpData.key = trimmedKey;
-                } else {
-                    delete tmpData.key;
+                if (!Array.isArray(tmpData.keys)) {
+                    tmpData.keys = [];
                 }
-                delete tmpData.keyInput;
+                tmpData.keys = tmpData.keys
+                    .map(item => ({
+                        name: String(item.name || '').trim(),
+                        key: String(this.resolveKeyForSubmit(item) || '').trim(),
+                        weight: Number(item.weight) || 0
+                    }))
+                    .filter(item => item.name || item.key);
+
+                const headers = (tmpData.model_endpoint && tmpData.model_endpoint.headers) || {};
+                const hasPlaceholder = Object.values(headers).some(v => String(v).includes('${API_KEY}'));
+                if (hasPlaceholder && tmpData.keys.length === 0) {
+                    this.$Message.error(this.$t('gatewayConfig.keysPlaceholderError') || '请求头中包含 ${API_KEY} 占位符时，Keys 不能为空');
+                    return;
+                }
+
+                if (!tmpData.key_policy) {
+                    tmpData.key_policy = {
+                        strategy: 'weighted_random',
+                        max_retries: 0,
+                        retry_backoff_initial: 500,
+                        retry_backoff_max: 5000
+                    };
+                }
+
                 delete tmpData.service_name;
                 delete tmpData.group;
                 if (!tmpData.provider_type) {
                     delete tmpData.provider_type;
                 }
+                if (!tmpData.match_prefix) {
+                    delete tmpData.match_prefix;
+                }
+                if (!tmpData.strip_prefix) {
+                    delete tmpData.strip_prefix;
+                }
 
                 this.$emit('submitData', {
                     topic: 'llmConfigData',
-                    data: tmpData,
-                    keepExistingKey: this.hasExistingKey && unchanged
+                    data: tmpData
                 });
             });
         }
@@ -896,6 +1397,7 @@ table {
     }
     th {
         background-color: #f8f8f9;
+        font-size: 13px;
     }
     .table-title {
         font-weight: 500;
@@ -910,5 +1412,64 @@ table {
     font-size: 12px;
     color: #999;
     margin-top: 4px;
+}
+
+.keys-table {
+    width: 100%;
+    margin-top: 15px;
+    font-size: 14px;
+    border-top: 1px solid #e7e9f0;
+    border-left: 1px solid #e7e9f0;
+    border-collapse: collapse;
+
+    td,
+    th {
+        border-bottom: 1px solid #e7e9f0;
+        border-right: 1px solid #e7e9f0;
+        padding: 10px;
+        text-align: left;
+        word-wrap: break-word;
+        word-break: break-all;
+    }
+
+    th {
+        background-color: #f8f8f9;
+        font-size: 13px;
+    }
+}
+
+.weight-error {
+    color: #ed4014;
+    margin-top: 8px;
+}
+
+.inline-form-item {
+    margin-bottom: 0;
+}
+
+.llm-section-card {
+    margin-bottom: 16px;
+
+    /deep/ .ivu-card-head p {
+        font-size: 13px;
+    }
+}
+
+.provider-label {
+    display: inline-flex;
+    align-items: center;
+}
+
+.provider-help-icon {
+    margin-left: 4px;
+    font-size: 16px;
+    color: #2d8cf0;
+    vertical-align: middle;
+}
+
+.provider-tip-content {
+    max-width: 320px;
+    white-space: normal;
+    line-height: 1.5;
 }
 </style>

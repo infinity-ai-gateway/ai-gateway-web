@@ -1,4 +1,4 @@
-# AI 网关管理控制台用户手册
+# 壬远AI网关管理控制台用户手册
 
 本手册面向**控制台使用者**：运维 / 平台同学通过 Web 控制台完成资源接入、消费者治理、路由配置与日常运维。手册基于当前版本控制台真实截图编写。
 
@@ -10,14 +10,15 @@
 | [02 概览](02-overview.md) | 控制台布局、导航结构与通用交互 |
 | [03 AI 网关实例池](03-ai-gateway-pool.md) | 数据面转发引擎实例登记 |
 | [04 AI 业务集群](04-ai-business-cluster.md) | 后端模型服务接入（向导 6 步） |
-| [05 Entity 类型](05-entity-type.md) | Entity 类型的创建、编辑与删除 |
-| [06 Entity 组织](06-entity.md) | 组织管理、配额、限流、模型访问控制、运行时生效机制 |
-| [07 API Key](07-api-key.md) | 调用凭证的创建、编辑、删除与配额限流 |
-| [08 路由管理](08-route.md) | 路由表、路由规则、表达式与权重 |
-| [09 场景实战](09-scenarios.md) | 从零到第一次调用成功的完整示例 |
-| [10 附录](10-appendix.md) | 术语表 + 常见错误提示对照 |
+| [05 模型定价](05-model-prices.md) | 模型价格维护、YAML 导入与费用核算 |
+| [06 Entity 类型](06-entity-type.md) | Entity 类型的创建、编辑与删除 |
+| [07 Entity 组织](07-entity.md) | 组织管理、配额、限流、模型访问控制、运行时生效机制 |
+| [08 API Key](08-api-key.md) | 调用凭证的创建、编辑、删除与配额限流 |
+| [09 路由管理](09-route.md) | 路由表、路由规则、表达式与权重 |
+| [10 场景实战](10-scenarios.md) | 从零到第一次调用成功的完整示例 |
+| [11 附录](11-appendix.md) | 术语表 + 常见错误提示对照 |
 
-**建议路径**：首次使用先看 [02 概览](02-overview.md)，再跟做 [09 场景实战](09-scenarios.md)，遇到字段疑问回查对应章节。
+**建议路径**：首次使用先看 [02 概览](02-overview.md)，再跟做 [10 场景实战](10-scenarios.md)，遇到字段疑问回查对应章节。
 
 ## 系统架构简介
 
@@ -53,15 +54,16 @@
 - 必填字段以 `*` 标注；
 - 控制台地址默认为 `http://<控制台IP>:8183`，默认管理员账号 `admin` / `admin`（见 01 章），建议首次登录后及时修改；
 - **控制台 IP 怎么填**：单机本地部署用 `127.0.0.1`；远程服务器部署用浏览器地址栏中的 IP 或域名（如 `192.168.1.10`）。控制台地址与数据面地址（见实例池章节）不是同一个；
-- **部署文档**：[AI Gateway Web 部署](deploy.md)、[AI Gateway API 部署](https://github.com/infinity-ai-gateway/ai-gateway-api/blob/develop/docs/zh_cn/deploy.md)。
+- **部署文档**：[AI Gateway Web 部署](deploy.md)、[AI Gateway API 部署](https://github.com/rainway-ai-gateway/ai-gateway-api/blob/develop/docs/zh_cn/deploy.md)。
 
 ## 模块全景
 
 ```text
 资源管理 ─ AI 网关实例池（数据面引擎地址）
-        └ AI 业务集群（后端模型服务 + 哈希策略）
+        ├ AI 业务集群（后端模型服务 + 哈希策略）
+        └ 模型定价（模型价格维护与费用核算）
 消费者管理 ─ Entity 类型（组织分类维度）
-          └ Entity 组织（配额与限流挂载点）
+          ├ Entity 组织（配额与限流挂载点）
           └ API Key 管理（调用凭证）
 路由管理 ─ 路由表（Global / Entity / API-Key 三级优先级）
 用户管理 ─ 控制台账号与 Token

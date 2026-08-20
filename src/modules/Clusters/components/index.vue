@@ -1,5 +1,5 @@
 /**
-* Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+* Copyright(c) 2026 The rainway-ai-gateway Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@
             :llmConfigData="llmConfigData"
             :originalLlmConfigKey="originalLlmConfigKey"
             :originalLlmConfigHeaders="originalLlmConfigHeaders"
+            :originalLlmConfigKeys="originalLlmConfigKeys"
             :isAdd="isAdd"
             :stepsCurrentState="currentStepIndex"
             :instancePoolData="instancePoolData"
@@ -327,6 +328,7 @@ export default {
             llmConfigData: {},
             originalLlmConfigKey: '',
             originalLlmConfigHeaders: {},
+            originalLlmConfigKeys: [],
             passiveHealthData: {},
             baseSubmitFlag: false,
             timeoutSubmitFlag: false,
@@ -503,6 +505,9 @@ export default {
                     tmpData.llm_config.model_endpoint &&
                     tmpData.llm_config.model_endpoint.headers) ||
                     {}
+            );
+            this.originalLlmConfigKeys = cloneDeep(
+                (tmpData.llm_config && tmpData.llm_config.keys) || []
             );
             this.instancePoolData = getClusterInstancePool(tmpData);
         },

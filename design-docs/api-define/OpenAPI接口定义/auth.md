@@ -528,8 +528,26 @@ Data为数组，每个元素为Token（详见“查看Token详情”）。
 
 | 参数名 | 类型 | 参数含义 | 补充描述 |
 | - | - | - | - |
-| nav | object | 导航配置 | - |
-| icon | object | 图标配置 | - |
-| logo | object | Logo配置 | - |
+| nav | object | 导航配置 | 按角色组织的导航树，key 为角色名 |
+| icon | string | 图标资源路径/URL | 对应配置项 `UIIcon` |
+| logo | string | Logo 资源路径/URL | 对应配置项 `UILogo` |
+
+**成功返回示例**
+
+```json
+{
+    "ErrNum": 200,
+    "ErrMsg": "success",
+    "Data": {
+        "nav": {
+            "admin": [
+                {"name": "clusters", "label": "集群管理"}
+            ]
+        },
+        "icon": "/static/icon.png",
+        "logo": "/static/logo.png"
+    }
+}
+```
 
 ---

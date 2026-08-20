@@ -1,463 +1,480 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="../assets/static/css/app.css" />
-  <link rel="stylesheet" href="../assets/static/css/Entity.list.css" />
-  <link rel="stylesheet" href="../assets/static/css/APIKey.css" />
-  <link rel="stylesheet" href="../assets/font/iconfont.css" />
-  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
-  <script src="../assets/js/mock-data.js"></script>
-  <script src="../assets/js/ivu-ui.js"></script>
-  <script src="../assets/js/api-key-upsert.js"></script>
-  <script src="../assets/js/entity-upsert.js"></script>
-  <script src="../assets/js/layout.js"></script>
-  <script src="../assets/js/prototype.js"></script>
-</head>
-<body>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  var root = Layout.render({ pageId: 'Entity.list', basePath: '../' });
-  var orgContent =
-    '<div class="title entity-page">' +
-      IvuUI.btn('创建Entity', 'primary', 'small', '', 'id="btn-entity-add"') +
-    '</div>' +
-    '<div id="entity-table"></div>';
-  var typeContent =
-    '<div class="title entity-page">' +
-      IvuUI.btn('创建类型', 'primary', 'small', '', 'id="btn-entity-type-add"') +
-    '</div>' +
-    '<div id="entity-type-table"></div>';
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../assets/static/css/app.css" />
+    <link rel="stylesheet" href="../assets/static/css/Entity.list.css" />
+    <link rel="stylesheet" href="../assets/static/css/APIKey.css" />
+    <link rel="stylesheet" href="../assets/font/iconfont.css" />
+    <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+    <script src="../assets/js/mock-data.js"></script>
+    <script src="../assets/js/ivu-ui.js"></script>
+    <script src="../assets/js/api-key-upsert.js"></script>
+    <script src="../assets/js/entity-upsert.js"></script>
+    <script src="../assets/js/layout.js"></script>
+    <script src="../assets/js/prototype.js"></script>
+  </head>
+  <body>
+    <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                  var root = Layout.render({ pageId: 'Entity.list', basePath: '../' });
+                  var orgContent =
+                    '<div class="title entity-page">' +
+                      IvuUI.btn('创建Entity', 'primary', 'small', '', 'id="btn-entity-add"') +
+                    '</div>' +
+                    '<div id="entity-table"></div>';
+                  var typeContent =
+                    '<div class="title entity-page">' +
+                      IvuUI.btn('创建类型', 'primary', 'small', '', 'id="btn-entity-type-add"') +
+                    '</div>' +
+                    '<div id="entity-type-table"></div>';
 
-  root.innerHTML =
-    IvuUI.tabs([
-      { name: 'entity', label: 'Entity组织管理' },
-      { name: 'entityType', label: 'Entity类型管理' }
-    ], IvuUI.tabPane('entity', orgContent, true) + IvuUI.tabPane('entityType', typeContent, false)) +
-    EntityUpsert.drawer('add', {}, []) +
-    EntityUpsert.typeDrawer('add', {}) +
-    EntityUpsert.resetQuotaModal();
+                  root.innerHTML =
+                    IvuUI.tabs([
+                      { name: 'entity', label: 'Entity组织管理' },
+                      { name: 'entityType', label: 'Entity类型管理' }
+                    ], IvuUI.tabPane('entity', orgContent, true) + IvuUI.tabPane('entityType', typeContent, false)) +
+                    EntityUpsert.drawer('add', {}, []) +
+                    EntityUpsert.typeDrawer('add', {}) +
+                    EntityUpsert.resetQuotaModal();
 
-  Prototype.initTabs(root);
+                  Prototype.initTabs(root);
 
-  var entityState = {
-    rows: cloneRows(MockData.entities),
-    filteredRows: [],
-    search: { name: '', type: '', parent_id: '', quota_plan: '', rate_limit_policy_enabled: '' },
-    pageSize: 20,
-    currentPage: 1,
-    drawerMode: 'add',
-    currentRow: null,
-    currentId: ''
-  };
+                  var entityState = {
+                    rows: cloneRows(MockData.entities),
+                    filteredRows: [],
+                    search: { id: '', name: '', type: '', parent_id: '', quota_plan: '', rate_limit_policy_enabled: '' },
+                    pageSize: 20,
+                    currentPage: 1,
+                    drawerMode: 'add',
+                    currentRow: null,
+                    currentId: ''
+                  };
 
-  var typeState = {
-    rows: cloneRows(MockData.entityTypes),
-    filteredRows: [],
-    search: { type_name: '', level: '' },
-    pageSize: 20,
-    currentPage: 1,
-    drawerMode: 'add',
-    currentRow: null,
-    currentId: ''
-  };
+                  var typeState = {
+                    rows: cloneRows(MockData.entityTypes),
+                    filteredRows: [],
+                    search: { type_name: '', level: '' },
+                    pageSize: 20,
+                    currentPage: 1,
+                    drawerMode: 'add',
+                    currentRow: null,
+                    currentId: ''
+                  };
 
-  function cloneRows(list) {
-    return JSON.parse(JSON.stringify(list || []));
-  }
+                  function cloneRows(list) {
+                    return JSON.parse(JSON.stringify(list || []));
+                  }
 
-  function enrichEntityRows(rows) {
-    return rows.map(function (row) {
-      return Object.assign({}, row, {
-        rate_limit_policy_enabled: !!(row.rate_limit_policy && row.rate_limit_policy.enabled)
-      });
-    });
-  }
+                  function enrichEntityRows(rows) {
+                    return rows.map(function (row) {
+                      return Object.assign({}, row, {
+                        rate_limit_policy_enabled: !!(row.rate_limit_policy && row.rate_limit_policy.enabled)
+                      });
+                    });
+                  }
 
-  function filterEntityRows() {
-    entityState.filteredRows = enrichEntityRows(entityState.rows).filter(function (row) {
-      return Object.keys(entityState.search).every(function (key) {
-        var keyword = String(entityState.search[key] || '').trim().toUpperCase();
-        if (!keyword) return true;
-        if (key === 'name') return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
-        if (key === 'type') return String(row.type || '').toUpperCase().indexOf(keyword) !== -1;
-        if (key === 'parent_id') return EntityUpsert.parentName(row, entityState.rows).toUpperCase().indexOf(keyword) !== -1;
-        if (key === 'quota_plan') return EntityUpsert.formatQuota(row).toUpperCase().indexOf(keyword) !== -1;
-        if (key === 'rate_limit_policy_enabled') {
-          var enabled = !!(row.rate_limit_policy && row.rate_limit_policy.enabled);
-          return String(enabled) === keyword;
+                  function filterEntityRows() {
+                    entityState.filteredRows = enrichEntityRows(entityState.rows).filter(function (row) {
+                      return Object.keys(entityState.search).every(function (key) {
+                        var keyword = String(entityState.search[key] || '').trim().toUpperCase();
+                        if (!keyword) return true;
+                        if (key === 'id') return String(row.id || '').toUpperCase().indexOf(keyword) !== -1;
+                        if (key === 'name') return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
+                        if (key === 'type') return String(row.type || '').toUpperCase().indexOf(keyword) !== -1;
+                        if (key === 'parent_id') return EntityUpsert.parentName(row, entityState.rows).toUpperCase().indexOf(keyword) !== -1;
+                        if (key === 'quota_plan') return EntityUpsert.formatQuota(row).toUpperCase().indexOf(keyword) !== -1;
+                        if (key === 'rate_limit_policy_enabled') {
+                          var enabled = !!(row.rate_limit_policy && row.rate_limit_policy.enabled);
+                          return String(enabled) === keyword;
+                        }
+                        return true;
+                      });
+                    });
+                  }
+
+                  function filterTypeRows() {
+                    typeState.filteredRows = typeState.rows.filter(function (row) {
+                      return Object.keys(typeState.search).every(function (key) {
+                        var keyword = String(typeState.search[key] || '').trim();
+                        if (!keyword) return true;
+                        if (key === 'type_name') return String(row.type_name || '').toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
+                        if (key === 'level') return String(row.level) === keyword;
+                        return true;
+                      });
+                    });
+                  }
+
+                  function getEntityPageRows() {
+                    var start = (entityState.currentPage - 1) * entityState.pageSize;
+                    return entityState.filteredRows.slice(start, start + entityState.pageSize);
+                  }
+
+                  function getTypePageRows() {
+                    var start = (typeState.currentPage - 1) * typeState.pageSize;
+                    return typeState.filteredRows.slice(start, start + typeState.pageSize);
+                  }
+
+                  function renderEntityTable() {
+                    filterEntityRows();
+                    var totalPages = Math.max(1, Math.ceil(entityState.filteredRows.length / entityState.pageSize));
+                    if (entityState.currentPage > totalPages) entityState.currentPage = totalPages;
+
+                    document.getElementById('entity-table').innerHTML = IvuUI.pageTable({
+                      tableId: 'entity-page-table',
+                      columns: [
+                  { title: 'ID', key: 'id', minWidth: 120, searchable: true, sortable: true },
+                  { title: '名称', key: 'name', minWidth: 120, searchable: true, sortable: true },
+                  { title: '类型', key: 'type', minWidth: 100, searchable: true, sortable: true },
+                  {
+                    title: '父Entity', key: 'parent_id', minWidth: 120, searchable: true, sortable: true,
+                    render: function (row) { return EntityUpsert.parentName(row, entityState.rows); }
+                  },
+                  { title: '配额', key: 'quota_plan', minWidth: 140, searchable: true, sortable: true, render: function (row) { return EntityUpsert.formatQuota(row); } },
+                  {
+                    title: '限流状态', key: 'rate_limit_policy_enabled', minWidth: 100, searchable: true, sortable: true,
+                    searchType: 'select',
+                    searchPlaceholder: '请选择限流状态',
+                    searchFilters: [
+                      { label: '已启用', value: 'true' },
+                      { label: '未启用', value: 'false' }
+                    ],
+                    render: function (row) {
+                      var enabled = !!(row.rate_limit_policy && row.rate_limit_policy.enabled);
+                      return IvuUI.tag(enabled ? '已启用' : '未启用', enabled ? 'success' : 'default');
+                    }
+                  },
+                  {
+                    title: '操作', key: 'action', width: 300,
+                    render: function (row, rowIndex) {
+                      var pageStart = (entityState.currentPage - 1) * entityState.pageSize;
+                      return IvuUI.btn('管理路由规则', 'success', 'small', '', 'data-entity-manage-rules="' + (pageStart + rowIndex) + '"') + ' ' +
+                        IvuUI.btn('编辑', 'primary', 'small', '', 'data-entity-edit="' + (pageStart + rowIndex) + '"') + ' ' +
+                        IvuUI.btn('删除', 'error', 'small', '', 'data-entity-delete="' + (pageStart + rowIndex) + '"');
+                    }
+                  }
+                ],
+                      rows: getEntityPageRows(),
+                      total: entityState.filteredRows.length,
+                      pageSize: entityState.pageSize,
+                      currentPage: entityState.currentPage,
+                      searchValues: entityState.search
+                    });
+
+                    bindEntityTableEvents();
+                  }
+
+                  function renderTypeTable() {
+                    filterTypeRows();
+                    var totalPages = Math.max(1, Math.ceil(typeState.filteredRows.length / typeState.pageSize));
+                    if (typeState.currentPage > totalPages) typeState.currentPage = totalPages;
+
+                    document.getElementById('entity-type-table').innerHTML = IvuUI.pageTable({
+                      tableId: 'entity-type-page-table',
+                      columns: [
+                        { title: '类型名', key: 'type_name', minWidth: 120, searchable: true, sortable: true },
+                        { title: '描述', key: 'description', minWidth: 180, sortable: true },
+                        {
+                          title: '级别', key: 'level', minWidth: 100, searchable: true, sortable: true,
+                          searchType: 'select',
+                          searchPlaceholder: '请选择级别',
+                          searchFilters: [
+                            { label: '1', value: '1' },
+                            { label: '2', value: '2' },
+                            { label: '3', value: '3' },
+                            { label: '4', value: '4' },
+                            { label: '5', value: '5' }
+                          ]
+                        },
+                        {
+                          title: '创建时间', key: 'create_time', minWidth: 160, sortable: true,
+                          render: function (row) { return EntityUpsert.formatTime(row.create_time); }
+                        },
+                        {
+                          title: '操作', key: 'action', width: 200,
+                          render: function (row, rowIndex) {
+                            var pageStart = (typeState.currentPage - 1) * typeState.pageSize;
+                            return IvuUI.btn('编辑', 'primary', 'small', '', 'data-entity-type-edit="' + (pageStart + rowIndex) + '"') + ' ' +
+                              IvuUI.btn('删除', 'error', 'small', '', 'data-entity-type-delete="' + (pageStart + rowIndex) + '"');
+                          }
+                        }
+                      ],
+                      rows: getTypePageRows(),
+                      total: typeState.filteredRows.length,
+                      pageSize: typeState.pageSize,
+                      currentPage: typeState.currentPage,
+                      searchValues: typeState.search
+                    });
+
+                    bindTypeTableEvents();
+                  }
+
+                  function bindEntityTableEvents() {
+                    var tableRoot = document.getElementById('entity-page-table');
+                    if (!tableRoot) return;
+
+                    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+                      entityState.search[key] = value;
+                      entityState.currentPage = 1;
+                      renderEntityTable();
+                    });
+
+                    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+                      item.onclick = function () {
+                        entityState.currentPage = parseInt(item.getAttribute('data-page'), 10);
+                        renderEntityTable();
+                      };
+                    });
+
+                    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+                    if (sizeSelect) {
+                      sizeSelect.onchange = function () {
+                        entityState.pageSize = parseInt(sizeSelect.value, 10);
+                        entityState.currentPage = 1;
+                        renderEntityTable();
+                      };
+                    }
+
+                    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+                      btn.onclick = function () {
+                        if (entityState.currentPage > 1) { entityState.currentPage -= 1; renderEntityTable(); }
+                      };
+                    });
+                    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
+                      btn.onclick = function () {
+                        var totalPages = Math.max(1, Math.ceil(entityState.filteredRows.length / entityState.pageSize));
+                        if (entityState.currentPage < totalPages) { entityState.currentPage += 1; renderEntityTable(); }
+                      };
+                    });
+
+                    tableRoot.querySelectorAll('[data-entity-edit]').forEach(function (btn) {
+                      btn.onclick = function (e) {
+                        e.stopPropagation();
+                        openEntityDrawer('edit', parseInt(btn.getAttribute('data-entity-edit'), 10));
+                      };
+                    });
+
+                    tableRoot.querySelectorAll('[data-entity-manage-rules]').forEach(function (btn) {
+                btn.onclick = function (e) {
+                  e.stopPropagation();
+                  var index = parseInt(btn.getAttribute('data-entity-manage-rules'), 10);
+                  var row = entityState.filteredRows[index];
+                  if (!row) return;
+                  window.location.href = 'route-tables.html?type=entity&owner=' + encodeURIComponent(row.id);
+                };
+              });
+
+              tableRoot.querySelectorAll('[data-entity-delete]').forEach(function (btn) {
+                      btn.onclick = function (e) {
+                        e.stopPropagation();
+                        var index = parseInt(btn.getAttribute('data-entity-delete'), 10);
+                        var row = entityState.filteredRows[index];
+                        if (!row) return;
+                        Prototype.confirm({
+                          content: '是否删除Entity ' + (row.name || '') + '？',
+                          onOk: function () {
+                            entityState.rows = entityState.rows.filter(function (item) { return item.id !== row.id; });
+                            renderEntityTable();
+                            Prototype.toast('删除成功!');
+                          }
+                        });
+                      };
+                    });
+
+                    tableRoot.querySelectorAll('.show-iView-Table .ivu-table-tbody tr').forEach(function (tr, rowIndex) {
+                      tr.style.cursor = 'pointer';
+                      tr.onclick = function (e) {
+                        if (e.target.closest('button')) return;
+                        var pageStart = (entityState.currentPage - 1) * entityState.pageSize;
+                        openEntityDrawer('view', pageStart + rowIndex);
+                      };
+                    });
+                  }
+
+                  function bindTypeTableEvents() {
+                    var tableRoot = document.getElementById('entity-type-page-table');
+                    if (!tableRoot) return;
+
+                    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+                      typeState.search[key] = value;
+                      typeState.currentPage = 1;
+                      renderTypeTable();
+                    });
+
+                    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
+                      item.onclick = function () {
+                        typeState.currentPage = parseInt(item.getAttribute('data-page'), 10);
+                        renderTypeTable();
+                      };
+                    });
+
+                    var sizeSelect = tableRoot.querySelector('.proto-page-size');
+                    if (sizeSelect) {
+                      sizeSelect.onchange = function () {
+                        typeState.pageSize = parseInt(sizeSelect.value, 10);
+                        typeState.currentPage = 1;
+                        renderTypeTable();
+                      };
+                    }
+
+                    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+                      btn.onclick = function () {
+                        if (typeState.currentPage > 1) { typeState.currentPage -= 1; renderTypeTable(); }
+                      };
+                    });
+                    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
+                      btn.onclick = function () {
+                        var totalPages = Math.max(1, Math.ceil(typeState.filteredRows.length / typeState.pageSize));
+                        if (typeState.currentPage < totalPages) { typeState.currentPage += 1; renderTypeTable(); }
+                      };
+                    });
+
+                    tableRoot.querySelectorAll('[data-entity-type-edit]').forEach(function (btn) {
+                      btn.onclick = function (e) {
+                        e.stopPropagation();
+                        openTypeDrawer('edit', parseInt(btn.getAttribute('data-entity-type-edit'), 10));
+                      };
+                    });
+
+                    tableRoot.querySelectorAll('[data-entity-type-delete]').forEach(function (btn) {
+                      btn.onclick = function (e) {
+                        e.stopPropagation();
+                        var index = parseInt(btn.getAttribute('data-entity-type-delete'), 10);
+                        var row = typeState.filteredRows[index];
+                        if (!row) return;
+                        Prototype.confirm({
+                          content: '是否删除Entity类型 ' + (row.type_name || '') + '？',
+                          onOk: function () {
+                            typeState.rows = typeState.rows.filter(function (item) { return item.type_name !== row.type_name; });
+                            renderTypeTable();
+                            Prototype.toast('删除成功!');
+                          }
+                        });
+                      };
+                    });
+                  }
+
+                  function mountEntityDrawer(mode, data) {
+            var wrap = document.getElementById('drawer-entity');
+            if (wrap) wrap.remove();
+            window._entityUpsertRows = entityState.rows;
+            window._entityUpsertCurrentId = data && data.id != null ? data.id : '';
+            document.getElementById('product-body').insertAdjacentHTML('beforeend', EntityUpsert.drawer(mode, data, entityState.rows));
+            bindEntityDrawerActions();
+          }
+
+                  function openEntityDrawer(mode, index) {
+                    entityState.drawerMode = mode;
+                    var filteredRow = typeof index === 'number' ? entityState.filteredRows[index] : null;
+                    entityState.currentRow = filteredRow
+                      ? entityState.rows.find(function (item) { return item.id === filteredRow.id; }) || filteredRow
+                      : null;
+                    entityState.currentId = entityState.currentRow ? entityState.currentRow.id : '';
+                    mountEntityDrawer(mode, entityState.currentRow || {});
+                    Prototype.openDrawer('drawer-entity');
+                  }
+
+                  function mountTypeDrawer(mode, data) {
+                    var wrap = document.getElementById('drawer-entity-type');
+                    if (wrap) wrap.remove();
+                    document.getElementById('product-body').insertAdjacentHTML('beforeend', EntityUpsert.typeDrawer(mode, data));
+                    bindTypeDrawerActions();
+                  }
+
+                  function openTypeDrawer(mode, index) {
+                    typeState.drawerMode = mode;
+                    var filteredRow = typeof index === 'number' ? typeState.filteredRows[index] : null;
+                    typeState.currentRow = filteredRow
+                      ? typeState.rows.find(function (item) { return item.type_name === filteredRow.type_name; }) || filteredRow
+                      : null;
+                    typeState.currentId = typeState.currentRow ? typeState.currentRow.type_name : '';
+                    mountTypeDrawer(mode, typeState.currentRow || {});
+                    Prototype.openDrawer('drawer-entity-type');
+                  }
+
+                  function openEntityResetQuotaModal() {
+                    var plan = entityState.currentRow && entityState.currentRow.quota_plan;
+                    var quotaInput = document.getElementById('modal-entity-reset-quota-total');
+                    var reasonInput = document.getElementById('modal-entity-reset-quota-reason');
+                    if (quotaInput) quotaInput.value = plan && plan.quota != null ? plan.quota : 0;
+                    if (reasonInput) reasonInput.value = '';
+                    Prototype.openModal('modal-entity-reset-quota');
+                  }
+
+                  function confirmEntityResetQuota() {
+                    var quotaInput = document.getElementById('modal-entity-reset-quota-total');
+                    var newQuota = quotaInput ? parseInt(quotaInput.value, 10) : NaN;
+                    if (!quotaInput || quotaInput.value === '' || isNaN(newQuota) || newQuota < 0) {
+                      Prototype.toast('请输入有效的配额总量');
+                      return;
+                    }
+                    if (!entityState.currentRow) return;
+                    if (!entityState.currentRow.quota_plan) entityState.currentRow.quota_plan = {};
+                    entityState.currentRow.quota_plan.quota = newQuota;
+                    entityState.currentRow.quota_plan.unlimited = false;
+                    if (!entityState.currentRow.quota_plan.balance) entityState.currentRow.quota_plan.balance = {};
+                    entityState.currentRow.quota_plan.balance.used = 0;
+                    Prototype.closeModal('modal-entity-reset-quota');
+                    Prototype.toast('配额重置成功！');
+                    mountEntityDrawer('view', entityState.currentRow);
+                    Prototype.openDrawer('drawer-entity');
+                    renderEntityTable();
+                  }
+
+                  function bindEntityDrawerActions() {
+                    var cancelBtn = document.getElementById('btn-entity-cancel');
+                    var closeBtn = document.getElementById('btn-entity-close');
+                    var submitBtn = document.getElementById('btn-entity-submit');
+                    if (cancelBtn) cancelBtn.onclick = function () { Prototype.closeDrawer('drawer-entity'); };
+                    if (closeBtn) closeBtn.onclick = function () { Prototype.closeDrawer('drawer-entity'); };
+                    if (submitBtn) {
+          submitBtn.onclick = function () {
+            if (entityState.drawerMode !== 'view' && !EntityUpsert.validateEntityForm()) return;
+            Prototype.closeDrawer('drawer-entity');
+            Prototype.toast(entityState.drawerMode === 'add' ? '创建成功！' : '编辑成功！');
+          };
         }
-        return true;
-      });
-    });
-  }
+                    if (entityState.drawerMode !== 'view') EntityUpsert.initUpsertForm();
+                    var resetBtn = document.getElementById('btn-entity-reset-quota');
+                    if (resetBtn) resetBtn.onclick = openEntityResetQuotaModal;
+                  }
 
-  function filterTypeRows() {
-    typeState.filteredRows = typeState.rows.filter(function (row) {
-      return Object.keys(typeState.search).every(function (key) {
-        var keyword = String(typeState.search[key] || '').trim();
-        if (!keyword) return true;
-        if (key === 'type_name') return String(row.type_name || '').toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
-        if (key === 'level') return String(row.level) === keyword;
-        return true;
-      });
-    });
-  }
+                  function bindTypeDrawerActions() {
+                    var cancelBtn = document.getElementById('btn-entity-type-cancel');
+                    var submitBtn = document.getElementById('btn-entity-type-submit');
+                    if (cancelBtn) cancelBtn.onclick = function () { Prototype.closeDrawer('drawer-entity-type'); };
+                    if (submitBtn) {
+        submitBtn.onclick = function () {
+          if (!EntityUpsert.validateEntityTypeForm()) return;
+          Prototype.closeDrawer('drawer-entity-type');
+          Prototype.toast(typeState.drawerMode === 'add' ? '创建成功！' : '编辑成功！');
+        };
+      }
+                  }
 
-  function getEntityPageRows() {
-    var start = (entityState.currentPage - 1) * entityState.pageSize;
-    return entityState.filteredRows.slice(start, start + entityState.pageSize);
-  }
+                  document.getElementById('btn-entity-add').addEventListener('click', function () {
+                    openEntityDrawer('add');
+                  });
+                  document.getElementById('btn-entity-type-add').addEventListener('click', function () {
+                    openTypeDrawer('add');
+                  });
 
-  function getTypePageRows() {
-    var start = (typeState.currentPage - 1) * typeState.pageSize;
-    return typeState.filteredRows.slice(start, start + typeState.pageSize);
-  }
+                  document.addEventListener('click', function (e) {
+                    var confirmBtn = e.target.closest ? e.target.closest('#btn-entity-reset-quota-confirm') : null;
+                    if (confirmBtn) {
+                      e.preventDefault();
+                      confirmEntityResetQuota();
+                    }
+                  });
 
-  function renderEntityTable() {
-    filterEntityRows();
-    var totalPages = Math.max(1, Math.ceil(entityState.filteredRows.length / entityState.pageSize));
-    if (entityState.currentPage > totalPages) entityState.currentPage = totalPages;
-
-    document.getElementById('entity-table').innerHTML = IvuUI.pageTable({
-      tableId: 'entity-page-table',
-      columns: [
-        { title: '名称', key: 'name', minWidth: 120, searchable: true, sortable: true },
-        { title: '类型', key: 'type', minWidth: 100, searchable: true, sortable: true },
-        {
-          title: '父Entity', key: 'parent_id', minWidth: 120, searchable: true, sortable: true,
-          render: function (row) { return EntityUpsert.parentName(row, entityState.rows); }
-        },
-        { title: '配额', key: 'quota_plan', minWidth: 140, searchable: true, sortable: true, render: function (row) { return EntityUpsert.formatQuota(row); } },
-        {
-          title: '限流状态', key: 'rate_limit_policy_enabled', minWidth: 100, searchable: true, sortable: true,
-          searchType: 'select',
-          searchPlaceholder: '请选择限流状态',
-          searchFilters: [
-            { label: '已启用', value: 'true' },
-            { label: '未启用', value: 'false' }
-          ],
-          render: function (row) {
-            var enabled = !!(row.rate_limit_policy && row.rate_limit_policy.enabled);
-            return IvuUI.tag(enabled ? '已启用' : '未启用', enabled ? 'success' : 'default');
-          }
-        },
-        {
-          title: '操作', key: 'action', width: 250,
-          render: function (row, rowIndex) {
-            var pageStart = (entityState.currentPage - 1) * entityState.pageSize;
-            return IvuUI.btn('编辑', 'primary', 'small', '', 'data-entity-edit="' + (pageStart + rowIndex) + '"') + ' ' +
-              IvuUI.btn('删除', 'error', 'small', '', 'data-entity-delete="' + (pageStart + rowIndex) + '"');
-          }
-        }
-      ],
-      rows: getEntityPageRows(),
-      total: entityState.filteredRows.length,
-      pageSize: entityState.pageSize,
-      currentPage: entityState.currentPage,
-      searchValues: entityState.search
-    });
-
-    bindEntityTableEvents();
-  }
-
-  function renderTypeTable() {
-    filterTypeRows();
-    var totalPages = Math.max(1, Math.ceil(typeState.filteredRows.length / typeState.pageSize));
-    if (typeState.currentPage > totalPages) typeState.currentPage = totalPages;
-
-    document.getElementById('entity-type-table').innerHTML = IvuUI.pageTable({
-      tableId: 'entity-type-page-table',
-      columns: [
-        { title: '类型名', key: 'type_name', minWidth: 120, searchable: true, sortable: true },
-        { title: '描述', key: 'description', minWidth: 180, sortable: true },
-        {
-          title: '级别', key: 'level', minWidth: 100, searchable: true, sortable: true,
-          searchType: 'select',
-          searchPlaceholder: '请选择级别',
-          searchFilters: [
-            { label: '1', value: '1' },
-            { label: '2', value: '2' },
-            { label: '3', value: '3' },
-            { label: '4', value: '4' },
-            { label: '5', value: '5' }
-          ]
-        },
-        {
-          title: '创建时间', key: 'create_time', minWidth: 160, sortable: true,
-          render: function (row) { return EntityUpsert.formatTime(row.create_time); }
-        },
-        {
-          title: '操作', key: 'action', width: 200,
-          render: function (row, rowIndex) {
-            var pageStart = (typeState.currentPage - 1) * typeState.pageSize;
-            return IvuUI.btn('编辑', 'primary', 'small', '', 'data-entity-type-edit="' + (pageStart + rowIndex) + '"') + ' ' +
-              IvuUI.btn('删除', 'error', 'small', '', 'data-entity-type-delete="' + (pageStart + rowIndex) + '"');
-          }
-        }
-      ],
-      rows: getTypePageRows(),
-      total: typeState.filteredRows.length,
-      pageSize: typeState.pageSize,
-      currentPage: typeState.currentPage,
-      searchValues: typeState.search
-    });
-
-    bindTypeTableEvents();
-  }
-
-  function bindEntityTableEvents() {
-    var tableRoot = document.getElementById('entity-page-table');
-    if (!tableRoot) return;
-
-    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
-      entityState.search[key] = value;
-      entityState.currentPage = 1;
-      renderEntityTable();
-    });
-
-    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
-      item.onclick = function () {
-        entityState.currentPage = parseInt(item.getAttribute('data-page'), 10);
-        renderEntityTable();
-      };
-    });
-
-    var sizeSelect = tableRoot.querySelector('.proto-page-size');
-    if (sizeSelect) {
-      sizeSelect.onchange = function () {
-        entityState.pageSize = parseInt(sizeSelect.value, 10);
-        entityState.currentPage = 1;
-        renderEntityTable();
-      };
-    }
-
-    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
-      btn.onclick = function () {
-        if (entityState.currentPage > 1) { entityState.currentPage -= 1; renderEntityTable(); }
-      };
-    });
-    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
-      btn.onclick = function () {
-        var totalPages = Math.max(1, Math.ceil(entityState.filteredRows.length / entityState.pageSize));
-        if (entityState.currentPage < totalPages) { entityState.currentPage += 1; renderEntityTable(); }
-      };
-    });
-
-    tableRoot.querySelectorAll('[data-entity-edit]').forEach(function (btn) {
-      btn.onclick = function (e) {
-        e.stopPropagation();
-        openEntityDrawer('edit', parseInt(btn.getAttribute('data-entity-edit'), 10));
-      };
-    });
-
-    tableRoot.querySelectorAll('[data-entity-delete]').forEach(function (btn) {
-      btn.onclick = function (e) {
-        e.stopPropagation();
-        var index = parseInt(btn.getAttribute('data-entity-delete'), 10);
-        var row = entityState.filteredRows[index];
-        if (!row) return;
-        Prototype.confirm({
-          content: '是否删除Entity ' + (row.name || '') + '？',
-          onOk: function () {
-            entityState.rows = entityState.rows.filter(function (item) { return item.id !== row.id; });
-            renderEntityTable();
-            Prototype.toast('删除成功!');
-          }
-        });
-      };
-    });
-
-    tableRoot.querySelectorAll('.show-iView-Table .ivu-table-tbody tr').forEach(function (tr, rowIndex) {
-      tr.style.cursor = 'pointer';
-      tr.onclick = function (e) {
-        if (e.target.closest('button')) return;
-        var pageStart = (entityState.currentPage - 1) * entityState.pageSize;
-        openEntityDrawer('view', pageStart + rowIndex);
-      };
-    });
-  }
-
-  function bindTypeTableEvents() {
-    var tableRoot = document.getElementById('entity-type-page-table');
-    if (!tableRoot) return;
-
-    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
-      typeState.search[key] = value;
-      typeState.currentPage = 1;
-      renderTypeTable();
-    });
-
-    tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
-      item.onclick = function () {
-        typeState.currentPage = parseInt(item.getAttribute('data-page'), 10);
-        renderTypeTable();
-      };
-    });
-
-    var sizeSelect = tableRoot.querySelector('.proto-page-size');
-    if (sizeSelect) {
-      sizeSelect.onchange = function () {
-        typeState.pageSize = parseInt(sizeSelect.value, 10);
-        typeState.currentPage = 1;
-        renderTypeTable();
-      };
-    }
-
-    tableRoot.querySelectorAll('.proto-page-prev').forEach(function (btn) {
-      btn.onclick = function () {
-        if (typeState.currentPage > 1) { typeState.currentPage -= 1; renderTypeTable(); }
-      };
-    });
-    tableRoot.querySelectorAll('.proto-page-next').forEach(function (btn) {
-      btn.onclick = function () {
-        var totalPages = Math.max(1, Math.ceil(typeState.filteredRows.length / typeState.pageSize));
-        if (typeState.currentPage < totalPages) { typeState.currentPage += 1; renderTypeTable(); }
-      };
-    });
-
-    tableRoot.querySelectorAll('[data-entity-type-edit]').forEach(function (btn) {
-      btn.onclick = function (e) {
-        e.stopPropagation();
-        openTypeDrawer('edit', parseInt(btn.getAttribute('data-entity-type-edit'), 10));
-      };
-    });
-
-    tableRoot.querySelectorAll('[data-entity-type-delete]').forEach(function (btn) {
-      btn.onclick = function (e) {
-        e.stopPropagation();
-        var index = parseInt(btn.getAttribute('data-entity-type-delete'), 10);
-        var row = typeState.filteredRows[index];
-        if (!row) return;
-        Prototype.confirm({
-          content: '是否删除Entity类型 ' + (row.type_name || '') + '？',
-          onOk: function () {
-            typeState.rows = typeState.rows.filter(function (item) { return item.type_name !== row.type_name; });
-            renderTypeTable();
-            Prototype.toast('删除成功!');
-          }
-        });
-      };
-    });
-  }
-
-  function mountEntityDrawer(mode, data) {
-    var wrap = document.getElementById('drawer-entity');
-    if (wrap) wrap.remove();
-    document.getElementById('product-body').insertAdjacentHTML('beforeend', EntityUpsert.drawer(mode, data, entityState.rows));
-    bindEntityDrawerActions();
-  }
-
-  function openEntityDrawer(mode, index) {
-    entityState.drawerMode = mode;
-    var filteredRow = typeof index === 'number' ? entityState.filteredRows[index] : null;
-    entityState.currentRow = filteredRow
-      ? entityState.rows.find(function (item) { return item.id === filteredRow.id; }) || filteredRow
-      : null;
-    entityState.currentId = entityState.currentRow ? entityState.currentRow.id : '';
-    mountEntityDrawer(mode, entityState.currentRow || {});
-    Prototype.openDrawer('drawer-entity');
-  }
-
-  function mountTypeDrawer(mode, data) {
-    var wrap = document.getElementById('drawer-entity-type');
-    if (wrap) wrap.remove();
-    document.getElementById('product-body').insertAdjacentHTML('beforeend', EntityUpsert.typeDrawer(mode, data));
-    bindTypeDrawerActions();
-  }
-
-  function openTypeDrawer(mode, index) {
-    typeState.drawerMode = mode;
-    var filteredRow = typeof index === 'number' ? typeState.filteredRows[index] : null;
-    typeState.currentRow = filteredRow
-      ? typeState.rows.find(function (item) { return item.type_name === filteredRow.type_name; }) || filteredRow
-      : null;
-    typeState.currentId = typeState.currentRow ? typeState.currentRow.type_name : '';
-    mountTypeDrawer(mode, typeState.currentRow || {});
-    Prototype.openDrawer('drawer-entity-type');
-  }
-
-  function openEntityResetQuotaModal() {
-    var plan = entityState.currentRow && entityState.currentRow.quota_plan;
-    var quotaInput = document.getElementById('modal-entity-reset-quota-total');
-    var reasonInput = document.getElementById('modal-entity-reset-quota-reason');
-    if (quotaInput) quotaInput.value = plan && plan.quota != null ? plan.quota : 0;
-    if (reasonInput) reasonInput.value = '';
-    Prototype.openModal('modal-entity-reset-quota');
-  }
-
-  function confirmEntityResetQuota() {
-    var quotaInput = document.getElementById('modal-entity-reset-quota-total');
-    var newQuota = quotaInput ? parseInt(quotaInput.value, 10) : NaN;
-    if (!quotaInput || quotaInput.value === '' || isNaN(newQuota) || newQuota < 0) {
-      Prototype.toast('请输入有效的配额总量');
-      return;
-    }
-    if (!entityState.currentRow) return;
-    if (!entityState.currentRow.quota_plan) entityState.currentRow.quota_plan = {};
-    entityState.currentRow.quota_plan.quota = newQuota;
-    entityState.currentRow.quota_plan.unlimited = false;
-    if (!entityState.currentRow.quota_plan.balance) entityState.currentRow.quota_plan.balance = {};
-    entityState.currentRow.quota_plan.balance.used = 0;
-    Prototype.closeModal('modal-entity-reset-quota');
-    Prototype.toast('配额重置成功！');
-    mountEntityDrawer('view', entityState.currentRow);
-    Prototype.openDrawer('drawer-entity');
-    renderEntityTable();
-  }
-
-  function bindEntityDrawerActions() {
-    var cancelBtn = document.getElementById('btn-entity-cancel');
-    var closeBtn = document.getElementById('btn-entity-close');
-    var submitBtn = document.getElementById('btn-entity-submit');
-    if (cancelBtn) cancelBtn.onclick = function () { Prototype.closeDrawer('drawer-entity'); };
-    if (closeBtn) closeBtn.onclick = function () { Prototype.closeDrawer('drawer-entity'); };
-    if (submitBtn) {
-      submitBtn.onclick = function () {
-        Prototype.closeDrawer('drawer-entity');
-        Prototype.toast(entityState.drawerMode === 'add' ? '创建成功！' : '编辑成功！');
-      };
-    }
-    if (entityState.drawerMode !== 'view') EntityUpsert.initUpsertForm();
-    var resetBtn = document.getElementById('btn-entity-reset-quota');
-    if (resetBtn) resetBtn.onclick = openEntityResetQuotaModal;
-  }
-
-  function bindTypeDrawerActions() {
-    var cancelBtn = document.getElementById('btn-entity-type-cancel');
-    var submitBtn = document.getElementById('btn-entity-type-submit');
-    if (cancelBtn) cancelBtn.onclick = function () { Prototype.closeDrawer('drawer-entity-type'); };
-    if (submitBtn) {
-      submitBtn.onclick = function () {
-        Prototype.closeDrawer('drawer-entity-type');
-        Prototype.toast(typeState.drawerMode === 'add' ? '创建成功！' : '编辑成功！');
-      };
-    }
-  }
-
-  document.getElementById('btn-entity-add').addEventListener('click', function () {
-    openEntityDrawer('add');
-  });
-  document.getElementById('btn-entity-type-add').addEventListener('click', function () {
-    openTypeDrawer('add');
-  });
-
-  document.addEventListener('click', function (e) {
-    var confirmBtn = e.target.closest ? e.target.closest('#btn-entity-reset-quota-confirm') : null;
-    if (confirmBtn) {
-      e.preventDefault();
-      confirmEntityResetQuota();
-    }
-  });
-
-  Prototype.bindDrawerClose();
-  Prototype.bindModalClose();
-  bindEntityDrawerActions();
-  bindTypeDrawerActions();
-  renderEntityTable();
-  renderTypeTable();
-});
-</script>
-</body>
+                  Prototype.bindDrawerClose();
+                  Prototype.bindModalClose();
+                  bindEntityDrawerActions();
+                  bindTypeDrawerActions();
+                  renderEntityTable();
+                  renderTypeTable();
+                });
+    </script>
+  </body>
 </html>

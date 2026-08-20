@@ -17,12 +17,13 @@
 │       ├── 02-overview.md         // 控制台布局与导航
 │       ├── 03-ai-gateway-pool.md  // AI 网关实例池
 │       ├── 04-ai-business-cluster.md // AI 业务集群
-│       ├── 05-entity-type.md      // Entity 类型
-│       ├── 06-entity.md           // Entity 组织
-│       ├── 07-api-key.md          // API Key 管理
-│       ├── 08-route.md            // 路由管理
-│       ├── 09-scenarios.md        // 场景实战
-│       ├── 10-appendix.md         // 附录
+│       ├── 05-model-prices.md     // 模型定价
+│       ├── 06-entity-type.md      // Entity 类型
+│       ├── 07-entity.md           // Entity 组织
+│       ├── 08-api-key.md          // API Key 管理
+│       ├── 09-route.md            // 路由管理
+│       ├── 10-scenarios.md        // 场景实战
+│       ├── 11-appendix.md         // 附录
 │       ├── deploy.md              // 部署说明
 │       ├── develop.md             // 开发说明（本文）
 │       └── images/                // 文档截图
@@ -33,13 +34,13 @@
     │   └── router.js
     ├── modules             // 业务模块
     │   ├── AIInstancePool // AI网关实例池
-    │   ├── AIRouteRules    // AI路由规则
     │   ├── APIKey          // API Key管理
     │   // ├── Cert            // 证书管理（暂未提供）
     │   ├── Clusters        // AI业务集群
     │   ├── Entity          // Entity管理
     │   ├── Login           // 登录模块
-    │   ├── Routes          // 转发规则
+    │   ├── ModelPrices     // 模型定价
+    │   ├── RouteTable      // 路由表（Global / Entity / API-Key）
     │   └── User            // 用户管理
     ├── layout              // 布局逻辑
     │   ├── 404.vue

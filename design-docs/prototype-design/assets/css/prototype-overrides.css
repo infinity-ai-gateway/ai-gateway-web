@@ -1,8 +1,30 @@
 /* 原型专用：仅控制 Drawer/Modal 显隐，不覆盖 app.css 视觉 */
-.ivu-drawer-wrap.proto-hidden { display: none !important; }
-.ivu-modal-wrap.proto-hidden { display: none !important; }
-.proto-hidden { display: none !important; }
-.proto-hidden-inline { display: none !important; }
+html,
+body,
+#product-body,
+.app-layout {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+body {
+  background: #f5f7f9;
+}
+#nprogress {
+  display: none !important;
+}
+.ivu-drawer-wrap.proto-hidden {
+  display: none !important;
+}
+.ivu-modal-wrap.proto-hidden {
+  display: none !important;
+}
+.proto-hidden {
+  display: none !important;
+}
+.proto-hidden-inline {
+  display: none !important;
+}
 
 /* Tabs：仅显示当前激活面板 */
 .ivu-tabs-tabpane {
@@ -97,7 +119,7 @@
   line-height: 1;
   font-weight: 300;
   color: #999;
-  font-family: Arial, "Helvetica Neue", sans-serif;
+  font-family: Arial, 'Helvetica Neue', sans-serif;
   transition: color 0.2s ease;
 }
 .ivu-drawer-wrap .proto-drawer-close:hover .proto-drawer-close-x {
@@ -260,18 +282,95 @@
   margin-left: 8px;
 }
 
-/* 侧边栏分组：子项缩进，标题始终展开 */
+/* 登录页标题：对齐 loginPassword.vue scoped .text */
+.bfe-login .bfe-login-hearder .text {
+  width: 240px;
+  margin-left: 20px;
+  text-align: center;
+  color: #fff;
+  background: #1a1a1ade;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 侧栏标题：对齐 navBar.less .bfe-sidebar .header .text */
+.bfe-sidebar .header .text {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 0 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 侧栏菜单图标间距：对齐 iView MenuItem */
+.bfe-sidebar .Menu .ivu-menu-item i,
+.bfe-sidebar .Menu .ivu-menu-submenu-title i:not(.ivu-menu-submenu-title-icon) {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* 侧栏菜单链接：保持与 MenuItem 相同的点击区域 */
+.bfe-sidebar .Menu .ivu-menu-item .menu-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin: -14px -24px;
+  padding: 14px 24px;
+}
+
+/* 侧栏选中项：对齐 sidebarNav.vue scoped 样式 */
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active,
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active:hover,
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu),
+.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu):hover {
+  border-right: none;
+  color: #fff;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 125, 221, 0.2),
+    rgba(59, 125, 221, 0.0875) 60%,
+    transparent
+  ) !important;
+  border-left: 3px solid #515a6e;
+  border-left-color: #a0cfff !important;
+}
+
+/* 侧边栏分组：子项缩进 */
 .bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu {
   display: block !important;
 }
 .bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu .ivu-menu-item {
   padding-left: 48px !important;
 }
-.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu-submenu-title .ivu-menu-submenu-title-icon {
-  display: none;
+/* 侧边栏分组标题：右侧显示折叠箭头（向上表示已展开） */
+.bfe-sidebar
+  .Menu
+  > .ivu-menu
+  > .ivu-menu-submenu
+  > .ivu-menu-submenu-title
+  .ivu-menu-submenu-title-icon {
+  display: inline-block !important;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  color: #c0c4cc;
+  font-size: 14px;
 }
-.proto-drawer-footer { border-top: 1px solid #e8eaec; padding: 12px 16px; text-align: right; background: #fff; flex-shrink: 0; }
-.ivu-drawer-content { display: flex; flex-direction: column; height: 100%; background: #fff; }
+.proto-drawer-footer {
+  border-top: 1px solid #e8eaec;
+  padding: 12px 16px;
+  text-align: right;
+  background: #fff;
+  flex-shrink: 0;
+}
+.ivu-drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
 .ivu-drawer-wrap:not(.proto-hidden) .ivu-drawer-body {
   flex: 1 1 auto;
   overflow: auto;
@@ -280,20 +379,61 @@
   padding-bottom: 16px !important;
   height: auto !important;
 }
-.menu-link { color: inherit; display: block; }
-.ivu-menu-item a.menu-link { color: inherit; }
-.title { margin-bottom: 16px; }
-.form-card { margin-bottom: 16px; }
-.form-card .ivu-card-head { padding: 14px 20px; background: #f8f8f9; }
-.form-card .ivu-card-body { padding: 20px; }
-.com-btn-box { display: flex; flex-direction: row-reverse; gap: 10px; margin-top: 16px; }
-.formBox table { margin: 10px 0; width: 100%; border-collapse: collapse; }
-.formBox th, .formBox td { border: 1px solid #d9dbe3; padding: 8px 10px; }
-.formBox th { background: #f8f8f9; }
-.routes { position: relative; min-height: 500px; }
-.routes > .ivu-btn.submit { position: absolute; right: 0; top: 0; z-index: 998; }
-.routes > div > .ivu-btn-primary { margin-bottom: 0; }
-.routes .forwardRule { margin-top: 0; }
+.menu-link {
+  color: inherit;
+  display: block;
+}
+.ivu-menu-item a.menu-link {
+  color: inherit;
+}
+.title {
+  margin-bottom: 16px;
+}
+.form-card {
+  margin-bottom: 16px;
+}
+.form-card .ivu-card-head {
+  padding: 14px 20px;
+  background: #f8f8f9;
+}
+.form-card .ivu-card-body {
+  padding: 20px;
+}
+.com-btn-box {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 10px;
+  margin-top: 16px;
+}
+.formBox table {
+  margin: 10px 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+.formBox th,
+.formBox td {
+  border: 1px solid #d9dbe3;
+  padding: 8px 10px;
+}
+.formBox th {
+  background: #f8f8f9;
+}
+.routes {
+  position: relative;
+  min-height: 500px;
+}
+.routes > .ivu-btn.submit {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 998;
+}
+.routes > div > .ivu-btn-primary {
+  margin-bottom: 0;
+}
+.routes .forwardRule {
+  margin-top: 0;
+}
 
 /* 路由规则 Upsert（对齐 Routes/components/Upsert.vue + Expression） */
 #drawer-route .ivu-drawer-body {
@@ -398,24 +538,44 @@
   margin-left: 10px;
   margin-right: 0;
 }
-.ai-route-rules-container .action-bar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.ai-route-rules-container .action-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
 
 /* API Key 管理（对齐 APIKey 模块） */
-.api-key-page .title { margin-bottom: 0; }
+.api-key-page .title {
+  margin-bottom: 0;
+}
 .api-key-page + .page-table,
-#api-table .page-table { margin-top: 0; }
-#api-table .proto-api-key-link { color: #2db7f5; cursor: pointer; text-decoration: none; }
-#api-table .show-iView-Table .ivu-table-tbody tr { cursor: pointer; }
-#api-table .searchTable .ivu-table-tbody tr { cursor: default; }
+#api-table .page-table {
+  margin-top: 0;
+}
+#api-table .proto-api-key-link {
+  color: #2db7f5;
+  cursor: pointer;
+  text-decoration: none;
+}
+#api-table .show-iView-Table .ivu-table-tbody tr {
+  cursor: pointer;
+}
+#api-table .searchTable .ivu-table-tbody tr {
+  cursor: default;
+}
 
-.reset-quota-modal .ivu-modal-body { padding: 24px; }
+.reset-quota-modal .ivu-modal-body {
+  padding: 24px;
+}
 .reset-quota-modal .form-tip {
   color: #999;
   font-size: 12px;
   margin-bottom: 0;
   margin-top: 12px;
 }
-.reset-quota-modal .modal-form-item { margin-bottom: 0; }
+.reset-quota-modal .modal-form-item {
+  margin-bottom: 0;
+}
 .reset-quota-modal .modal-label {
   color: #495060;
   font-size: 14px;
@@ -427,12 +587,19 @@
   gap: 0 24px;
   margin-bottom: 0;
 }
-.api-key-form-col { min-width: 0; }
-.api-key-upsert-form .form-card { margin-bottom: 16px; }
+.api-key-form-col {
+  min-width: 0;
+}
+.api-key-upsert-form .form-card {
+  margin-bottom: 16px;
+}
 .api-key-upsert-form .form-tip {
   color: #999;
   font-size: 12px;
   margin-top: 4px;
+}
+.api-key-upsert-form .form-tip-error {
+  color: #ed4014;
 }
 .api-key-upsert-form .rules-section {
   border-top: 1px dashed #e8eaec;
@@ -486,7 +653,9 @@
 #drawer-api-key .ivu-drawer-footer {
   flex-shrink: 0;
 }
-.api-key-upsert-form .max-concurrency-custom-input { margin-top: 8px; }
+.api-key-upsert-form .max-concurrency-custom-input {
+  margin-top: 8px;
+}
 .api-key-upsert-form input.proto-field-disabled,
 .api-key-upsert-form select.proto-field-disabled {
   background-color: #f3f3f3 !important;
@@ -502,6 +671,10 @@
   gap: 6px;
   line-height: 32px;
   cursor: pointer;
+}
+.proto-btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
 }
 .proto-el-select-mock {
   min-height: 32px;
@@ -610,22 +783,35 @@
   font-size: 14px;
   line-height: 1;
 }
-.proto-el-tag-close:hover { color: #515a6e; }
+.proto-el-tag-close:hover {
+  color: #515a6e;
+}
 .api-key-view .info-row,
 .api-key-upsert-form + .info-row {
   display: flex;
   padding: 8px 0;
   border-bottom: 1px solid #f0f0f0;
 }
-.api-key-view .info-row:last-child { border-bottom: none; }
+.api-key-view .info-row:last-child {
+  border-bottom: none;
+}
 .api-key-view .info-label {
   width: 100px;
   flex-shrink: 0;
   color: #666;
 }
-.api-key-view .info-value { flex: 1; color: #333; }
-.api-key-view .quota-progress { margin-top: 16px; }
-.api-key-view .progress-label { font-size: 12px; color: #999; margin-bottom: 8px; }
+.api-key-view .info-value {
+  flex: 1;
+  color: #333;
+}
+.api-key-view .quota-progress {
+  margin-top: 16px;
+}
+.api-key-view .progress-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+}
 .proto-progress {
   height: 8px;
   background: #f0f0f0;
@@ -664,16 +850,26 @@
   margin: 0;
   padding: 0;
 }
-#drawer-api-key .api-key-drawer-footer .btn-box-del { margin-right: 8px; }
+#drawer-api-key .api-key-drawer-footer .btn-box-del {
+  margin-right: 8px;
+}
 
 /* Entity 管理（对齐 Entity 模块） */
-.entity-page .title { margin-bottom: 0; }
+.entity-page .title {
+  margin-bottom: 0;
+}
 #entity-table .page-table,
-#entity-type-table .page-table { margin-top: 0; }
+#entity-type-table .page-table {
+  margin-top: 0;
+}
 #entity-table .show-iView-Table .ivu-table-tbody tr,
-#entity-type-table .show-iView-Table .ivu-table-tbody tr { cursor: pointer; }
+#entity-type-table .show-iView-Table .ivu-table-tbody tr {
+  cursor: pointer;
+}
 #entity-table .searchTable .ivu-table-tbody tr,
-#entity-type-table .searchTable .ivu-table-tbody tr { cursor: default; }
+#entity-type-table .searchTable .ivu-table-tbody tr {
+  cursor: default;
+}
 #drawer-entity .ivu-drawer-body,
 #drawer-entity-type .ivu-drawer-body {
   overflow-y: auto !important;
@@ -693,7 +889,9 @@
   padding: 0;
 }
 #drawer-entity .api-key-drawer-footer .btn-box-del,
-#drawer-entity-type .api-key-drawer-footer .btn-box-del { margin-right: 8px; }
+#drawer-entity-type .api-key-drawer-footer .btn-box-del {
+  margin-right: 8px;
+}
 .entity-type-form .form-tip {
   color: #999;
   font-size: 12px;
@@ -706,43 +904,342 @@
   cursor: not-allowed;
 }
 
-#modal-api-key-value:not(.proto-hidden) { display: block; }
-.proto-copy-icon { cursor: pointer; color: #2db7f5; font-size: 18px; user-select: none; }
+/* Entity 表单：限流帮助图标 */
+.api-key-upsert-form .rate-limit-label {
+  display: inline-flex;
+  align-items: center;
+}
+.api-key-upsert-form .rate-limit-help-icon {
+  margin-left: 4px;
+  font-size: 14px;
+  color: #2d8cf0;
+  cursor: help;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #2d8cf0;
+  border-radius: 50%;
+  font-style: normal;
+  font-weight: bold;
+  line-height: 1;
+}
+
+/* 操作列按钮：success 类型 */
+.ivu-btn-success {
+  background-color: #19be6b !important;
+  border-color: #19be6b !important;
+  color: #fff !important;
+}
+.ivu-btn-success:hover {
+  background-color: #47cb89 !important;
+  border-color: #47cb89 !important;
+}
+
+/* i-switch 开关样式（模拟 Element UI el-switch） */
+.ivu-switch {
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  line-height: 18px;
+  border-radius: 10px;
+  vertical-align: middle;
+  border: none;
+  background-color: #dcdfe6;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  box-sizing: content-box;
+}
+.ivu-switch-checked {
+  background-color: #409eff;
+}
+.ivu-switch-inner {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #fff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.ivu-switch-checked .ivu-switch-inner {
+  left: 22px;
+}
+
+/* 模型多选下拉样式（模拟 el-select multiple） */
+.proto-model-select {
+  position: relative;
+  min-height: 32px;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  padding: 3px 28px 3px 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  background: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.proto-model-select-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+.proto-model-select .proto-placeholder {
+  color: #c5c8ce;
+  font-size: 14px;
+  line-height: 24px;
+}
+.proto-model-select .proto-select-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #808695;
+  font-size: 12px;
+  pointer-events: none;
+}
+.proto-model-tag {
+  height: 24px;
+  line-height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+/* 模型列表接口 - endpoint host 灰底样式 */
+.gateway-config .endpoint-url-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.gateway-config .endpoint-url-group .endpoint-protocol {
+  width: 90px;
+  flex-shrink: 0;
+}
+.gateway-config .endpoint-url-group .endpoint-host {
+  flex: 1;
+  border: 1px solid #dcdee2;
+  border-left: 0;
+  border-right: 0;
+  padding: 0 10px;
+  background: #f8f8f9;
+  font-size: 13px;
+  color: #515a6e;
+  line-height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gateway-config .endpoint-url-group .ivu-input-wrapper {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+/* GatewayConfig Card 间距 */
+.gateway-config .form-card {
+  margin-bottom: 16px;
+}
+.gateway-config .form-card:last-child {
+  margin-bottom: 0;
+}
+
+/* LLM Card 样式（对齐实际UI的 Card 组件） */
+.gateway-config .llm-card {
+  border: 1px solid #e8eaec;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+.gateway-config .llm-card:last-child {
+  margin-bottom: 0;
+}
+.gateway-config .llm-card-title {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8eaec;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2d3d;
+}
+.gateway-config .llm-card-body {
+  padding: 16px;
+}
+
+/* 表单帮助图标 (?) */
+.form-help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #2d8cf0;
+  border-radius: 50%;
+  color: #2d8cf0;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
+  margin-left: 4px;
+  cursor: help;
+  vertical-align: middle;
+}
+
+/* 表单 label 行样式（label-top 模式） */
+.gateway-config .ivu-form-item {
+  margin-bottom: 20px;
+}
+.gateway-config .ivu-form-item-label {
+  float: none;
+  display: block;
+  text-align: left;
+  padding: 0 0 8px;
+  font-size: 14px;
+  color: #515a6e;
+}
+
+#modal-api-key-value:not(.proto-hidden) {
+  display: block;
+}
+.proto-copy-icon {
+  cursor: pointer;
+  color: #2db7f5;
+  font-size: 18px;
+  user-select: none;
+}
 
 /* instance-pool-ai（对齐 Vue scoped 样式，静态原型无 data-v） */
-.ai-instance-pool { position: relative; min-height: 200px; }
-.ai-instance-pool .page-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.ai-instance-pool .formBox { display: inline-block; width: 100%; }
-.ai-instance-pool .formBox table { margin: 10px 0; width: 100%; border-right: 1px solid #d9dbe3; border-bottom: 1px solid #d9dbe3; }
-.ai-instance-pool .formBox th { border-left: 1px solid #d9dbe3; border-top: 1px solid #d9dbe3; }
-.ai-instance-pool .formBox td { padding: 5px 10px; border-left: 1px solid #d9dbe3; border-top: 1px solid #d9dbe3; }
-.ai-instance-pool .formBox .poolInput { width: 100px; display: inline-block; }
-.ai-instance-pool .formBox .empty-cell { text-align: center; color: #999; padding: 24px 10px; }
-.ai-instance-pool .formBox .cell-text { color: #333; line-height: 32px; }
-.ai-instance-pool .footer-actions { display: flex; align-items: center; gap: 12px; margin-top: 42px; padding-top: 8px; }
-.ai-instance-pool .ivu-btn-success { background-color: #67c23a; border-color: #67c23a; color: #fff; }
+.ai-instance-pool {
+  position: relative;
+  min-height: 200px;
+}
+.ai-instance-pool .page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.ai-instance-pool .formBox {
+  display: inline-block;
+  width: 100%;
+}
+.ai-instance-pool .formBox table {
+  margin: 10px 0;
+  width: 100%;
+  border-right: 1px solid #d9dbe3;
+  border-bottom: 1px solid #d9dbe3;
+}
+.ai-instance-pool .formBox th {
+  border-left: 1px solid #d9dbe3;
+  border-top: 1px solid #d9dbe3;
+}
+.ai-instance-pool .formBox td {
+  padding: 5px 10px;
+  border-left: 1px solid #d9dbe3;
+  border-top: 1px solid #d9dbe3;
+}
+.ai-instance-pool .formBox .poolInput {
+  width: 100px;
+  display: inline-block;
+}
+.ai-instance-pool .formBox .empty-cell {
+  text-align: center;
+  color: #999;
+  padding: 24px 10px;
+}
+.ai-instance-pool .formBox .cell-text {
+  color: #333;
+  line-height: 32px;
+}
+.ai-instance-pool .footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 42px;
+  padding-top: 8px;
+}
+.ai-instance-pool .ivu-btn-success {
+  background-color: #67c23a;
+  border-color: #67c23a;
+  color: #fff;
+}
 
 /* AI业务集群列表（对齐 Clusters/index.vue + pageTable） */
-.clusters > .ivu-btn { margin-bottom: 0; }
-.clusters .page-table { margin-top: 0; }
-.clusters .page-table .page { margin-top: 15px; }
-.clusters .page-table ul { margin: 5px 0; }
-.clusters .page-table ul li { padding: 0 3px; }
-.clusters .searchTable .ivu-table:after { width: 1px; background-color: transparent !important; }
-.clusters .searchTable .iview_table_tr td { background-color: transparent; border: 0; }
-.clusters .searchTable .ivu-table { background-color: transparent; }
-.clusters .searchTable .ivu-table-wrapper { border: 0 !important; background: transparent; }
-.clusters .searchTable .ivu-table-wrapper .ivu-table-tip:after { width: 0; }
-.clusters .searchTable .ivu-table tr.ivu-table-row-hover td { background-color: transparent !important; }
-.clusters .searchTable .ivu-table .ivu-table-cell { padding-left: 0 !important; }
-.clusters .show-iView-Table .ivu-table-wrapper { border-bottom: 1px solid #e7e9f0; }
-.clusters .ivu-table-sort { display: inline-block; height: 12px; margin-left: 4px; vertical-align: middle; width: 14px; }
-.clusters .ivu-table-sort i { color: #c5c8ce; display: block; font-size: 14px; height: 6px; line-height: 6px; overflow: hidden; }
-.clusters .info-row { display: flex; padding: 8px 0; }
-.clusters .info-label { width: 140px; color: #808695; }
+.clusters > .ivu-btn {
+  margin-bottom: 0;
+}
+.clusters .page-table {
+  margin-top: 0;
+}
+.clusters .page-table .page {
+  margin-top: 15px;
+}
+.clusters .page-table ul {
+  margin: 5px 0;
+}
+.clusters .page-table ul li {
+  padding: 0 3px;
+}
+.clusters .searchTable .ivu-table:after {
+  width: 1px;
+  background-color: transparent !important;
+}
+.clusters .searchTable .iview_table_tr td {
+  background-color: transparent;
+  border: 0;
+}
+.clusters .searchTable .ivu-table {
+  background-color: transparent;
+}
+.clusters .searchTable .ivu-table-wrapper {
+  border: 0 !important;
+  background: transparent;
+}
+.clusters .searchTable .ivu-table-wrapper .ivu-table-tip:after {
+  width: 0;
+}
+.clusters .searchTable .ivu-table tr.ivu-table-row-hover td {
+  background-color: transparent !important;
+}
+.clusters .searchTable .ivu-table .ivu-table-cell {
+  padding-left: 0 !important;
+}
+.clusters .show-iView-Table .ivu-table-wrapper {
+  border-bottom: 1px solid #e7e9f0;
+}
+.clusters .ivu-table-sort {
+  display: inline-block;
+  height: 12px;
+  margin-left: 4px;
+  vertical-align: middle;
+  width: 14px;
+}
+.clusters .ivu-table-sort i {
+  color: #c5c8ce;
+  display: block;
+  font-size: 14px;
+  height: 6px;
+  line-height: 6px;
+  overflow: hidden;
+}
+.clusters .info-row {
+  display: flex;
+  padding: 8px 0;
+}
+.clusters .info-label {
+  width: 140px;
+  color: #808695;
+}
 
 /* 集群向导 newClusters */
-.newClusters { min-height: 100%; }
+.newClusters {
+  min-height: 100%;
+}
 .newClusters footer.cluster-steps-footer {
   margin-top: 35px;
   padding-bottom: 16px;
@@ -759,7 +1256,10 @@
 .newClusters footer.cluster-steps-footer .ivu-steps-horizontal .ivu-steps-main {
   margin-top: 4px;
 }
-.newClusters footer.cluster-steps-footer .ivu-steps-horizontal .ivu-steps-content {
+.newClusters
+  footer.cluster-steps-footer
+  .ivu-steps-horizontal
+  .ivu-steps-content {
   font-size: 12px;
   white-space: normal;
 }
@@ -786,22 +1286,84 @@
   background-color: #57a3f3;
   border-color: #57a3f3;
 }
-.newClusters .from-item-inp { width: 100%; }
-.newClusters .health-check .from-item-inp { width: 100%; }
-.newClusters .formBox { display: inline-block; width: 100%; }
-.newClusters .formBox table { border-bottom: 1px solid #d9dbe3; border-right: 1px solid #d9dbe3; margin: 10px 0; width: 100%; border-collapse: collapse; }
-.newClusters .formBox table td, .newClusters .formBox table th { border-left: 1px solid #d9dbe3; border-top: 1px solid #d9dbe3; }
-.newClusters .formBox table td { padding: 5px 10px; }
-.newClusters .formBox .poolInput { display: inline-block; width: 100px; }
-.newClusters .flex { align-items: center; display: flex; justify-content: center; }
-.newClusters .flex .item { flex: 1; margin-right: 10px; }
-.newClusters .header-controls { display: flex; flex-direction: column; margin-left: 10px; width: 50%; }
-.newClusters .header-pair { align-items: center; display: flex; margin-bottom: 8px; }
-.newClusters .header-input { flex: 1; margin: 0 5px; }
-.newClusters .header-separator { color: #666; margin: 0 5px; }
-.newClusters table { border-collapse: collapse; border-left: 1px solid #e7e9f0; border-top: 1px solid #e7e9f0; color: rgba(0,0,0,.65); font-size: 14px; margin-top: 15px; width: 100%; }
-.newClusters table td, .newClusters table th { border-bottom: 1px solid #e7e9f0; border-right: 1px solid #e7e9f0; padding: 10px 20px; text-align: left; word-break: break-all; min-width: 130px; }
-.newClusters table th { background-color: #f8f8f9; }
+.newClusters .from-item-inp {
+  width: 100%;
+}
+.newClusters .health-check .from-item-inp {
+  width: 100%;
+}
+.newClusters .formBox {
+  display: inline-block;
+  width: 100%;
+}
+.newClusters .formBox table {
+  border-bottom: 1px solid #d9dbe3;
+  border-right: 1px solid #d9dbe3;
+  margin: 10px 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+.newClusters .formBox table td,
+.newClusters .formBox table th {
+  border-left: 1px solid #d9dbe3;
+  border-top: 1px solid #d9dbe3;
+}
+.newClusters .formBox table td {
+  padding: 5px 10px;
+}
+.newClusters .formBox .poolInput {
+  display: inline-block;
+  width: 100px;
+}
+.newClusters .flex {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+.newClusters .flex .item {
+  flex: 1;
+  margin-right: 10px;
+}
+.newClusters .header-controls {
+  display: flex;
+  flex-direction: column;
+  margin-left: 10px;
+  width: 50%;
+}
+.newClusters .header-pair {
+  align-items: center;
+  display: flex;
+  margin-bottom: 8px;
+}
+.newClusters .header-input {
+  flex: 1;
+  margin: 0 5px;
+}
+.newClusters .header-separator {
+  color: #666;
+  margin: 0 5px;
+}
+.newClusters table {
+  border-collapse: collapse;
+  border-left: 1px solid #e7e9f0;
+  border-top: 1px solid #e7e9f0;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  margin-top: 15px;
+  width: 100%;
+}
+.newClusters table td,
+.newClusters table th {
+  border-bottom: 1px solid #e7e9f0;
+  border-right: 1px solid #e7e9f0;
+  padding: 10px 20px;
+  text-align: left;
+  word-break: break-all;
+  min-width: 130px;
+}
+.newClusters table th {
+  background-color: #f8f8f9;
+}
 
 /* 大模型配置 GatewayConfig */
 .gateway-config .endpoint-row.flex {
@@ -855,7 +1417,9 @@
 }
 .gateway-config .model-single-select select {
   appearance: none;
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23808695' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 10px center;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23808695' d='M2 4l4 4 4-4'/%3E%3C/svg%3E")
+    no-repeat right 10px center;
   border: 1px solid #dcdee2;
   border-radius: 4px;
   color: #515a6e;
@@ -892,13 +1456,30 @@
 .gateway-config .mapping-table select {
   width: 100%;
 }
-.Review .review-instance-table .page-table { display: none; }
-.Review .review-instance-table table { margin-top: 0; width: 100%; }
+.Review .review-instance-table .page-table {
+  display: none;
+}
+.Review .review-instance-table table {
+  margin-top: 0;
+  width: 100%;
+}
 
 /* Review 详情/复查面板 */
-.Review .panel { margin-bottom: 16px; border: 1px solid #e7e9f0; border-radius: 4px; overflow: hidden; }
-.Review .panel-header { background: #f8f8f9; border-bottom: 1px solid #e7e9f0; font-weight: 500; padding: 12px 16px; }
-.Review .panel-body { padding: 8px 16px 16px; }
+.Review .panel {
+  margin-bottom: 16px;
+  border: 1px solid #e7e9f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.Review .panel-header {
+  background: #f8f8f9;
+  border-bottom: 1px solid #e7e9f0;
+  font-weight: 500;
+  padding: 12px 16px;
+}
+.Review .panel-body {
+  padding: 8px 16px 16px;
+}
 .Review .panel-body ul.clearFloat {
   align-items: center;
   display: flex;
@@ -951,8 +1532,20 @@
 .Review .instance-ip-list-row .title {
   padding-top: 8px;
 }
-.Review .model-tag { background: #ecf5ff; border: 1px solid #d9ecff; border-radius: 3px; color: #409eff; display: inline-block; font-size: 12px; line-height: 20px; margin: 0 8px 8px 0; padding: 2px 10px; }
-.Review .empty-text { color: #999; }
+.Review .model-tag {
+  background: #ecf5ff;
+  border: 1px solid #d9ecff;
+  border-radius: 3px;
+  color: #409eff;
+  display: inline-block;
+  font-size: 12px;
+  line-height: 20px;
+  margin: 0 8px 8px 0;
+  padding: 2px 10px;
+}
+.Review .empty-text {
+  color: #999;
+}
 .Review .mapping-table {
   border-collapse: collapse;
   border: 1px solid #e7e9f0;
@@ -970,6 +1563,194 @@
   text-align: left;
   word-break: break-all;
 }
+
+/* 模型价格管理 */
+.model-prices-page .action-bar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+.model-prices-page .ivu-table-sort {
+  display: inline-block;
+  height: 12px;
+  margin-left: 4px;
+  vertical-align: middle;
+  width: 14px;
+}
+.model-prices-page .ivu-table-sort i {
+  color: #c5c8ce;
+  display: block;
+  font-size: 14px;
+  height: 6px;
+  line-height: 6px;
+  overflow: hidden;
+}
+.model-prices-page .page-table {
+  margin-top: 0;
+  overflow-x: hidden;
+}
+.model-prices-page .show-iView-Table,
+.model-prices-page .searchTable,
+.model-prices-page .ivu-table-wrapper,
+.model-prices-page .ivu-table,
+.model-prices-page .ivu-table-body {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 模型价格 Upsert / View */
+#model-price-drawer .ivu-drawer-body {
+  overflow-y: auto !important;
+  max-height: calc(100vh - 120px);
+}
+#model-price-drawer .form-card {
+  margin-bottom: 16px;
+}
+#model-price-drawer .form-card:last-child {
+  margin-bottom: 0;
+}
+#model-price-drawer .info-row {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+#model-price-drawer .info-row:last-child {
+  border-bottom: none;
+}
+#model-price-drawer .info-label {
+  width: 120px;
+  flex-shrink: 0;
+  color: #666;
+}
+#model-price-drawer .info-value {
+  flex: 1;
+  color: #333;
+}
+#model-price-drawer .ivu-tag {
+  margin: 2px 4px 2px 0;
+}
+#model-price-drawer .proto-dynamic-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+#model-price-drawer .proto-dynamic-add {
+  margin-top: 4px;
+}
+#model-price-drawer .proto-kv-table .info-row {
+  border-bottom: 1px solid #e8eaec;
+}
+#model-price-drawer .proto-kv-table .info-row:last-child {
+  border-bottom: none;
+}
+#model-price-drawer .proto-kv-table .info-label {
+  width: 50%;
+  background: #f8f9fb;
+  padding: 8px 12px;
+}
+#model-price-drawer .proto-kv-table .info-value {
+  padding: 8px 12px;
+}
+#model-price-drawer .ivu-drawer-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#model-price-drawer .proto-multi-dropdown {
+  position: relative;
+  width: 100%;
+}
+#model-price-drawer .proto-multi-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 24px 0 8px;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: #515a6e;
+  font-size: 14px;
+}
+#model-price-drawer .proto-multi-dropdown-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #515a6e;
+}
+#model-price-drawer .proto-multi-dropdown-trigger:not(:has(.proto-multi-dropdown-text:not(:empty))) .proto-multi-dropdown-text,
+#model-price-drawer .proto-multi-dropdown-text:empty {
+  color: #808695;
+}
+#model-price-drawer .proto-multi-dropdown-arrow {
+  position: absolute;
+  right: 8px;
+  color: #808695;
+  font-size: 12px;
+}
+#model-price-drawer .proto-multi-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+#model-price-drawer .proto-multi-dropdown.open .proto-multi-dropdown-menu {
+  display: block;
+}
+#model-price-drawer .proto-multi-dropdown-opt {
+  display: block;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #515a6e;
+}
+#model-price-drawer .proto-multi-dropdown-opt:hover {
+  background: #f3f3f3;
+}
+#model-price-drawer .proto-multi-dropdown-opt input {
+  margin-right: 6px;
+}
+
+/* 导入弹窗 */
+.ivu-modal-wrap#import-modal {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+}
+.ivu-modal-wrap#import-modal .ivu-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(55, 55, 55, 0.6);
+}
+.ivu-modal-wrap#import-modal > .ivu-modal {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1101;
+  width: 700px;
+  max-width: calc(100vw - 32px);
+}
+.ivu-modal-wrap#import-modal .ivu-modal-footer {
+  text-align: right;
+  border-top: 1px solid #e8eaec;
+  padding: 12px 18px;
+}
+
 .Review .mapping-table th {
   background: #f8f8f9;
   color: #515a6e;
@@ -1019,12 +1800,22 @@
 }
 
 /* 用户管理（对齐 User 模块） */
-.user-page .title { margin-bottom: 0; }
-.user-page .add-button { margin-bottom: 30px; }
-.user-token-alert { margin-bottom: 16px; }
+.user-page .title {
+  margin-bottom: 0;
+}
+.user-page .add-button {
+  margin-bottom: 30px;
+}
+.user-token-alert {
+  margin-bottom: 16px;
+}
 #user-table .page-table,
-#token-table .page-table { margin-top: 0; }
-.user-upsert-form .com-create-input { width: 100%; }
+#token-table .page-table {
+  margin-top: 0;
+}
+.user-upsert-form .com-create-input {
+  width: 100%;
+}
 .user-upsert-form .proto-radio-group {
   display: flex;
   flex-wrap: wrap;
@@ -1057,7 +1848,9 @@
   border-radius: 4px;
   background: #fff;
 }
-.token-detail-panel .panel-body { padding: 15px; }
+.token-detail-panel .panel-body {
+  padding: 15px;
+}
 .token-detail-panel .panel-body ul.clearFloat {
   list-style: none;
   margin: 0;
