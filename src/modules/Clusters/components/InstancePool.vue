@@ -65,6 +65,7 @@
                 <FormItem
                     :label="$t('instancePool.list')"
                     prop="instances"
+                    class="instance-list-form-item"
                     style="width: 100%;"
                 >
                     <div class="formBox">
@@ -75,7 +76,11 @@
                                 <th>{{ $t('instancePool.weight') }}</th>
                                 <th>{{ $t('com.operation') }}</th>
                             </tr>
-                            <tr v-for="(item, ind) in formData.instances" :key="ind">
+                            <tr
+                                v-for="(item, ind) in formData.instances"
+                                :key="ind"
+                                :class="{ 'is-duplicate-row': isDuplicateInstance(item) }"
+                            >
                                 <td>
                                     <FormItem
                                         :prop="'instances.' + ind + '.addr'"
@@ -160,6 +165,33 @@ function createEmptyInstance() {
         port: 80,
         weight: 100
     };
+}
+
+function getInstanceAddrPortKey(instance) {
+    const addr = String((instance && instance.addr) || '').trim();
+    const port = instance && instance.port;
+    if (!addr || port == null || port === '') {
+        return '';
+    }
+    if (!isIP(addr, 4) && !isIP(addr, 6)) {
+        return '';
+    }
+    if (port < 1 || port > 65535) {
+        return '';
+    }
+    return `${addr}:${port}`;
+}
+
+function getDuplicateAddrPortKeys(list) {
+    const counts = Object.create(null);
+    (list || []).forEach(item => {
+        const key = getInstanceAddrPortKey(item);
+        if (!key) {
+            return;
+        }
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.keys(counts).filter(key => counts[key] > 1);
 }
 
 function toFormInstance(instance) {
@@ -305,35 +337,13 @@ export default {
         }
     },
 
+    computed: {
+        duplicateAddrPortKeySet() {
+            return new Set(getDuplicateAddrPortKeys(this.formData.instances));
+        }
+    },
+
     data() {
-        const getInstanceFieldIndex = (fieldPath) => {
-            const match = String(fieldPath || '').match(/^instances\.(\d+)\./);
-            return match ? parseInt(match[1], 10) : -1;
-        };
-
-        const getDuplicateAddrError = (index) => {
-            if (index < 0) {
-                return '';
-            }
-            const current = this.formData.instances[index];
-            const addr = String((current && current.addr) || '').trim();
-            if (!addr) {
-                return '';
-            }
-
-            const hasDuplicate = this.formData.instances.some((item, itemIndex) => {
-                if (itemIndex === index) {
-                    return false;
-                }
-                const otherAddr = String(item.addr || '').trim();
-                return otherAddr && otherAddr === addr;
-            });
-            if (!hasDuplicate) {
-                return '';
-            }
-            return this.$t('instancePool.tipDuplicateIp', { ip: addr });
-        };
-
         const validateDomainName = (rule, value, callback) => {
             if (!value) {
                 callback(new Error(this.$t('instancePool.domainRequired')));
@@ -372,39 +382,47 @@ export default {
                 callback(new Error(this.$t('instancePool.tipAtLeastOnePositiveWeight')));
                 return;
             }
+
+            const duplicateKeys = getDuplicateAddrPortKeys(list);
+            if (duplicateKeys.length) {
+                callback(new Error(this.$t('instancePool.tipDuplicateIpPort', {
+                    ipPort: duplicateKeys[0]
+                })));
+                return;
+            }
             callback();
         };
 
         const validateInstanceAddr = (rule, value, callback) => {
-            const index = getInstanceFieldIndex(rule.field);
             const addr = String(value || '').trim();
 
             if (!addr) {
+                this.triggerInstanceListValidate();
                 callback(new Error(this.$t('com.tipEnterX', {
                     obj: this.$t('instancePool.ipAddress')
                 })));
                 return;
             }
             if (!isIP(addr, 4) && !isIP(addr, 6)) {
+                this.triggerInstanceListValidate();
                 callback(new Error(this.$t('com.tipEnterX', {
                     obj: this.$t('instancePool.ipAddress')
                 })));
                 return;
             }
 
-            const duplicateError = getDuplicateAddrError(index);
-            if (duplicateError) {
-                callback(new Error(duplicateError));
-                return;
-            }
+            this.triggerInstanceListValidate();
             callback();
         };
 
         const validateInstancePort = (rule, value, callback) => {
             if (value == null || value === '' || value < 1 || value > 65535) {
+                this.triggerInstanceListValidate();
                 callback(new Error(this.$t('instancePool.tipPortRang')));
                 return;
             }
+
+            this.triggerInstanceListValidate();
             callback();
         };
 
@@ -470,6 +488,19 @@ export default {
     },
 
     methods: {
+        isDuplicateInstance(item) {
+            const key = getInstanceAddrPortKey(item);
+            return Boolean(key && this.duplicateAddrPortKeySet.has(key));
+        },
+
+        triggerInstanceListValidate() {
+            this.$nextTick(() => {
+                if (this.$refs.formData) {
+                    this.$refs.formData.validateField('instances');
+                }
+            });
+        },
+
         applyInstancePoolData(data) {
             this.isApplyingPoolData = true;
             const instances = parseInstancePool(data);
@@ -499,6 +530,7 @@ export default {
                 this.deleteAble = false;
             }
             this.formData.instances.splice(index, 1);
+            this.triggerInstanceListValidate();
         },
 
         handleAdd() {
@@ -508,6 +540,7 @@ export default {
                 port: 80,
                 weight: 0
             });
+            this.triggerInstanceListValidate();
         },
 
         emitSubmitData(instances) {
@@ -567,6 +600,40 @@ export default {
 
     .InputNumber {
         width: 100px;
+    }
+}
+
+.instance-list-form-item.ivu-form-item-error /deep/ .formBox {
+    .ivu-input,
+    .ivu-input-number {
+        border-color: #dcdee2;
+    }
+
+    .ivu-input:hover,
+    .ivu-input:focus,
+    .ivu-input-number:hover {
+        border-color: #57a3f3;
+    }
+
+    .table-cell-form-item.ivu-form-item-error {
+        .ivu-input,
+        .ivu-input-number {
+            border-color: #ed4014;
+        }
+    }
+}
+
+.formBox tr.is-duplicate-row td:nth-child(1),
+.formBox tr.is-duplicate-row td:nth-child(2) {
+    /deep/ .ivu-input,
+    /deep/ .ivu-input-number {
+        border-color: #ed4014;
+    }
+
+    /deep/ .ivu-input:hover,
+    /deep/ .ivu-input:focus,
+    /deep/ .ivu-input-number:hover {
+        border-color: #ed4014;
     }
 }
 
