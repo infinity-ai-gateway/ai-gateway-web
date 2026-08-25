@@ -24,6 +24,14 @@
         <span class="info-label">{{ $t('com.desc') }}</span>
         <span class="info-value">{{ currentData.description || '-' }}</span>
       </div>
+      <div class="info-row">
+        <span class="info-label">{{ $t('modelPrices.createdAt') }}</span>
+        <span class="info-value">{{ formatTime(currentData.create_time) }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">{{ $t('modelPrices.updatedAt') }}</span>
+        <span class="info-value">{{ formatTime(currentData.update_time) }}</span>
+      </div>
     </Card>
 
     <Card :title="$t('instancePool.name')" class="info-card">
@@ -92,14 +100,36 @@
       </div>
     </Card>
 
-    <Card :title="$t('modelPrices.timestamps')" class="info-card">
+    <Card :title="$t('provider.pricingTiers')" class="info-card">
       <div class="info-row">
-        <span class="info-label">{{ $t('modelPrices.createdAt') }}</span>
-        <span class="info-value">{{ formatTime(currentData.create_time) }}</span>
+        <span class="info-label">{{ $t('provider.pricingTimeZone') }}</span>
+        <span class="info-value">{{ currentData.time_zone || 'Asia/Shanghai' }}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">{{ $t('modelPrices.updatedAt') }}</span>
-        <span class="info-value">{{ formatTime(currentData.update_time) }}</span>
+        <span class="info-label">{{ $t('provider.pricingTierType') }}</span>
+        <span class="info-value">{{ $t('provider.pricingTierPeak') }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">{{ $t('provider.pricingTimeRanges') }}</span>
+        <span class="info-value">
+          <table v-if="peakTimeRanges.length" class="kv-table">
+            <thead>
+              <tr>
+                <th>{{ $t('provider.pricingWeekdays') }}</th>
+                <th>{{ $t('provider.pricingStartTime') }}</th>
+                <th>{{ $t('provider.pricingEndTime') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, index) in peakTimeRanges" :key="'range-' + index">
+                <td>{{ formatWeekdays(item.weekdays) }}</td>
+                <td>{{ item.start || '-' }}</td>
+                <td>{{ item.end || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <span v-else>{{ $t('provider.pricingNotConfigured') }}</span>
+        </span>
       </div>
     </Card>
   </div>
@@ -149,11 +179,34 @@ export default {
             return (this.currentData.keys || []).filter(
                 item => (item.name && item.name.trim()) || (item.key && item.key.trim())
             );
+        },
+        peakTimeRanges() {
+            const peak = (this.currentData.tiers || []).find(item => item && item.name === 'peak');
+            return (peak && peak.time_ranges) || [];
         }
     },
 
     methods: {
         maskSecretKey,
+        formatWeekdays(weekdays) {
+            if (!weekdays || !weekdays.length) {
+                return this.$t('provider.weekdaysEveryDay');
+            }
+            const labels = [
+                this.$t('provider.weekdaySun'),
+                this.$t('provider.weekdayMon'),
+                this.$t('provider.weekdayTue'),
+                this.$t('provider.weekdayWed'),
+                this.$t('provider.weekdayThu'),
+                this.$t('provider.weekdayFri'),
+                this.$t('provider.weekdaySat')
+            ];
+            return weekdays
+                .slice()
+                .sort((a, b) => a - b)
+                .map(day => labels[day] || day)
+                .join('、');
+        },
         formatTime(ts) {
             if (!ts) {
                 return '-';

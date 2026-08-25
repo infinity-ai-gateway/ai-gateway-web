@@ -2080,3 +2080,186 @@ body {
   color: #2d8cf0;
   font-weight: 500;
 }
+
+/* Provider 分段计价配置 */
+.provider-pricing-tiers-form .proto-pricing-tiers-provider-name {
+  color: #17233d;
+  font-size: 14px;
+  font-weight: 500;
+}
+.provider-pricing-tiers-form .proto-pricing-tier-type {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.provider-pricing-tiers-form .proto-pricing-tier-code {
+  color: #808695;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.provider-pricing-tiers-form .proto-time-picker {
+  min-width: 128px;
+}
+.provider-pricing-tiers-form .proto-time-input-wrap {
+  width: 100%;
+}
+.provider-pricing-tiers-form .proto-time-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+.provider-pricing-tiers-form .proto-time-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+}
+.provider-pricing-tiers-form .proto-time-col {
+  width: 140px;
+}
+.provider-pricing-tiers-form .proto-time-cell {
+  vertical-align: top;
+}
+.provider-pricing-tiers-form .proto-pricing-tier-note {
+  color: #c5c8ce;
+  font-size: 12px;
+}
+.provider-pricing-tiers-form .proto-weekday-picker {
+  min-width: 280px;
+}
+.provider-pricing-tiers-form .proto-weekday-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+.provider-pricing-tiers-form .proto-weekday-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  flex: 1 1 220px;
+}
+.provider-pricing-tiers-form .proto-weekday-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #515a6e;
+  cursor: pointer;
+  user-select: none;
+}
+.provider-pricing-tiers-form .proto-weekday-check {
+  margin: 0;
+}
+.provider-pricing-tiers-form .proto-weekday-quick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  color: #808695;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-label {
+  margin-right: 2px;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-link {
+  border: 0;
+  background: transparent;
+  color: #2d8cf0;
+  padding: 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-link:hover {
+  color: #57a3f3;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-sep {
+  color: #dcdee2;
+}
+.proto-price-config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.proto-price-config-block {
+  border: 1px solid #e8eaec;
+  border-radius: 4px;
+  background: #fff;
+}
+.proto-price-config-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e8eaec;
+  background: #f8f8f9;
+}
+.proto-price-config-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #515a6e;
+}
+.proto-price-config-title.is-required::before {
+  content: '*';
+  display: inline-block;
+  margin-right: 4px;
+  color: #ed4014;
+  font-family: SimSun, sans-serif;
+}
+.proto-price-config-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  border-radius: 50%;
+  border: 1px solid #c5c8ce;
+  color: #808695;
+  font-size: 12px;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+.proto-price-config-body {
+  padding: 16px;
+}
+.proto-tier-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.proto-tier-meta-label {
+  font-size: 13px;
+  color: #808695;
+}
+.proto-pricing-tiers-table td {
+  vertical-align: top;
+}
+.proto-table-actions .ivu-btn-warning {
+  color: #fff;
+  background-color: #ff9900;
+  border-color: #ff9900;
+}
+.proto-table-actions .ivu-btn-warning:hover {
+  background-color: #ffad33;
+  border-color: #ffad33;
+}
+.proto-tier-price-view + .proto-tier-price-view {
+  margin-top: 12px;
+}
+.proto-tier-price-view-label {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #515a6e;
+}
+.proto-pricing-tiers-tip {
+  margin: 0 0 12px;
+  color: #808695;
+  font-size: 12px;
+}
+.proto-tier-readonly {
+  display: inline-block;
+  font-size: 14px;
+  color: #515a6e;
+  line-height: 32px;
+}

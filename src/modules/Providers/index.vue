@@ -19,15 +19,9 @@
       {{ $t('com.createX', { obj: $t('provider.name') }) }}
     </Button>
     <pageTable
-      :tableData="displayTableData"
+      :tableData="tableData"
       :columns="columns"
       :loading="tableLoading"
-      :total="total"
-      :server-pagination="true"
-      :current-page="page"
-      :page-size="pageSize"
-      @on-page-change="onPageChange"
-      @on-search-change="onSearchChange"
     />
 
     <Drawer
@@ -45,6 +39,20 @@
       />
       <ProviderView v-if="upsertVisible && isView" :currentData="currentProvider" />
     </Drawer>
+
+    <Drawer
+      v-model="pricingTiersVisible"
+      :title="$t('provider.pricingTiers')"
+      :mask-closable="false"
+      width="65"
+    >
+      <ProviderPricingTiers
+        v-if="pricingTiersVisible"
+        :currentProvider="pricingTiersProvider"
+        @submit="onPricingTiersSubmit"
+        @cancel="pricingTiersVisible = false"
+      />
+    </Drawer>
   </div>
 </template>
 
@@ -52,6 +60,7 @@
 import pageTable from '@/components/table/pageTable';
 import ProviderUpsert from './components/ProviderUpsert.vue';
 import ProviderView from './components/ProviderView.vue';
+import ProviderPricingTiers from './components/ProviderPricingTiers.vue';
 
 const PROTOCOL_OPTIONS = [
     { value: 'openai', label: 'openai' },
@@ -64,23 +73,17 @@ export default {
     components: {
         pageTable,
         ProviderUpsert,
-        ProviderView
+        ProviderView,
+        ProviderPricingTiers
     },
 
     data() {
         return {
             tableLoading: false,
             tableData: [],
-            page: 1,
-            pageSize: 20,
-            total: 0,
-            searchParams: {},
-            localFilters: {
-                name: '',
-                description: '',
-                models: ''
-            },
             upsertVisible: false,
+            pricingTiersVisible: false,
+            pricingTiersProvider: {},
             isAdd: true,
             isView: false,
             currentProvider: {},
@@ -136,7 +139,7 @@ export default {
                 {
                     title: this.$t('com.operation'),
                     key: 'action',
-                    minWidth: 360,
+                    minWidth: 460,
                     render(h, params) {
                         return h('div', [
                             h(
@@ -160,6 +163,15 @@ export default {
                             h(
                                 'Button',
                                 {
+                                    props: { type: 'warning', size: 'small' },
+                                    style: { marginRight: '5px' },
+                                    on: { click: () => that.onPricingTiers(params.row) }
+                                },
+                                that.$t('provider.pricingTiers')
+                            ),
+                            h(
+                                'Button',
+                                {
                                     props: { type: 'primary', size: 'small' },
                                     style: { marginRight: '5px' },
                                     on: { click: () => that.onEdit(params.row) }
@@ -178,32 +190,6 @@ export default {
                     }
                 }
             ];
-        },
-        displayTableData() {
-            let list = this.tableData || [];
-            const nameQ = String(this.localFilters.name || '').trim();
-            const descQ = String(this.localFilters.description || '').trim();
-            const modelsQ = String(this.localFilters.models || '').trim();
-
-            if (nameQ) {
-                const q = nameQ.toUpperCase();
-                list = list.filter(row => String(row.name || '').toUpperCase().includes(q));
-            }
-            if (descQ) {
-                const q = descQ.toUpperCase();
-                list = list.filter(row => String(row.description || '').toUpperCase().includes(q));
-            }
-            if (modelsQ) {
-                const q = modelsQ.toUpperCase();
-                list = list.filter(row => {
-                    const models = row.models || [];
-                    if (!Array.isArray(models)) {
-                        return String(models).toUpperCase().includes(q);
-                    }
-                    return models.some(item => String(item).toUpperCase().includes(q));
-                });
-            }
-            return list;
         }
     },
 
@@ -214,17 +200,10 @@ export default {
     methods: {
         parseListPayload(data) {
             if (Array.isArray(data)) {
-                return { list: data, total: data.length };
+                return data;
             }
             const payload = data || {};
-            const list = Array.isArray(payload.list) ? payload.list : [];
-            const pagination = payload.pagination || {};
-            return {
-                list,
-                total: pagination.total != null ? pagination.total : list.length,
-                page: pagination.page,
-                pageSize: pagination.page_size
-            };
+            return Array.isArray(payload.list) ? payload.list : [];
         },
         renderModelTags(h, models) {
             const list = (models || []).filter(Boolean);
@@ -283,30 +262,13 @@ export default {
             this.$request({
                 url: 'providers',
                 method: 'get',
-                params: {
-                    page: this.page,
-                    page_size: this.pageSize,
-                    ...this.searchParams
-                },
                 openapi: true
             })
                 .then(res => {
                     if (res.status !== 200) {
                         return;
                     }
-                    const parsed = this.parseListPayload(res.data.Data);
-                    if (parsed.list.length === 0 && this.page > 1) {
-                        this.page -= 1;
-                        return this.fetchList();
-                    }
-                    this.tableData = parsed.list;
-                    this.total = parsed.total;
-                    if (parsed.page != null) {
-                        this.page = parsed.page;
-                    }
-                    if (parsed.pageSize != null) {
-                        this.pageSize = parsed.pageSize;
-                    }
+                    this.tableData = this.parseListPayload(res.data.Data);
                 })
                 .finally(() => {
                     this.tableLoading = false;
@@ -323,30 +285,6 @@ export default {
                 }
                 this.providerNames = (res.data.Data && res.data.Data.names) || [];
             });
-        },
-        onPageChange(pageInfo) {
-            this.page = pageInfo.page;
-            this.pageSize = pageInfo.pageSize;
-            this.fetchList();
-        },
-        onSearchChange(filters) {
-            filters = filters || {};
-            const protocol = filters.model_protocols;
-            const nextSearchParams = protocol ? { model_protocol: protocol } : {};
-            const protocolChanged =
-                nextSearchParams.model_protocol !== this.searchParams.model_protocol;
-
-            this.localFilters = {
-                name: filters.name || '',
-                description: filters.description || '',
-                models: filters.models || ''
-            };
-
-            if (protocolChanged) {
-                this.searchParams = nextSearchParams;
-                this.page = 1;
-                this.fetchList();
-            }
         },
         onAdd() {
             this.isAdd = true;
@@ -378,6 +316,16 @@ export default {
                 }
             });
         },
+        onPricingTiers(row) {
+            this.loadDetail(row.name, data => {
+                this.pricingTiersProvider = data || { name: row.name };
+                this.pricingTiersVisible = true;
+            });
+        },
+        onPricingTiersSubmit() {
+            this.pricingTiersVisible = false;
+            this.fetchList();
+        },
         loadDetail(name, done) {
             this.$request({
                 url: this.$urlFormat('providers/{provider_name}', {
@@ -390,13 +338,13 @@ export default {
                     this.currentProvider =
                         res.status === 200 && res.data.Data ? res.data.Data : { name };
                     if (typeof done === 'function') {
-                        done();
+                        done(this.currentProvider);
                     }
                 })
                 .catch(() => {
                     this.currentProvider = { name };
                     if (typeof done === 'function') {
-                        done();
+                        done(this.currentProvider);
                     }
                 });
         },

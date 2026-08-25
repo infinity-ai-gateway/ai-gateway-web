@@ -54,10 +54,11 @@
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
-| `Providers/index.vue` | `GET` | `providers` | 分页查询服务商列表（`page` / `page_size`，可带 `model_protocol`）；`Data` 为 `{ list, pagination }`。 |
+| `Providers/index.vue` | `GET` | `providers` | 拉取全量服务商列表（不传 `page` / `page_size` / `model_protocol`）；筛选与分页由前端完成。 |
 | `Providers/index.vue` | `GET` | `providers/actions/get-provider-names` | 创建时名称去重列表。 |
 | `Providers/index.vue` | `GET` | `providers/{provider_name}` | 查询单个服务商详情。 |
 | `Providers/index.vue` | `DELETE` | `providers/{provider_name}` | 删除服务商；被 cluster 引用时 `409`。 |
+| `Providers/components/ProviderPricingTiers.vue` | `PUT` | `providers/{provider_name}/pricing-tiers` | 设置高峰/闲时模板（`time_zone` + `tiers`，初期仅 `peak`）；UI 对 `time_zone` 做 IANA 校验（`isValidIanaTimeZone`）。 |
 | `Providers/components/ProviderUpsert.vue` | `POST` | `providers` | 新建服务商。 |
 | `Providers/components/ProviderUpsert.vue` | `PATCH` | `providers/{provider_name}` | 更新服务商；`keys`、`instance_pool` 全量替换。 |
 | `Providers/components/ProviderUpsert.vue` | `POST` | `providers/tools/discover-models` | 无状态模型发现（Body 传连接参数，回填 `models`）。 |

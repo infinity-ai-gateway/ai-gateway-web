@@ -30,6 +30,16 @@
         }
     ],
     "model_protocols": ["openai"],
+    "time_zone": "Asia/Shanghai",
+    "tiers": [
+        {
+            "name": "peak",
+            "time_ranges": [
+                { "weekdays": [1, 2, 3, 4, 5], "start": "09:00", "end": "12:00" },
+                { "weekdays": [1, 2, 3, 4, 5], "start": "14:00", "end": "18:00" }
+            ]
+        }
+    ],
     "create_time": 1716883200,
     "update_time": 1716883200
 }
@@ -46,8 +56,30 @@
 | `keys` | []ProviderKey | 该 provider 可用的 API Key 明文 | - | 非必填；默认空数组 `[]`；元素须满足 表：ProviderKey 结构 |
 | `instance_pool` | []Instance | Provider 对应的后端实例池 | 系统自动据此创建实例池和子集群 | 必填；至少 1 个元素；同一 provider 内，对于 `name` 不为空的实例，`name` 不能重复；同一 provider 内 `(name, addr, port)` 组合不能重复；至少有一个实例 `weight > 0` |
 | `model_protocols` | []string | 支持的模型访问协议 | 首期枚举：`openai`、`anthropic` | 必填；至少 1 个元素；元素不可重复；枚举值见下方 |
+| `time_zone` | string | 计算时段所使用的时区 | 用于 tier 价格匹配 | 非必填；默认 `Asia/Shanghai`；须为合法 IANA 时区名 |
+| `tiers` | []PricingTier | 时段 tier 定义列表 | 描述该 provider 在什么时段属于哪个 tier | 非必填；元素须满足 表：PricingTier 结构；**初期 `name` 只支持 `peak`** |
 | `create_time` | int64 | 创建时间 | - | 系统生成 |
 | `update_time` | int64 | 更新时间 | - | 系统生成 |
+
+**表：PricingTier 结构（`tiers` 元素）**
+
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | - | - | - | - | - |
+| `name` | string | Tier 名称 | Y | 用于与 `model-prices` 的 `tier_prices` 关联 | 必填；**初期只支持 `peak`** |
+| `time_ranges` | []TimeRange | 时段范围列表 | Y | 命中任意一个即属于该 tier | 必填；至少 1 个元素；元素须满足 表：TimeRange 结构 |
+
+**表：TimeRange 结构（`time_ranges` 元素）**
+
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | - | - | - | - | - |
+| `weekdays` | []int | 星期几 | N | 0=周日，1=周一，...，6=周六 | 为空表示每天；元素须在 0-6 之间 |
+| `start` | string | 开始时间 | Y | 格式 `HH:MM` | 必填；`HH:MM` 格式 |
+| `end` | string | 结束时间 | Y | 格式 `HH:MM` | 必填；`HH:MM` 格式；`end` 必须大于 `start`；跨午夜请拆成两段 |
+
+> **说明**：
+> - 同一 tier 内的多个 `time_ranges` 为"或"关系；`tiers` 列表按顺序匹配，命中第一个即停止。
+> - `start` / `end` 采用左闭右开语义（`start <= cur < end`），跨午夜请拆成两段。
+> - `time_zone` / `tiers` 可通过 `PUT /providers/{provider_name}/pricing-tiers` 接口单独维护，创建 provider 时无需传入。
 
 **表：Endpoint（`model_endpoint`）**
 
@@ -138,8 +170,10 @@
 1. 校验 `name` 全局唯一、`instance_pool` 合法、`model_protocols` 合法。
 2. 若未传 `model_endpoint`，使用默认值 `{schema: "https", uri: "/v1/models"}`。
 3. 若未传 `keys`，默认空数组。
-4. 若请求中携带 `models` 且非空，直接保存；否则可在创建后调用 `/providers/tools/discover-models` 接口探测模型列表，再回填到 provider。
-5. 写入 provider 记录，返回完整对象。
+4. 若未传 `time_zone`，默认 `Asia/Shanghai`。
+5. 若请求中携带 `tiers`，按 表：PricingTier 结构 校验；**初期只支持 `name="peak"`**。
+6. 若请求中携带 `models` 且非空，直接保存；否则可在创建后调用 `/providers/tools/discover-models` 接口探测模型列表，再回填到 provider。
+7. 写入 provider 记录，返回完整对象。
 
 **返回数据（Data内容）**
 
@@ -167,6 +201,16 @@
             {"name": "backend-1", "addr": "api.deepseek.com", "weight": 100, "port": 443}
         ],
         "model_protocols": ["openai"],
+        "time_zone": "Asia/Shanghai",
+        "tiers": [
+            {
+                "name": "peak",
+                "time_ranges": [
+                    {"weekdays": [1, 2, 3, 4, 5], "start": "09:00", "end": "12:00"},
+                    {"weekdays": [1, 2, 3, 4, 5], "start": "14:00", "end": "18:00"}
+                ]
+            }
+        ],
         "create_time": 1716883200,
         "update_time": 1716883200
     }
@@ -190,11 +234,27 @@
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
+| page | int | 页码 | N | 未传且 `page_size` 也未传时，返回全部记录 | 大于 0 |
+| page_size | int | 每页条数 | N | 未传且 `page` 也未传时，返回全部记录；最大 1000 | 大于 0 |
 | model_protocol | string | 按协议过滤 | N | - | 须为 `model_protocols` 枚举值 |
 
 **返回数据（Data内容）**
 
-数组，单元素同创建接口。
+```json
+{
+  "list": [...],
+  "pagination": {
+    "page": 1,
+    "page_size": 50,
+    "total": 100
+  }
+}
+```
+
+- 未携带 `page`/`page_size` 时，`list` 返回全部匹配记录，`pagination.page=1`，`pagination.page_size=total`；
+- 携带分页参数时，按对应页码返回。
+
+数组元素同创建接口。
 
 ### 2.3 Provider 详情
 
@@ -380,6 +440,102 @@ Data 为 null。
 }
 ```
 
+### 2.8 设置 Provider 高峰/闲时模板
+
+**基本信息**
+
+| 项目 | 值 | 说明 |
+| - | - | - |
+| 含义 | 设置/更新指定 provider 的高峰/闲时模板 | 支持 JSON body 或 YAML 文件；**初期 tier name 只支持 `peak`** |
+| 端点 | /providers/{provider_name}/pricing-tiers | - |
+| 版本 | v1 | - |
+| method | PUT | - |
+
+**输入参数（URI）**
+
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | - | - | - | - | - |
+| `provider_name` | string | Provider 名称 | Y | - | 必填；类型为 [ProviderName](./00-common.md#17-provider-名称providername)；必须引用已存在的 provider |
+
+**输入参数（Body）**
+
+两种提交方式：
+
+1. **JSON 格式**（`Content-Type: application/json`）：
+
+```json
+{
+    "time_zone": "Asia/Shanghai",
+    "tiers": [
+        {
+            "name": "peak",
+            "time_ranges": [
+                { "weekdays": [1, 2, 3, 4, 5], "start": "09:00", "end": "12:00" },
+                { "weekdays": [1, 2, 3, 4, 5], "start": "14:00", "end": "18:00" }
+            ]
+        }
+    ]
+}
+```
+
+2. **YAML 文件格式**（`Content-Type: text/yaml` 或 `multipart/form-data` 上传文件）：
+
+```yaml
+time_zone: "Asia/Shanghai"
+tiers:
+  - name: "peak"
+    time_ranges:
+      - weekdays: [1, 2, 3, 4, 5]
+        start: "09:00"
+        end: "12:00"
+      - weekdays: [1, 2, 3, 4, 5]
+        start: "14:00"
+        end: "18:00"
+```
+
+**执行逻辑**
+
+1. 校验 `provider_name` 对应的 provider 存在。
+2. 校验 `time_zone` 为合法 IANA 时区名；为空时默认 `Asia/Shanghai`。
+3. 校验 `tiers` 中每个 tier 包含非空 `name` 和至少一个 `time_range`；**初期 `name` 只支持 `peak`**。
+4. 校验 `time_ranges` 中 `weekdays` 元素在 0-6 之间；`start` / `end` 格式为 `HH:MM`，且 `end` > `start`；同一 tier 内部 `time_ranges` 不得重叠。
+5. 更新 provider 的 `time_zone` / `tiers` 字段，并刷新 `update_time`。
+6. 返回更新后的完整 provider 记录。
+
+**返回数据（Data内容）**
+
+同 `GET /providers/{provider_name}`，包含基础信息 + `time_zone` / `tiers`。
+
+**成功返回示例**
+
+```json
+{
+    "ErrNum": 200,
+    "ErrMsg": "success",
+    "Data": {
+        "name": "deepseek",
+        "description": "DeepSeek 官方 API",
+        "model_endpoint": { "schema": "https", "uri": "/v1/models" },
+        "models": ["deepseek-v4-pro", "deepseek-v4-flash"],
+        "keys": [...],
+        "instance_pool": [...],
+        "model_protocols": ["openai"],
+        "time_zone": "Asia/Shanghai",
+        "tiers": [
+            {
+                "name": "peak",
+                "time_ranges": [
+                    { "weekdays": [1, 2, 3, 4, 5], "start": "09:00", "end": "12:00" },
+                    { "weekdays": [1, 2, 3, 4, 5], "start": "14:00", "end": "18:00" }
+                ]
+            }
+        ],
+        "create_time": 1716883200,
+        "update_time": 1716883200
+    }
+}
+```
+
 ## 3. 校验规则
 
 1. `name` 必填，类型为 [ProviderName](./00-common.md#17-provider-名称providername)，全局唯一。
@@ -392,5 +548,13 @@ Data 为 null。
    - 每个元素 `name` 必填，长度 1-128，同一 provider 内唯一；
    - 每个元素 `key` 必填且非空，长度 1-512。
 8. `model_protocols` 必填，至少 1 个元素，元素不可重复，取值须为枚举值：`openai`、`anthropic`。
-9. 删除 provider 前，须校验无 cluster 引用，否则返回 `409 Conflict`；`/model-prices` 记录不再作为阻塞条件。
-10. 触发模型发现时，`model_protocol`、`schema`、`addr`、`port` 为必填，`uri` 和 `apikey` 为选填；各参数须满足对应合法性条件；`model_protocol` 不在枚举值范围内时返回 `422`。
+9. `time_zone` 非必填，为空时默认 `Asia/Shanghai`；若传入，须为合法 IANA 时区名。
+10. `tiers` 非必填；若传入：
+    - 每个 tier 必须包含非空 `name` 和至少一个 `time_range`；
+    - **初期 `name` 只支持 `peak`**；
+    - `time_ranges` 中 `weekdays` 元素须在 0-6 之间，为空表示每天；
+    - `start` / `end` 格式为 `HH:MM`，且 `end` 必须大于 `start`；
+    - 同一 tier 内部 `time_ranges` 不得重叠。
+11. `PUT /providers/{provider_name}/pricing-tiers` 中，`time_zone` / `tiers` 的校验规则同上；YAML 文件格式须能正确解析为相同结构。
+12. 删除 provider 前，须校验无 cluster 引用，否则返回 `409 Conflict`；`/model-prices` 记录不再作为阻塞条件。
+13. 触发模型发现时，`model_protocol`、`schema`、`addr`、`port` 为必填，`uri` 和 `apikey` 为选填；各参数须满足对应合法性条件；`model_protocol` 不在枚举值范围内时返回 `422`。

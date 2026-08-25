@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/ivu-ui.js"></script>
-  <script src="../assets/js/provider-upsert.js?v=2026082521"></script>
+  <script src="../assets/js/provider-upsert.js?v=2026082540"></script>
+  <script src="../assets/js/provider-pricing-tiers.js?v=2026082541"></script>
   <script src="../assets/js/layout.js"></script>
   <script src="../assets/js/prototype.js"></script>
 </head>
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
     '</div>' +
     drawerUpsert() +
     drawerDetail() +
+    drawerPricingTiers() +
     drawerRefCheck();
 
   var upsertController = null;
@@ -136,11 +138,12 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           title: '操作',
           key: 'action',
-          minWidth: 360,
+          minWidth: 460,
           render: function (row) {
             return (
               '<div class="proto-table-actions">' +
               IvuUI.btn('详情', 'success', 'small', '', 'data-action="detail" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('分段计价配置', 'warning', 'small', '', 'data-action="pricing-tiers" data-name="' + escapeAttr(row.name) + '"') +
               IvuUI.btn('查询模型价格', 'primary', 'small', '', 'data-action="prices" data-name="' + escapeAttr(row.name) + '"') +
               IvuUI.btn('编辑', 'primary', 'small', '', 'data-action="edit" data-name="' + escapeAttr(row.name) + '"') +
               IvuUI.btn('删除', 'error', 'small', '', 'data-action="delete" data-name="' + escapeAttr(row.name) + '"') +
@@ -184,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var action = btn.getAttribute('data-action');
         if (action === 'detail') openDetail(row);
         else if (action === 'edit') openUpsert(false, row);
+        else if (action === 'pricing-tiers') openPricingTiers(row);
         else if (action === 'prices') {
           window.location.href =
             '../pages/model-prices.html?provider=' +
@@ -263,6 +267,33 @@ document.addEventListener('DOMContentLoaded', function () {
     Prototype.openDrawer('drawer-provider-upsert');
   }
 
+  function openPricingTiers(row) {
+    ProviderPricingTiers.mount(
+      document.getElementById('provider-pricing-tiers-body'),
+      document.getElementById('provider-pricing-tiers-footer'),
+      {
+        row: row,
+        onCancel: function () {
+          Prototype.closeDrawer('drawer-provider-pricing-tiers');
+        },
+        onSubmit: function (payload) {
+          var target = state.allRows.find(function (item) {
+            return item.name === row.name;
+          });
+          if (target) {
+            target.time_zone = payload.time_zone;
+            target.tiers = payload.tiers;
+            target.update_time = Math.floor(Date.now() / 1000);
+          }
+          Prototype.closeDrawer('drawer-provider-pricing-tiers');
+          Prototype.toast('分段计价配置已更新');
+          renderTable();
+        },
+      },
+    );
+    Prototype.openDrawer('drawer-provider-pricing-tiers');
+  }
+
   function openDetail(row) {
     ProviderUpsert.mount(
       document.getElementById('provider-detail-body'),
@@ -292,6 +323,16 @@ function drawerUpsert() {
     '<div id="provider-upsert-body"></div>',
     '<div id="provider-upsert-footer"></div>',
     '70%');
+}
+
+function drawerPricingTiers() {
+  return IvuUI.drawer(
+    'drawer-provider-pricing-tiers',
+    '分段计价配置',
+    '<div id="provider-pricing-tiers-body"></div>',
+    '<div id="provider-pricing-tiers-footer"></div>',
+    '60%',
+  );
 }
 
 function drawerDetail() {

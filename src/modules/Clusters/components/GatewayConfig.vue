@@ -440,7 +440,7 @@ export default {
                 strip_prefix: false,
                 models: [],
                 model_mappings: [{ source_model: '', target_model: '' }],
-                keys: [{ name: '', weight: 100 }],
+                keys: [{ name: '', weight: 0 }],
                 key_policy: defaultKeyPolicy()
             },
             ruleValidate: {
@@ -573,7 +573,7 @@ export default {
                         name: item.name || '',
                         weight: item.weight != null ? Number(item.weight) : 0
                     }))
-                    : [{ name: '', weight: 100 }];
+                    : [{ name: '', weight: 0 }];
             this.formData.key_policy = {
                 ...defaultKeyPolicy(),
                 ...(src.key_policy || {})
@@ -595,7 +595,7 @@ export default {
                 name: allowedKeys.indexOf(item.name) !== -1 ? item.name : ''
             }));
             if (!this.formData.keys.length) {
-                this.formData.keys = [{ name: '', weight: 100 }];
+                this.formData.keys = [{ name: '', weight: 0 }];
             }
             this.validateKeysState();
         },
@@ -603,7 +603,7 @@ export default {
             if (!name) {
                 this.selectedProvider = null;
                 this.formData.models = [];
-                this.formData.keys = [{ name: '', weight: 100 }];
+                this.formData.keys = [{ name: '', weight: 0 }];
                 this.validateKeysState();
                 return;
             }
@@ -626,26 +626,35 @@ export default {
         },
         addKey() {
             this.formData.keys.push({ name: '', weight: 0 });
+            this.$nextTick(() => {
+                this.validateKeysState();
+            });
         },
         removeKey(index) {
             this.formData.keys.splice(index, 1);
             if (!this.formData.keys.length) {
-                this.formData.keys.push({ name: '', weight: 100 });
+                this.formData.keys.push({ name: '', weight: 0 });
             }
             this.validateKeysState();
         },
         keyNameRules(index) {
             const item = this.formData.keys[index] || {};
-            const hasContent = String(item.name || '').trim() || Number(item.weight) > 0;
+            if (!String(item.name || '').trim()) {
+                return [];
+            }
             return [
                 {
-                    required: !!hasContent,
+                    required: true,
                     message: this.$t('gatewayConfig.keyNameRequired'),
                     trigger: 'change'
                 }
             ];
         },
-        keyWeightRules() {
+        keyWeightRules(index) {
+            const item = this.formData.keys[index] || {};
+            if (!String(item.name || '').trim()) {
+                return [];
+            }
             return [
                 {
                     type: 'number',

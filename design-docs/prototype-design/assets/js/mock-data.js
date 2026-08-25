@@ -230,6 +230,16 @@ window.MockData = {
         },
       ],
       model_protocols: ['openai'],
+      time_zone: 'Asia/Shanghai',
+      tiers: [
+        {
+          name: 'peak',
+          time_ranges: [
+            { weekdays: [1, 2, 3, 4, 5], start: '09:00', end: '12:00' },
+            { weekdays: [1, 2, 3, 4, 5], start: '14:00', end: '18:00' },
+          ],
+        },
+      ],
       create_time: 1716883200,
       update_time: 1716883200,
     },
@@ -480,10 +490,18 @@ window.MockData = {
       prices: {
         input_cost_per_token: 0.00000027,
         output_cost_per_token: 0.0000011,
+        cache_read_input_token_cost: 0.00000007,
+      },
+      tier_prices: {
+        peak: {
+          input_cost_per_token: 0.00000054,
+          output_cost_per_token: 0.0000022,
+          cache_read_input_token_cost: 0.00000014,
+        },
       },
       metadata: {
         source: 'https://platform.deepseek.com/pricing',
-        notes: 'DeepSeek 官方定价',
+        notes: 'DeepSeek 官方定价，含 peak 分段计价',
       },
       create_time: 1717209600,
       update_time: 1722470400,
@@ -628,4 +646,5 @@ window.MockData = {
     'output_cost_per_video',
     'output_cost_per_video_per_second',
   ],
+  modelTierOptions: [{ value: 'peak', label: '忙时（peak）' }],
 };

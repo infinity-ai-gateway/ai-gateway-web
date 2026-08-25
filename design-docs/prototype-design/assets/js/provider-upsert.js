@@ -114,6 +114,8 @@ window.ProviderUpsert = (function () {
         ? clone(row.instance_pool)
         : [{ name: '', addr: '', weight: 100, port: 443 }],
       model_protocols: (row.model_protocols || ['openai']).slice(),
+      time_zone: row.time_zone || 'Asia/Shanghai',
+      tiers: clone(row.tiers || []),
       create_time: row.create_time || 0,
       update_time: row.update_time || 0,
     };
@@ -347,6 +349,59 @@ window.ProviderUpsert = (function () {
     );
   }
 
+  function renderPricingTiersDetail(data) {
+    var timeZone = data.time_zone || 'Asia/Shanghai';
+    var tiers = data.tiers || [];
+    if (!tiers.length) {
+      return (
+        IvuUI.card(
+          '分段计价配置',
+          '<div class="info-row"><div class="info-label">时区</div><div class="info-value">' +
+            IvuUI.escapeHtml(timeZone) +
+            '</div></div>' +
+            '<div class="info-row"><div class="info-label">计价时段</div><div class="info-value">忙时（peak）</div></div>' +
+            '<div class="info-row"><div class="info-label">时间段</div><div class="info-value">未配置</div></div>',
+        )
+      );
+    }
+
+    return IvuUI.card(
+      '分段计价配置',
+      IvuUI.formTop(
+        IvuUI.formTopItem('时区', IvuUI.escapeHtml(timeZone)) +
+          IvuUI.formTopItem('计价时段', '忙时（peak）') +
+          IvuUI.formTopItem(
+            '时间段',
+            renderDetailTable(
+              [
+                { title: '适用时段' },
+                { title: '开始时间' },
+                { title: '结束时间' },
+              ],
+              ((ProviderPricingTiers && ProviderPricingTiers.getPeakTier
+                ? ProviderPricingTiers.getPeakTier(data)
+                : tiers[0] || {}).time_ranges || [])
+                .map(function (tr) {
+                  var weekdaysText = ProviderPricingTiers
+                    ? ProviderPricingTiers.formatWeekdays(tr.weekdays)
+                    : (tr.weekdays && tr.weekdays.length ? tr.weekdays.join(',') : '每天');
+                  return (
+                    '<tr><td>' +
+                    IvuUI.escapeHtml(weekdaysText) +
+                    '</td><td>' +
+                    IvuUI.escapeHtml(tr.start || '-') +
+                    '</td><td>' +
+                    IvuUI.escapeHtml(tr.end || '-') +
+                    '</td></tr>'
+                  );
+                })
+                .join('') || '-',
+            ),
+          ),
+      ),
+    );
+  }
+
   function renderDetail(data) {
     data = data || createDefaultData({});
     var mode = inferInstanceMode(data.instance_pool || []);
@@ -412,7 +467,9 @@ window.ProviderUpsert = (function () {
         '基本信息',
         IvuUI.formTop(
           IvuUI.formTopItem('名称', IvuUI.escapeHtml(data.name || '-')) +
-            IvuUI.formTopItem('描述', IvuUI.escapeHtml(data.description || '-')),
+            IvuUI.formTopItem('描述', IvuUI.escapeHtml(data.description || '-')) +
+            IvuUI.formTopItem('创建时间', formatTime(data.create_time)) +
+            IvuUI.formTopItem('更新时间', formatTime(data.update_time || data.create_time)),
         ),
       ) +
       IvuUI.card('实例池', instanceBody) +
@@ -439,15 +496,7 @@ window.ProviderUpsert = (function () {
           renderTags(data.models) +
           '</div></div>',
       ) +
-      IvuUI.card(
-        '时间戳',
-        '<div class="info-row"><div class="info-label">创建时间</div><div class="info-value">' +
-          formatTime(data.create_time) +
-          '</div></div>' +
-          '<div class="info-row"><div class="info-label">更新时间</div><div class="info-value">' +
-          formatTime(data.update_time || data.create_time) +
-          '</div></div>',
-      ) +
+      renderPricingTiersDetail(data) +
       '</div>'
     );
   }

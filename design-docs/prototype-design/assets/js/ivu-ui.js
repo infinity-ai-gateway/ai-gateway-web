@@ -179,7 +179,9 @@ window.IvuUI = {
     ]},
     { name: 'body:', buttons: [
       { name: 'req_body_json_in', snippet: 'req_body_json_in("","",false)', title: 'req_body_json_in(jsonpath, patterns, foldCase)' },
-      { name: 'req_body_json_prefix_in', snippet: 'req_body_json_prefix_in("","",false)', title: 'req_body_json_prefix_in(jsonpath, patterns, foldCase)' }
+      { name: 'req_body_json_prefix_in', snippet: 'req_body_json_prefix_in("","",false)', title: 'req_body_json_prefix_in(jsonpath, patterns, foldCase)' },
+      { name: 'req_body_larger_than', snippet: 'req_body_larger_than(8192)', title: 'req_body_larger_than(bytes)' },
+      { name: 'req_body_less_than', snippet: 'req_body_less_than(2048)', title: 'req_body_less_than(bytes)' }
     ]}
   ],
 

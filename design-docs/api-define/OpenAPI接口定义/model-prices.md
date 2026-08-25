@@ -18,7 +18,15 @@
   },
   "prices": {
     "input_cost_per_token": 0.000002,
-    "output_cost_per_token": 0.000008
+    "output_cost_per_token": 0.000008,
+    "cache_read_input_token_cost": 0.0000005
+  },
+  "tier_prices": {
+    "peak": {
+      "input_cost_per_token": 0.000004,
+      "output_cost_per_token": 0.000016,
+      "cache_read_input_token_cost": 0.000001
+    }
   },
   "price_currency": "RMB",
   "metadata": {
@@ -42,7 +50,8 @@
 | `capabilities` | []string | 模型支持的能力列表 | 默认空数组；元素应为枚举值 |
 | `supported_parameters` | []string | 支持的请求参数列表 | 默认空数组；元素应为枚举值 |
 | `limits` | object | 限制对象 | 默认空对象；键名应为枚举值；所有限制字段必须为非负整数 |
-| `prices` | object | 价格对象 | 必填；至少包含一个价格字段；所有价格字段必须为非负数；键名应为枚举值 |
+| `prices` | object | 价格对象 | 必填；至少包含一个价格字段；所有价格字段必须为非负数；键名应为枚举值；未命中 tier 时作为 fallback 价格 |
+| `tier_prices` | object | 分时段价格对象 | 非必填；键为 tier name（**初期只支持 `peak`**），值为价格对象；内部键名应为 `prices` 枚举；与 provider 的 `tiers` 不做强制引用校验 |
 | `price_currency` | string | 价格货币 | 固定为 `RMB`，请求体中无需传入 |
 | `metadata` | object | 元数据 | 默认空对象；键名应为枚举值 |
 | `create_time` | int64 | 创建时间 | Unix 时间戳（秒） |
@@ -189,6 +198,12 @@ models:
     prices:
       input_cost_per_token: 0.000002
       output_cost_per_token: 0.000008
+      cache_read_input_token_cost: 0.0000005
+    tier_prices:
+      peak:
+        input_cost_per_token: 0.000004
+        output_cost_per_token: 0.000016
+        cache_read_input_token_cost: 0.000001
     metadata:
       source: "https://platform.deepseek.com/pricing"
       notes: "DeepSeek V3"
@@ -205,7 +220,8 @@ models:
 | `capabilities` | N | 能力列表，枚举值同第 1 节 `capabilities` 枚举 |
 | `supported_parameters` | N | 支持的请求参数列表，枚举值同第 1 节 `supported_parameters` 枚举 |
 | `limits` | N | 限制对象，键名枚举值同第 1 节 `limits` 枚举；所有限制字段必须为非负整数 |
-| `prices` | Y | 价格对象，键名枚举值同第 1 节 `prices` 枚举；至少包含一个价格字段 |
+| `prices` | Y | 价格对象，键名枚举值同第 1 节 `prices` 枚举；至少包含一个价格字段；未命中 tier 时作为 fallback 价格 |
+| `tier_prices` | N | 分时段价格对象，键为 tier name（**初期只支持 `peak`**），值为价格对象；内部键名枚举值同第 1 节 `prices` 枚举 |
 | `metadata` | N | 元数据，键名枚举值同第 1 节 `metadata` 枚举 |
 
 > **唯一性约束**：`(provider, model, mode)` 三元组必须唯一。
@@ -235,6 +251,11 @@ models:
       output_cost_per_token: 0.000008
       cache_read_input_token_cost: 0.0000005
       cache_creation_input_token_cost: 0.000001
+    tier_prices:
+      peak:
+        input_cost_per_token: 0.000004
+        output_cost_per_token: 0.000016
+        cache_read_input_token_cost: 0.000001
     metadata:
       source: "https://platform.deepseek.com/pricing"
       notes: "DeepSeek V3 官方 API"
@@ -285,9 +306,13 @@ models:
 2. 校验每条记录的 `(provider, model, mode)` 唯一性；
 3. 校验必填字段：`provider`、`model`、`base_model`、`mode`、`prices`；
 4. 校验 `prices` 中至少包含一个价格字段，且所有价格字段为非负数；
-5. 校验 `limits` 中所有限制字段值为非负整数；
-6. `replace` 模式：先清空 `model_prices` 表，再写入新数据；
-7. `merge` 模式：对已有 `(provider, model, mode)` 记录更新，新增记录插入。
+5. 若记录包含 `tier_prices`：
+   - **初期 tier name 只支持 `peak`**；
+   - 每个 tier 对应的价格对象中，键名须为 `prices` 枚举；
+   - 所有 tier 价格字段必须为非负数。
+6. 校验 `limits` 中所有限制字段值为非负整数；
+7. `replace` 模式：先清空 `model_prices` 表，再写入新数据；
+8. `merge` 模式：对已有 `(provider, model, mode)` 记录更新，新增记录插入。
 
 **权限**
 
@@ -389,7 +414,15 @@ models:
     },
     "prices": {
         "input_cost_per_token": 0.000002,
-        "output_cost_per_token": 0.000008
+        "output_cost_per_token": 0.000008,
+        "cache_read_input_token_cost": 0.0000005
+    },
+    "tier_prices": {
+        "peak": {
+            "input_cost_per_token": 0.000004,
+            "output_cost_per_token": 0.000016,
+            "cache_read_input_token_cost": 0.000001
+        }
     },
     "metadata": {
         "source": "https://platform.deepseek.com/pricing",
@@ -592,11 +625,16 @@ Data 为 null。
 3. `(provider, model, mode)` 组合不能重复；
 4. `prices` 必填，至少包含一个价格字段；
 5. 所有价格字段必须为非负数；
-6. `price_currency` 当前只支持 `RMB`；
-7. `mode` 必须是预定义枚举值；
-8. `capabilities`、`supported_parameters` 若传入，其元素应取自对应枚举值（非枚举值可接收但建议告警或记录，便于后续收敛）；
-9. `limits`、`prices`、`metadata` 的键名应取自对应枚举值（非枚举键可接收但建议告警或记录，便于后续收敛）；
-10. `limits` 中所有限制字段值必须为非负整数；
-11. `/v1/model-prices/import` 仅接受 YAML 文件，且 `default_currency` 必须为 `RMB`；导入时不再校验 `provider` 是否已存在于 `/providers`。
+6. `tier_prices` 非必填；若传入：
+   - **初期 tier name 只支持 `peak`**；
+   - 每个 tier 对应的价格对象中，键名须为 `prices` 枚举；
+   - 所有 tier 价格字段必须为非负数；
+   - 与 provider 的 `tiers` 不做强制引用校验；若引用了 provider 未定义的 tier name，可记录告警，但不阻塞写入。
+7. `price_currency` 当前只支持 `RMB`；
+8. `mode` 必须是预定义枚举值；
+9. `capabilities`、`supported_parameters` 若传入，其元素应取自对应枚举值（非枚举值可接收但建议告警或记录，便于后续收敛）；
+10. `limits`、`prices`、`tier_prices.<tier>`、`metadata` 的键名应取自对应枚举值（非枚举键可接收但建议告警或记录，便于后续收敛）；
+11. `limits` 中所有限制字段值必须为非负整数；
+12. `/v1/model-prices/import` 仅接受 YAML 文件，且 `default_currency` 必须为 `RMB`；导入时不再校验 `provider` 是否已存在于 `/providers`。
 
 ---

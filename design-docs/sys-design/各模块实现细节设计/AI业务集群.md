@@ -73,7 +73,7 @@ Clusters/index.vue
 | `models` | **转发模型**多选；下拉首项「全选」（已全部选中时隐藏）；支持 `clearable`。 |
 | `strip_prefix` / `match_prefix` | 裁剪前缀；开启时 `match_prefix` 必填且以 `/` 结尾。 |
 | `model_mappings` | 模型重定向；原模型名不可重复。 |
-| `keys[]` | 仅 `name` + `weight`（**无 key 明文**）；`name` 须属于所选服务商 Keys；权重之和 = 100；表头文案「Key」。 |
+| `keys[]` | 仅 `name` + `weight`（**无 key 明文**）；**非必填**；空行不参与校验；提交前 `filter` 掉 `name` 为空的项；有值的 `name` 须属于所选服务商 Keys；权重之和 = 100；表头文案「Key」。 |
 | `key_policy` | `strategy` 仅 `weighted_random`；退避最大值 ≥ 初始值。 |
 
 权重校验错误在 Keys 表格下方**单行**展示，避免重复提示。
