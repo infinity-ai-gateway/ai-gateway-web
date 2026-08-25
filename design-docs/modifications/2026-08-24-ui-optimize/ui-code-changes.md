@@ -2,8 +2,8 @@
 
 > **对照**：接口定义 `design-docs/api-define/OpenAPI接口定义/`
 > **原型**：`design-docs/prototype-design/`（`pages/providers.html`、`assets/js/provider-upsert.js`、`assets/js/cluster-upsert.js`、`pages/cluster-list.html`）
-> **接口变更日期**：2026-08-24
-> **状态**：基本完成（1 项待补，见 §9）
+> **接口变更日期**：2026-08-24（主体）；2026-08-25 增量见 [`2026-08-25-ui-optimize/ui-code-changes.md`](../2026-08-25-ui-optimize/ui-code-changes.md)
+> **状态**：已完成（含 [`2026-08-25-ui-optimize`](../2026-08-25-ui-optimize/ui-code-changes.md) 增量）
 
 本次核心变化：新增独立对象 `/providers`（模型服务商）。实例池、模型协议、模型发现端点、Key 明文从 Cluster 迁到 Provider；Cluster 只保留转发策略，通过 `llm_config.provider` 引用服务商。
 
@@ -14,7 +14,7 @@
 | 优先级 | 变更点 | 影响模块 | 状态 | 备注 |
 | ------ | ------ | -------- | ---- | ---- |
 | P0 | 新增模型服务商 `/providers` 管理模块 | 新模块 · 列表/创建/编辑/详情/删除 | **已完成** | 菜单放在「资源管理」下，位于 AI 网关实例池与 AI 业务集群之间 |
-| P0 | Cluster 去掉实例池步骤，改为引用 Provider | 集群 · 向导/复查/详情 | **部分完成** | 向导 5 步、提交体已对齐；复查/详情**待补**服务商实例池只读展示（§9.1） |
+| P0 | Cluster 去掉实例池步骤，改为引用 Provider | 集群 · 向导/复查/详情 | **已完成** | 向导 5 步、提交体已对齐；复查/详情展示服务商实例池 |
 | P0 | Cluster LLM 改为引用 Provider | 集群 · 大模型配置/复查 | **已完成** | 删除 `provider_type`、`model_endpoint`、Key 明文；`keys` 仅 `name`+`weight` |
 | P1 | `sticky_sessions.hash_strategy` 默认 `CLIENT_IP_ONLY` | 集群 · 基本配置 | **已完成** | 与 `clusters.md` / 原型一致 |
 | P1 | model-prices `prices` 键补齐 | 模型定价 · 创建/编辑 | **已完成** | 文档多出 4 个键 |
@@ -55,7 +55,7 @@
 | `model_protocols` | 必填，至少 1 个，元素不可重复；首期枚举仅 `openai`、`anthropic`（**不含 `gemini`**） |
 | `model_endpoint.schema` | 非必填；默认 `https`；有效值 `http`、`https` |
 | `model_endpoint.uri` | 非必填；默认 `/v1/models`；非空且须以 `/` 开头 |
-| `models` | 非必填；元素非空且不可重复；可手动维护或调用发现接口回填 |
+| `models` | 非必填；元素非空且不可重复；仅可通过 `/providers/tools/discover-models` 探测回填，前端不可手填 |
 | `keys` | 非必填，默认 `[]`；`name` 1-128 且同 provider 内唯一；`key` 1-512；**无 weight** |
 
 **接口清单**：
@@ -67,7 +67,7 @@
 | `GET` | `/providers/{provider_name}` | 详情 |
 | `PATCH` | `/providers/{provider_name}` | 更新；`keys`、`instance_pool` 全量替换 |
 | `DELETE` | `/providers/{provider_name}` | 删除；被 cluster 引用时返回 `409`；`/model-prices` 同名记录不阻塞 |
-| `POST` | `/providers/{provider_name}/discover-models` | 触发模型发现，回填 `models`；`keys` 为空时 `422` |
+| `POST` | `/providers/tools/discover-models` | 无状态工具接口，探测上游模型列表并回填表单；`keys` 为空时 `422` |
 
 ### 2.3 实现
 
@@ -105,7 +105,12 @@
 3. **模型服务配置**
    - 模型协议：多选下拉，必填，选项 `openai`、`anthropic`
    - 模型列表接口：`schema` 下拉 + 只读 `addr:port`（取首个实例）+ `uri` 输入
-   - 模型列表：标签展示；「同步模型」调用 `discover-models`；支持手动添加
+   - 模型列表（**2026-08-25 定稿**，详见 [增量文档 §2](../2026-08-25-ui-optimize/ui-code-changes.md#2-p0provider-模型列表交互定稿)）：
+     - 只读 tag / disabled 多选；空时占位「暂无模型」
+     - 标题旁 `?`：说明列表用途、获取流程、按钮置灰条件（两段 Tooltip）
+     - 「**获取**」按钮：调用 `POST /providers/tools/discover-models`（Body 传连接参数）；**不可手动添加或删除**
+     - 未选协议或未填实例地址时「获取」**置灰**；无按钮 Tooltip、无输入框下方长说明
+     - 获取成功后仍须点「提交」才写入 Provider
 4. **服务鉴权 Keys**
    - 列：Key 名称、Key 值、操作
    - 无权重列；「+ 添加 Key」
@@ -158,9 +163,10 @@
 2. **GatewayConfig 不再依赖本集群实例池** ✅
    - 删除 `instancePoolData` 用于拼模型列表 URL、探测 hosts 的逻辑
    - 删除对 `POST tools/get-models-from-provider` 的调用
-3. **复查 / 详情** ⚠️ 部分完成
+   - 所属服务商：`GET /providers/actions/get-provider-names`；选中后 `GET /providers/{provider_name}` 取 models/keys
+3. **复查 / 详情** ✅
    - 删除本集群「实例 IP 列表 / 服务商域名」编辑结果 ✅
-   - 按 `llm_config.provider` 请求 `GET /providers/{name}`，只读展示服务商实例池 ❌ **待补**（原型 `cluster-upsert.js` → `renderReview` 已有，Vue `Review.vue` 尚未实现）
+   - 按 `llm_config.provider` 请求 `GET /providers/{name}`，只读展示服务商实例池（地址 / 端口 / 权重） ✅
    - 健康检查 Host 为空时文案改为「使用所属服务商首个实例地址」 ✅
 4. **详情回显** ✅
    - `Clusters/index.vue` 的 `onDetails` 不再调用 `getClusterInstancePool(tmpData)`
@@ -228,11 +234,11 @@
 
 **GatewayConfig 布局（对照原型「模型服务配置」Card）**：
 
-1. **所属服务商**（必填下拉，`GET /providers`）
-2. **转发模型**（多选；选项来自所选 provider 的 `models`；切换服务商时剔除已不存在的模型）
+1. **所属服务商**（必填下拉，`GET /providers/actions/get-provider-names` 取 `names` 列表）
+2. **转发模型**（多选；选项来自 `GET /providers/{provider_name}` 返回的 `models`；切换服务商时剔除已不存在的模型）
 3. **裁剪前缀**开关；开启后显示 **匹配前缀**
 4. **模型重定向**表格：保持
-5. **Keys 配置**表格：列改为 **服务商 Key**（下拉 provider.keys 的 `name`）+ **权重** + 操作；去掉 Key 值输入
+5. **Keys 配置**表格：列改为 **服务商 Key**（下拉 `GET /providers/{provider_name}` 返回的 `keys[].name`）+ **权重** + 操作；去掉 Key 值输入
 6. **Key 路由策略**：策略 / 最大重试次数 / 初始退避 / 最大退避；保持
 
 **删除**：
@@ -250,7 +256,7 @@
 | 模型服务商类型 + 价格关联提供商 | **所属服务商**（仅 `provider`） | ✅ |
 | 模型列表接口 / header | 删除 | ✅ |
 | 服务鉴权 Keys（含明文） | 仅 Key 名称 + 权重 | ✅ |
-| 实例池（本集群） | **服务商实例池**（只读） | ❌ 待补 |
+| 实例池（本集群） | **服务商实例池**（只读） | ✅ |
 
 集群列表保持现网列：**名称 / 描述 / 操作**，**不要**增加 Provider 列或 Provider 筛选。`GET /clusters?provider=` 接口可保留，前端列表不消费。
 
@@ -316,6 +322,9 @@
 | --- | --- | ---- |
 | `nav.ProviderManage` | 模型服务商 | ✅ |
 | `provider.name` | 服务商 | ✅ |
+| `provider.syncModels` | 获取（模型列表按钮） | ✅ |
+| `provider.modelsHintDiscoverOnly` | 暂无模型（空列表占位） | ✅ |
+| `provider.modelsListTip` / `modelsListFetchTip` | 模型列表 `?` 说明（两段） | ✅ |
 | `gatewayConfig.ownedProvider` | 所属服务商 | ✅ |
 | `gatewayConfig.forwardModels` | 转发模型 | ✅ |
 | `gatewayConfig.modelProtocol` | 模型协议 | ✅ |
@@ -328,7 +337,7 @@
 | 旧消费 | 新消费 | 状态 |
 | ------ | ------ | ---- |
 | `GET model-provider-types` | `GET /providers` | ✅ |
-| `POST tools/get-models-from-provider` | `POST /providers/{name}/discover-models`（仅服务商页） | ✅ |
+| `POST tools/get-models-from-provider` | `POST /providers/tools/discover-models`（无状态工具，仅服务商页） | ✅ |
 
 ---
 
@@ -340,7 +349,8 @@
 - [x] 列表展示名称 / 描述 / 协议 / 模型，协议筛选项仅 `openai`、`anthropic`
 - [x] 创建：名称、实例池、模型协议必填；实例表无「名称」列
 - [x] 域名模式提交单实例 `port=443`、`weight=100`
-- [x] Keys 仅名称+值；「同步模型」调用 `discover-models` 回填模型
+- [x] Keys 仅名称+值；「获取」调用 `POST /providers/tools/discover-models` 回填模型（不可手填）
+- [x] 模型列表旁 `?` 说明置灰条件；空列表占位「暂无模型」；无手填、无下方长说明
 - [x] 详情只读、Key 脱敏；编辑回显正确
 - [x] 删除被集群引用的 provider 得到 409
 
@@ -351,7 +361,7 @@
 - [x] 转发模型为该服务商 models 子集；切换服务商后非法模型被剔除
 - [x] Keys 下拉为服务商 key name，提交无明文；权重和为 100
 - [x] 提交体无 `instance_pool`、`provider_type`、`model_endpoint`、`keys[].key`
-- [ ] 复查展示所属服务商实例池（只读）及 Key 名称+权重（Key 名称+权重 ✅；实例池 ❌）
+- [x] 复查展示所属服务商实例池（只读）及 Key 名称+权重
 - [x] 列表保持名称 / 描述 / 操作，无 Provider 列、无 Provider 筛选
 - [x] 新建会话保持默认 `CLIENT_IP_ONLY`
 
@@ -361,15 +371,9 @@
 
 ---
 
-## 9. 实施记录与待办
+## 9. 实施记录
 
-### 9.1 待补项
-
-| 项 | 文件 | 说明 |
-| -- | ---- | ---- |
-| 集群复查/详情展示服务商实例池 | `src/modules/Clusters/components/Review.vue` | 按 `llm_config.provider` 调用 `GET /providers/{name}`，只读展示 `instance_pool`（地址/端口/权重）；对照原型 `cluster-upsert.js` → `renderReview` |
-
-### 9.2 已变更文件清单
+### 9.1 已变更文件清单
 
 **新增**：
 
@@ -392,7 +396,7 @@
 | `src/utils/const.js` | `ProviderNameRegCheck`、`maskSecretKey` |
 | `src/modules/Clusters/components/index.vue` | 5 步向导、提交体格式化 |
 | `src/modules/Clusters/components/GatewayConfig.vue` | 引用 Provider |
-| `src/modules/Clusters/components/Review.vue` | 复查文案（实例池待补） |
+| `src/modules/Clusters/components/Review.vue` | 复查展示服务商实例池 |
 | `src/modules/Clusters/components/BaseConfig.vue` | `CLIENT_IP_ONLY` 默认 |
 | `src/modules/Clusters/components/InstancePool.vue` | 抽取为共享组件（Provider 复用） |
 | `src/modules/Clusters/index.vue` | 详情不再读实例池 |
@@ -406,16 +410,29 @@
 | `design-docs/api-define/OpenAPI接口定义/clusters.md` 等 | 接口定义同步 |
 | `design-docs/prototype-design/assets/js/cluster-upsert.js` 等 | 原型同步 |
 
+**2026-08-25 增量**（详见 [`2026-08-25-ui-optimize/ui-code-changes.md`](../2026-08-25-ui-optimize/ui-code-changes.md)）：
+
+| 文件 | 说明 |
+| ---- | ---- |
+| `src/modules/Providers/components/ProviderUpsert.vue` | 模型列表交互定稿（只读、获取、?、置灰） |
+| `src/i18n/zh.js`、`src/i18n/en.js` | 获取/占位/Tooltip 文案 |
+| `design-docs/prototype-design/assets/js/provider-upsert.js` | 原型对齐（helpIcon、canDiscoverModels、获取） |
+| `design-docs/prototype-design/pages/providers.html` | 脚本版本参数 |
+| `design-docs/prototype-design/assets/js/entity-upsert.js` | EntityName 校验 |
+| `design-docs/prototype-design/assets/js/api-key-upsert.js` | 限流规则 name |
+| `design-docs/prototype-design/assets/js/mock-data.js` | 示例数据 |
+
 **本地开发（非业务）**：
 
 | 文件 | 说明 |
 | ---- | ---- |
 | `configs/config.js` | dev 端口 `8085` → `8180` |
 
-### 9.3 关联文档
+### 9.2 关联文档
 
 | 文档 | 说明 |
 | ---- | ---- |
 | `design-docs/api-define/OpenAPI接口定义/providers.md` | Provider 接口定义 |
 | `design-docs/api-define/OpenAPI接口定义/clusters.md` | Cluster 接口变更 |
+| `design-docs/modifications/2026-08-25-ui-optimize/ui-code-changes.md` | 模型列表交互 + api-define 原型增量 |
 | 上一轮已完成 | `design-docs/modifications/2026-08-16-ui-optimize/ui-code-changes.md` |

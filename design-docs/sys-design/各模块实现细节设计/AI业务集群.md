@@ -2,7 +2,7 @@
 
 ## 1. 模块定位
 
-`Clusters` 管理 AI 业务集群（Cluster），是系统中最复杂的配置对象之一。新建/编辑采用**六步向导**模式，每个步骤负责 Cluster 的一部分配置（含多 Key 加权、价格关联提供商、模型前缀裁剪），最终由复核步骤统一提交。
+`Clusters` 管理 AI 业务集群（Cluster）。新建/编辑采用**五步向导**（已移除集群内实例池步骤）；后端实例由所选服务商的 `instance_pool` 派生。大模型配置通过 `llm_config.provider` 引用服务商，转发模型与 Keys 从服务商详情加载。
 
 ## 2. 路由与入口
 
@@ -14,118 +14,95 @@
 
 ### 3.1 列表页
 
-- 使用 `pageTable` 展示 `name`、`description` 等字段。
-- `name` 列支持搜索与排序。
+- `pageTable` 展示 `name`、`description` 等字段。
 - 操作列：详情、编辑、删除。
-- 顶部「创建集群」按钮打开 80% 宽度抽屉。
+- 顶部「创建集群」打开 80% 宽度抽屉。
 
-### 3.2 新建/编辑向导
+### 3.2 新建/编辑向导（5 步）
 
-抽屉内加载 `components/index.vue` 作为 6 步向导容器：
+抽屉内 `components/index.vue`：
 
 1. **基础配置**（BaseConfig）
 2. **超时与重试**（Timeout）
 3. **被动健康检查**（PassiveHealthCheck）
-4. **实例池**（InstancePool）
-5. **大模型配置**（GatewayConfig）
-6. **复核**（Review）
+4. **大模型配置**（GatewayConfig）
+5. **复核**（Review）
+
+> **不再包含「实例池」步骤**。实例池在服务商模块维护；提交 `POST/PATCH /clusters` **不携带** `instance_pool`。
 
 ### 3.3 详情查看
 
-- 列表页点击「详情」打开同一抽屉，但直接展示 `Review`（`showFooter=false`）。
-- 编辑时先调用 `GET /clusters/{cluster_name}` 拉取完整详情。
+- 列表「详情」打开同一抽屉，直接展示 `Review`（`showFooter=false`）。
+- 编辑时 `GET /clusters/{cluster_name}` 拉取完整详情。
 
 ## 4. 组件清单
 
 | 组件 | 职责 | 关键 Props | 事件 |
 |------|------|------------|------|
-| `components/index.vue` | 6 步向导容器 | `currentCluster`、`clusterNames`、`isAdd` | `submit` |
-| `BaseConfig.vue` | 基础配置 | `baseConfigData`、`reportFlag`、`isAdd`、`clusterNames` | `submitData({ topic, data })` |
+| `components/index.vue` | 5 步向导容器 | `currentCluster`、`clusterNames`、`isAdd` | `submit` |
+| `BaseConfig.vue` | 基础配置 | `baseConfigData`、`reportFlag`、`isAdd`、`clusterNames` | `submitData` |
 | `Timeout.vue` | 超时与重试 | `baseConfigData`、`reportFlag`、`isAdd` | `submitData` |
 | `PassiveHealthCheck.vue` | 被动健康检查 | `passiveHealthData`、`reportFlag`、`isAdd` | `submitData` |
-| `InstancePool.vue` | 实例池 | `instancePoolData`、`reportFlag` | `submitData` |
-| `GatewayConfig.vue` | 大模型配置 | `llmConfigData`、`originalLlmConfigKey/Headers`、`isAdd`、`stepsCurrentState`、`instancePoolData`、`reportFlag` | `submitData` |
-| `Review.vue` | 复核/详情 | 各配置分片 props、`showFooter`、`reportFlag` | `submitData` |
+| `GatewayConfig.vue` | 大模型配置 | `llmConfigData`、`reportFlag`、`isAdd` | `submitData` |
+| `Review.vue` | 复核/详情 | 各配置分片 props、`showFooter`、`reportFlag` | `submit` / `submitData` |
+| `InstancePool.vue` | 实例池表单（**仅服务商模块嵌入**） | `instancePoolData`、`endpointSchema` | `pool-change`、`submitData` |
 
 ## 5. 数据流
 
 ```
 Clusters/index.vue
-    ├─ 打开 Drawer → 传入 currentCluster / clusterNames / isAdd
-    └─ components/index.vue (向导容器)
-          ├─ 通过 reportFlag 翻转触发当前步骤子表单校验
-          ├─ 子表单 $emit('submitData', { topic, data })
-          ├─ acceptDataHandler 按 topic 合并到父级 state
-          └─ Review 最终 $emit('submit') → Clusters/index.vue 调接口并刷新列表
+    └─ components/index.vue
+          ├─ reportFlag 触发当前步子表单校验
+          ├─ acceptDataHandler 按 topic 合并 state
+          └─ Review → Clusters/index.vue → POST/PATCH clusters（无 instance_pool）
 ```
 
-- 子表单不直接修改 `props`；所有状态提升回向导容器。
-- `InstancePool.vue` 提供 `getClusterInstancePool`、`formatInstancePoolForApi` 等工具函数，供其他步骤复用。
+`InstancePool.vue` 仍位于 `Clusters/components/`，导出 `formatInstancePoolForApi`、`parseInstancePool` 等供 **Providers** 复用。
 
 ## 6. 表单字段与校验要点
 
-### 6.1 BaseConfig
+### 6.1 BaseConfig / Timeout / PassiveHealthCheck
 
-| 字段 | 校验 | 说明 |
-|------|------|------|
-| `name` | 新建唯一性 + `ClustersNameRegCheck` | 集群名称。 |
-| `protocol` | 必填 | 协议类型。 |
-| `connection` | 必填 | 连接模式。 |
-| `hash_header` | `sticky_sessions === 'CLIENT_IP_ONLY'` 时移除校验 | 会话保持相关字段。 |
+与既有设计一致：集群名称唯一性、`HealthRegCheck`、`uri` 以 `/` 开头等。
 
-### 6.2 Timeout
+### 6.2 GatewayConfig（大模型配置）
 
-- 5 个 timeout 字段及 `retries.max_retry_in_cluster` 均为非负整数，上限 `99999999`。
+| 字段 / 交互 | 说明 |
+|-------------|------|
+| `provider` | **所属服务商**（必填）。`GET providers/actions/get-provider-names` 下拉；选中后 `GET providers/{name}` 加载 `models`、`keys`。 |
+| `models` | **转发模型**多选；下拉首项「全选」（已全部选中时隐藏）；支持 `clearable`。 |
+| `strip_prefix` / `match_prefix` | 裁剪前缀；开启时 `match_prefix` 必填且以 `/` 结尾。 |
+| `model_mappings` | 模型重定向；原模型名不可重复。 |
+| `keys[]` | 仅 `name` + `weight`（**无 key 明文**）；`name` 须属于所选服务商 Keys；权重之和 = 100；表头文案「Key」。 |
+| `key_policy` | `strategy` 仅 `weighted_random`；退避最大值 ≥ 初始值。 |
 
-### 6.3 PassiveHealthCheck
+权重校验错误在 Keys 表格下方**单行**展示，避免重复提示。
 
-- `interval`、`failnum`、`statuscode` 为数值。
-- `host` 使用 `HealthRegCheck`。
-- `uri` 必须以 `/` 开头。
+**已移除字段**：`provider_type`、`model_endpoint`、Keys 明文、`tools/get-models-from-provider`。
 
-### 6.4 InstancePool
+### 6.3 Review（复核 / 详情）
 
-- 支持 IP 模式与域名模式。
-- IP + 端口重复检测。
-- 域名模式使用 FQDN 校验；端口随 LLM `model_endpoint.schema` 同步（http → 80，https → 443），提交与探测模型时保持一致。
+只读展示：基本配置、超时、健康检查、大模型配置（含所属服务商名称、转发模型、裁剪前缀、重定向、Keys、Key 策略）。
 
-### 6.5 GatewayConfig（大模型配置）
-
-| 字段 | 校验 | 说明 |
-|------|------|------|
-| `provider_type` | 可选 | 模型服务商类型，用于探测模型列表与接口适配。 |
-| `provider` | 可选 | 价格关联提供商，与模型定价表 `provider` 匹配。 |
-| `strip_prefix` | 布尔 | 开启后转发前去掉请求 model 中的匹配前缀。 |
-| `match_prefix` | 开启裁剪时必填，必须以 `/` 结尾 | 模型前缀匹配，如 `openrouter/`。 |
-| `model_endpoint` | schema + uri；uri 以 `/` 开头 | 模型列表接口；host 来自实例池。 |
-| `models` | 必填 | 已选模型列表。 |
-| `model_mappings` | 原模型名不可重复 | 模型重定向。 |
-| `keys[]` | name/key 成对填写；权重 0–100，有效 Key 权重之和 = 100 | 多 Key 加权；请求头含 `${API_KEY}` 时 Keys 不能为空。 |
-| `key_policy` | `strategy` 仅 `weighted_random`；退避最大值 ≥ 初始值 | Key 路由策略（重试与退避）。 |
-
-密钥与 headers 编辑时做掩码；未修改则提交原值。
-
-复核页 `Review.vue` 只读展示上述 LLM 字段（含提供商、裁剪前缀、前缀匹配、Keys、Key 策略）。
+**不展示**服务商实例池表格（实例池归属 Provider 资源）。
 
 ## 7. OpenAPI 消费映射
 
 | 组件 | 方法 | 相对 URL | 说明 |
 |------|------|----------|------|
 | `Clusters/index.vue` | `GET` | `clusters` | 集群列表。 |
-| `Clusters/index.vue` | `GET` | `clusters/{cluster_name}` | 单个集群详情。 |
+| `Clusters/index.vue` | `GET` | `clusters/{cluster_name}` | 集群详情。 |
 | `Clusters/index.vue` | `DELETE` | `clusters/{cluster_name}` | 删除集群。 |
-| `components/index.vue` | `POST` | `clusters` | 新建集群。 |
-| `components/index.vue` | `PATCH` | `clusters/{cluster_name}` | 更新集群。 |
-| `GatewayConfig.vue` | `GET` | `model-provider-types` | 服务商类型列表。 |
-| `GatewayConfig.vue` | `POST` | `tools/get-models-from-provider` | 探测下游模型列表。 |
-| `Review.vue` | `GET` | `model-provider-types` | 详情展示服务商类型名称。 |
-
-> 更新集群使用 `PATCH`。
+| `Clusters/index.vue` | `GET` | `route-tables` / `entities` / `api-keys` | 删除被引用时解析引用方。 |
+| `components/index.vue` | `POST` | `clusters` | 新建；Body 不含 `instance_pool`。 |
+| `components/index.vue` | `PATCH` | `clusters/{cluster_name}` | 更新。 |
+| `GatewayConfig.vue` | `GET` | `providers/actions/get-provider-names` | 所属服务商名称列表。 |
+| `GatewayConfig.vue` | `GET` | `providers/{provider_name}` | 转发模型、Keys 选项来源。 |
 
 ## 8. 边界情况
 
-- `cancel_on_client_close` 字段在编辑时存在字符串与布尔互转。
-- 提交前将空对象字段转为 `null`。
-- LLM keys / headers 编辑时做掩码处理，避免明文泄露。
-- 实例池端口随 endpoint schema 同步；探测模型与提交使用同一套 host:port。
-- 删除集群若被路由规则引用，前端解析 `route-tables` / Entity / API-Key 引用并提示跳转处理。
+- `cancel_on_client_close` 编辑时字符串与布尔互转。
+- 提交前空对象字段可转为 `null`。
+- 被动健康检查 `host` 为空时后端使用所属服务商首个实例 `addr`。
+- 删除集群若被路由规则引用，前端解析引用并提示跳转。
+- 健康检查展示文案：「使用所属服务商首个实例」。

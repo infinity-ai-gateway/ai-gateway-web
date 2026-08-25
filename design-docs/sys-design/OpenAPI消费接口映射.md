@@ -55,13 +55,16 @@
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
 | `Providers/index.vue` | `GET` | `providers` | 分页查询服务商列表（`page` / `page_size`，可带 `model_protocol`）；`Data` 为 `{ list, pagination }`。 |
+| `Providers/index.vue` | `GET` | `providers/actions/get-provider-names` | 创建时名称去重列表。 |
 | `Providers/index.vue` | `GET` | `providers/{provider_name}` | 查询单个服务商详情。 |
 | `Providers/index.vue` | `DELETE` | `providers/{provider_name}` | 删除服务商；被 cluster 引用时 `409`。 |
 | `Providers/components/ProviderUpsert.vue` | `POST` | `providers` | 新建服务商。 |
 | `Providers/components/ProviderUpsert.vue` | `PATCH` | `providers/{provider_name}` | 更新服务商；`keys`、`instance_pool` 全量替换。 |
-| `Providers/components/ProviderUpsert.vue` | `POST` | `providers/{provider_name}/discover-models` | 触发模型发现并回填 `models`。 |
+| `Providers/components/ProviderUpsert.vue` | `POST` | `providers/tools/discover-models` | 无状态模型发现（Body 传连接参数，回填 `models`）。 |
 
-服务商持有实例池、模型协议、模型发现端点与 Key 明文。集群通过 `llm_config.provider` 引用，不再消费 `model-provider-types` 与 `tools/get-models-from-provider`。
+列表「查询模型价格」为前端路由跳转 `ModelPrice.list?provider={name}&autoView=1`，不新增 API。
+
+服务商持有实例池、模型协议、模型发现端点与 Key 明文。集群通过 `llm_config.provider` 引用，不再消费 `model-provider-types`、`GET providers?page_size=1000` 全量列表或 `tools/get-models-from-provider`。
 
 ## 8. AI 业务集群（`modules/Clusters`）
 
@@ -73,7 +76,8 @@
 | `Clusters/index.vue` | `GET` | `route-tables` / `entities` / `api-keys` | 删除被引用时解析引用方，用于提示跳转。 |
 | `Clusters/components/index.vue` | `POST` | `clusters` | 新建集群。不提交 `instance_pool`。 |
 | `Clusters/components/index.vue` | `PATCH` | `clusters/{cluster_name}` | 更新集群。 |
-| `Clusters/components/GatewayConfig.vue` | `GET` | `providers` | 所属服务商下拉（`page=1&page_size=1000`，解析 `Data.list`）。 |
+| `Clusters/components/GatewayConfig.vue` | `GET` | `providers/actions/get-provider-names` | 所属服务商名称下拉。 |
+| `Clusters/components/GatewayConfig.vue` | `GET` | `providers/{provider_name}` | 加载转发模型、Keys 选项。 |
 
 ## 9. 路由表（`modules/RouteTable`）
 

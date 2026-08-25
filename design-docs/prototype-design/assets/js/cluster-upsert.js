@@ -417,22 +417,35 @@ window.ClusterUpsert = (function () {
         (provider ? '请选择转发模型（可多选）' : '请先选择所属服务商') +
         '</span>';
 
-    var modelOptions = providerModels.length
-      ? providerModels
-          .map(function (model) {
-            var on = selectedModels.indexOf(model) !== -1;
-            return (
-              '<li class="ivu-select-item proto-forward-model-option' +
-              (on ? ' ivu-select-item-selected' : '') +
-              '" data-value="' +
-              IvuUI.escapeHtml(model) +
-              '">' +
-              IvuUI.escapeHtml(model) +
-              '</li>'
-            );
-          })
-          .join('')
-      : '<li class="ivu-select-item" style="color:#c5c8ce;cursor:default;">暂无模型</li>';
+    var allModelsSelected =
+      providerModels.length > 0 &&
+      providerModels.every(function (model) {
+        return selectedModels.indexOf(model) !== -1;
+      });
+
+    var selectAllOption =
+      providerModels.length && !allModelsSelected
+        ? '<li class="ivu-select-item proto-forward-model-option proto-forward-select-all" data-value="__SELECT_ALL__">全选</li>'
+        : '';
+
+    var modelOptions =
+      selectAllOption +
+      (providerModels.length
+        ? providerModels
+            .map(function (model) {
+              var on = selectedModels.indexOf(model) !== -1;
+              return (
+                '<li class="ivu-select-item proto-forward-model-option' +
+                (on ? ' ivu-select-item-selected' : '') +
+                '" data-value="' +
+                IvuUI.escapeHtml(model) +
+                '">' +
+                IvuUI.escapeHtml(model) +
+                '</li>'
+              );
+            })
+            .join('')
+        : '<li class="ivu-select-item" style="color:#c5c8ce;cursor:default;">暂无模型</li>');
 
     var modelSelectHtml =
       '<div class="ivu-select ivu-select-multiple proto-protocol-select proto-forward-model-select' +
@@ -528,7 +541,7 @@ window.ClusterUpsert = (function () {
     }, 0);
     var keyWeightTip =
       validKeys.length > 0 && keyWeightSum !== 100
-        ? '<p style="color:#ed4014;font-size:12px;margin:8px 0 0;">Key 权重总和必须等于 100</p>'
+        ? '<p class="proto-keys-error" style="color:#ed4014;font-size:12px;margin:8px 0 0;">所有 Key 的权重之和必须等于 100</p>'
         : '';
 
     var kp = llm.key_policy || {};
@@ -613,12 +626,12 @@ window.ClusterUpsert = (function () {
       '</div></div>' +
       '<div class="llm-card"><div class="llm-card-title">Keys配置</div><div class="llm-card-body">' +
       '<table class="keys-table" style="width:100%;border-collapse:collapse;border:1px solid #e7e9f0;">' +
-      '<thead><tr style="background:#f8f8f9;"><th>服务商 Key</th><th style="width:120px;">权重</th><th style="width:80px;">操作</th></tr></thead>' +
+      '<thead><tr style="background:#f8f8f9;"><th>Key</th><th style="width:120px;">权重</th><th style="width:80px;">操作</th></tr></thead>' +
       '<tbody>' +
       keyRows +
       '</tbody></table>' +
-      keyWeightTip +
       '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="cluster-add-key" style="margin-top:20px;"><span>+添加 Key</span></button>' +
+      keyWeightTip +
       '</div></div>' +
       '<div class="llm-card"><div class="llm-card-body">' +
       keyPolicyHtml +
@@ -687,28 +700,6 @@ window.ClusterUpsert = (function () {
       reviewRow('健康检查Uri', h.uri) +
       reviewRow('健康检查期望的状态码', h.statuscode);
 
-    var providerInstances = provider && provider.instance_pool ? provider.instance_pool : [];
-    var instanceRows =
-      reviewRow('所属服务商', llm.provider || '-') +
-      (providerInstances.length
-        ? '<ul class="clearFloat detail-row detail-row-block"><li class="title">服务商实例池:</li><li class="value">' +
-          '<table class="mapping-table"><thead><tr><th>地址</th><th>端口</th><th>权重</th></tr></thead><tbody>' +
-          providerInstances
-            .map(function (item) {
-              return (
-                '<tr><td>' +
-                IvuUI.escapeHtml(item.addr || '-') +
-                '</td><td>' +
-                IvuUI.escapeHtml(item.port) +
-                '</td><td>' +
-                IvuUI.escapeHtml(item.weight) +
-                '</td></tr>'
-              );
-            })
-            .join('') +
-          '</tbody></table></li></ul>'
-        : reviewRow('服务商实例池', '-'));
-
     var modelsHtml =
       (llm.models || [])
         .map(function (model) {
@@ -722,7 +713,7 @@ window.ClusterUpsert = (function () {
     });
     if (validKs.length) {
       keysHtml =
-        '<table class="mapping-table"><thead><tr><th>Key 名称</th><th>权重</th></tr></thead><tbody>' +
+        '<table class="mapping-table"><thead><tr><th>Key</th><th>权重</th></tr></thead><tbody>' +
         validKs
           .map(function (item) {
             return (
@@ -789,7 +780,6 @@ window.ClusterUpsert = (function () {
       renderReviewPanel('基本配置', basicRows) +
       renderReviewPanel('超时和重传', timeoutRows) +
       renderReviewPanel('被动健康检查', healthRows) +
-      renderReviewPanel('所属服务商', instanceRows) +
       renderReviewPanel('大模型配置', llmRows) +
       '</div>'
     );
@@ -1152,11 +1142,16 @@ window.ClusterUpsert = (function () {
             var value = item.getAttribute('data-value');
             if (!value) return;
             syncFromDom(bodyEl, state.data);
-            var list = state.data.llmConfigData.models || [];
-            var idx = list.indexOf(value);
-            if (idx === -1) list.push(value);
-            else list.splice(idx, 1);
-            state.data.llmConfigData.models = list;
+            if (value === '__SELECT_ALL__') {
+              var prov = getProviderByName(state.data.llmConfigData.provider);
+              state.data.llmConfigData.models = (prov && prov.models ? prov.models.slice() : []);
+            } else {
+              var list = state.data.llmConfigData.models || [];
+              var idx = list.indexOf(value);
+              if (idx === -1) list.push(value);
+              else list.splice(idx, 1);
+              state.data.llmConfigData.models = list;
+            }
             state.keepForwardModelOpen = true;
             render();
           });

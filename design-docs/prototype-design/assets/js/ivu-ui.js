@@ -406,15 +406,27 @@ window.IvuUI = {
     var nav = tabDefs.map(function (t, i) {
       return '<div class="ivu-tabs-tab' + (i === 0 ? ' ivu-tabs-tab-active' : '') + '" data-tab="' + t.name + '">' + t.label + '</div>';
     }).join('');
-    return '<div class="ivu-tabs ivu-tabs-no-animation" data-proto-tabs>' +
-      '<div class="ivu-tabs-bar"><div class="ivu-tabs-nav-container">' +
-        '<div class="ivu-tabs-nav-wrap"><div class="ivu-tabs-nav-scroll"><div class="ivu-tabs-nav">' + nav + '</div></div></div>' +
-      '</div></div>' +
-      '<div class="ivu-tabs-content">' + panesHtml + '</div></div>';
+    return (
+      '<div class="ivu-tabs ivu-tabs-no-animation" data-proto-tabs>' +
+        '<div class="ivu-tabs-bar">' +
+          '<div class="ivu-tabs-nav-container">' +
+            '<div class="ivu-tabs-nav-wrap">' +
+              '<div class="ivu-tabs-nav-scroll">' +
+                '<div class="ivu-tabs-nav">' + nav + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ivu-tabs-content">' + panesHtml + '</div>' +
+      '</div>'
+    );
   },
 
   tabPane(name, content, active) {
-    return '<div class="ivu-tabs-tabpane' + (active ? ' ivu-tabs-tabpane-active' : '') + '" data-tab-pane="' + name + '">' + content + '</div>';
+    var cls = 'ivu-tabs-tabpane';
+    if (active) cls += ' ivu-tabs-tabpane-active';
+    else cls += ' ivu-tabs-tabpane-inactive';
+    return '<div class="' + cls + '" data-tab-pane="' + name + '">' + content + '</div>';
   },
 
   steps(stepTitles, current) {

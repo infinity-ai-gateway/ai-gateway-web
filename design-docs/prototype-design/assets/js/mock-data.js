@@ -3,7 +3,7 @@ window.MockData = {
   entities: [
     {
       id: 1,
-      name: '研发部',
+      name: 'rd-dept',
       type: 'dep',
       parent_id: '',
       allow_models: ['*'],
@@ -24,7 +24,7 @@ window.MockData = {
           max_concurrency: 50,
           tpm: [
             {
-              name: 'tpm-default',
+              name: 'tpm_1min',
               model: '*',
               window_minutes: 1,
               max_tokens: 100000,
@@ -33,7 +33,7 @@ window.MockData = {
           ],
           rpm: [
             {
-              name: 'rpm-default',
+              name: 'rpm_1min',
               model: '*',
               window_minutes: 1,
               max_requests: 1000,
@@ -48,7 +48,7 @@ window.MockData = {
     },
     {
       id: 2,
-      name: '算法组',
+      name: 'algo-team',
       type: 'team',
       parent_id: 1,
       allow_models: ['gpt-4o'],
@@ -81,7 +81,7 @@ window.MockData = {
     },
     {
       id: 3,
-      name: '测试组',
+      name: 'qa-team',
       type: 'team',
       parent_id: 1,
       allow_models: ['*'],
@@ -136,7 +136,7 @@ window.MockData = {
       update_time: 1743494400,
       subnet: '*',
       models: ['*'],
-      entity: { id: 'e1', name: '研发部', type: 'dep' },
+      entity: { id: 'e1', name: 'rd-dept', type: 'dep' },
       quota_plan: {
         unlimited: false,
         quota: 1000000,
@@ -151,7 +151,7 @@ window.MockData = {
           max_concurrency: 100,
           tpm: [
             {
-              name: 'tpm-gpt4',
+              name: 'tpm_gpt4',
               model: 'gpt-4o',
               window_minutes: 1,
               max_tokens: 100000,
@@ -160,7 +160,7 @@ window.MockData = {
           ],
           rpm: [
             {
-              name: 'rpm-default',
+              name: 'rpm_1min',
               model: '*',
               window_minutes: 1,
               max_requests: 1000,
@@ -193,7 +193,7 @@ window.MockData = {
       update_time: 1741276800,
       subnet: '10.0.0.0/24',
       models: ['gpt-4o'],
-      entity: { id: 'e3', name: '测试组', type: 'team' },
+      entity: { id: 'e3', name: 'qa-team', type: 'team' },
       quota_plan: {
         unlimited: true,
         quota: 0,
@@ -536,6 +536,14 @@ window.MockData = {
       if (item.provider) names[item.provider] = true;
     });
     return Object.keys(names).sort();
+  },
+  getProviderNames: function () {
+    return (this.providers || [])
+      .map(function (item) {
+        return item.name;
+      })
+      .filter(Boolean)
+      .sort();
   },
   modelModeOptions: [
     'chat',

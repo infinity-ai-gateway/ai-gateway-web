@@ -19,7 +19,7 @@
       {{ $t('com.createX', { obj: $t('provider.name') }) }}
     </Button>
     <pageTable
-      :tableData="tableData"
+      :tableData="displayTableData"
       :columns="columns"
       :loading="tableLoading"
       :total="total"
@@ -42,7 +42,6 @@
         :providerNames="providerNames"
         :isAdd="isAdd"
         @submit="onUpsertSubmit"
-        @models-synced="onModelsSynced"
       />
       <ProviderView v-if="upsertVisible && isView" :currentData="currentProvider" />
     </Drawer>
@@ -76,6 +75,11 @@ export default {
             pageSize: 20,
             total: 0,
             searchParams: {},
+            localFilters: {
+                name: '',
+                description: '',
+                models: ''
+            },
             upsertVisible: false,
             isAdd: true,
             isView: false,
@@ -105,12 +109,14 @@ export default {
                 {
                     title: this.$t('com.desc'),
                     key: 'description',
+                    sortable: 'custom',
                     searchable: true
                 },
                 {
                     title: this.$t('provider.protocols'),
                     key: 'model_protocols',
                     searchable: true,
+                    sortable: 'custom',
                     searchType: 'select',
                     searchFilters: PROTOCOL_OPTIONS,
                     render(h, params) {
@@ -120,14 +126,17 @@ export default {
                 {
                     title: this.$t('provider.models'),
                     key: 'models',
+                    sortable: 'custom',
+                    minWidth: 220,
                     searchable: true,
                     render(h, params) {
-                        return h('span', (params.row.models || []).join(', ') || '-');
+                        return that.renderModelTags(h, params.row.models);
                     }
                 },
                 {
                     title: this.$t('com.operation'),
                     key: 'action',
+                    minWidth: 360,
                     render(h, params) {
                         return h('div', [
                             h(
@@ -138,6 +147,15 @@ export default {
                                     on: { click: () => that.onDetails(params.row) }
                                 },
                                 that.$t('com.detail')
+                            ),
+                            h(
+                                'Button',
+                                {
+                                    props: { type: 'primary', size: 'small' },
+                                    style: { marginRight: '5px' },
+                                    on: { click: () => that.onViewModelPrices(params.row) }
+                                },
+                                that.$t('provider.viewModelPrices')
                             ),
                             h(
                                 'Button',
@@ -160,11 +178,36 @@ export default {
                     }
                 }
             ];
+        },
+        displayTableData() {
+            let list = this.tableData || [];
+            const nameQ = String(this.localFilters.name || '').trim();
+            const descQ = String(this.localFilters.description || '').trim();
+            const modelsQ = String(this.localFilters.models || '').trim();
+
+            if (nameQ) {
+                const q = nameQ.toUpperCase();
+                list = list.filter(row => String(row.name || '').toUpperCase().includes(q));
+            }
+            if (descQ) {
+                const q = descQ.toUpperCase();
+                list = list.filter(row => String(row.description || '').toUpperCase().includes(q));
+            }
+            if (modelsQ) {
+                const q = modelsQ.toUpperCase();
+                list = list.filter(row => {
+                    const models = row.models || [];
+                    if (!Array.isArray(models)) {
+                        return String(models).toUpperCase().includes(q);
+                    }
+                    return models.some(item => String(item).toUpperCase().includes(q));
+                });
+            }
+            return list;
         }
     },
 
     mounted() {
-        this.fetchNameList();
         this.fetchList();
     },
 
@@ -182,6 +225,58 @@ export default {
                 page: pagination.page,
                 pageSize: pagination.page_size
             };
+        },
+        renderModelTags(h, models) {
+            const list = (models || []).filter(Boolean);
+            if (!list.length) {
+                return h('span', '-');
+            }
+            const maxVisible = 2;
+            const visible = list.slice(0, maxVisible);
+            const hidden = list.slice(maxVisible);
+            const tags = visible.map(item =>
+                h(
+                    'Tag',
+                    {
+                        props: { size: 'small' },
+                        class: 'provider-model-tag'
+                    },
+                    item
+                )
+            );
+            if (hidden.length) {
+                tags.push(
+                    h(
+                        'Tooltip',
+                        {
+                            props: {
+                                transfer: true,
+                                maxWidth: 420,
+                                placement: 'top'
+                            }
+                        },
+                        [
+                            h(
+                                'div',
+                                {
+                                    slot: 'content',
+                                    class: 'provider-models-tooltip'
+                                },
+                                list.map(name => h('div', { class: 'provider-models-tooltip-item' }, name))
+                            ),
+                            h(
+                                'Tag',
+                                {
+                                    props: { size: 'small', color: 'default' },
+                                    class: 'provider-model-more-tag'
+                                },
+                                `+${hidden.length}`
+                            )
+                        ]
+                    )
+                );
+            }
+            return h('div', { class: 'provider-models-cell' }, tags);
         },
         fetchList() {
             this.tableLoading = true;
@@ -217,18 +312,16 @@ export default {
                     this.tableLoading = false;
                 });
         },
-        fetchNameList() {
-            this.$request({
-                url: 'providers',
+        fetchProviderNames() {
+            return this.$request({
+                url: 'providers/actions/get-provider-names',
                 method: 'get',
-                params: { page: 1, page_size: 1000 },
                 openapi: true
             }).then(res => {
                 if (res.status !== 200) {
                     return;
                 }
-                const parsed = this.parseListPayload(res.data.Data);
-                this.providerNames = parsed.list.map(item => item.name);
+                this.providerNames = (res.data.Data && res.data.Data.names) || [];
             });
         },
         onPageChange(pageInfo) {
@@ -237,19 +330,29 @@ export default {
             this.fetchList();
         },
         onSearchChange(filters) {
-            const params = {};
-            const protocol = filters && filters.model_protocols;
-            if (protocol) {
-                params.model_protocol = protocol;
+            filters = filters || {};
+            const protocol = filters.model_protocols;
+            const nextSearchParams = protocol ? { model_protocol: protocol } : {};
+            const protocolChanged =
+                nextSearchParams.model_protocol !== this.searchParams.model_protocol;
+
+            this.localFilters = {
+                name: filters.name || '',
+                description: filters.description || '',
+                models: filters.models || ''
+            };
+
+            if (protocolChanged) {
+                this.searchParams = nextSearchParams;
+                this.page = 1;
+                this.fetchList();
             }
-            this.searchParams = params;
-            this.page = 1;
-            this.fetchList();
         },
         onAdd() {
             this.isAdd = true;
             this.isView = false;
             this.currentProvider = {};
+            this.fetchProviderNames();
             this.upsertVisible = true;
         },
         onEdit(row) {
@@ -264,6 +367,15 @@ export default {
             this.isAdd = false;
             this.loadDetail(row.name, () => {
                 this.upsertVisible = true;
+            });
+        },
+        onViewModelPrices(row) {
+            this.$router.push({
+                name: 'ModelPrice.list',
+                query: {
+                    provider: row.name,
+                    autoView: '1'
+                }
             });
         },
         loadDetail(name, done) {
@@ -306,7 +418,7 @@ export default {
                             this.$Modal.remove();
                             if (res.status === 200) {
                                 this.$Message.success({ content: this.$t('com.tipDelSucc') });
-                                this.fetchNameList();
+                                this.fetchProviderNames();
                                 this.fetchList();
                                 return;
                             }
@@ -326,10 +438,6 @@ export default {
         },
         onUpsertSubmit() {
             this.upsertVisible = false;
-            this.fetchNameList();
-            this.fetchList();
-        },
-        onModelsSynced() {
             this.fetchList();
         }
     }
@@ -341,5 +449,37 @@ export default {
     .ivu-btn {
         margin-bottom: 12px;
     }
+}
+
+.provider-models-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.4;
+}
+
+.provider-model-tag {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.provider-model-more-tag {
+    cursor: pointer;
+}
+</style>
+
+<style lang="less">
+.provider-models-tooltip {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.provider-models-tooltip-item {
+    line-height: 1.6;
+    word-break: break-all;
 }
 </style>

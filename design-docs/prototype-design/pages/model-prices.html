@@ -35,6 +35,25 @@
         importResult: null
       };
 
+      function parseRouteQuery() {
+        var q = {};
+        var search = window.location.search.replace(/^\?/, '');
+        if (!search) return q;
+        search.split('&').forEach(function (part) {
+          var kv = part.split('=');
+          if (kv[0]) {
+            q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+          }
+        });
+        return q;
+      }
+
+      var routeQuery = parseRouteQuery();
+      var autoViewOnce = routeQuery.autoView === '1';
+      if (routeQuery.provider) {
+        state.searchParams.provider = routeQuery.provider;
+      }
+
       function getProviderOptions() {
         var names = MockData.getModelPriceProviders
           ? MockData.getModelPriceProviders()
@@ -100,6 +119,20 @@
           '</div>';
 
         bindTableEvents();
+
+        if (autoViewOnce) {
+          autoViewOnce = false;
+          if (state.filtered.length) {
+            ModelPriceUpsert.drawer(state.filtered[0], true, function () {
+              renderTable();
+            });
+          } else if (routeQuery.provider) {
+            Prototype.toast(
+              '未找到提供商 ' + routeQuery.provider + ' 的模型定价',
+              'error'
+            );
+          }
+        }
       }
 
       function bindTableEvents() {

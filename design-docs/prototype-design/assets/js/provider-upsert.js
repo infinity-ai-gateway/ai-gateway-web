@@ -1,5 +1,35 @@
 window.ProviderUpsert = (function () {
   var PROTOCOL_OPTIONS = ['openai', 'anthropic'];
+  var MODEL_LIST_TIP =
+    '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。';
+  var MODEL_LIST_PLACEHOLDER = '点击「获取」从上游拉取模型列表';
+
+  function helpIcon(tip) {
+    return (
+      '<span class="form-help-icon" title="' +
+      IvuUI.escapeHtml(tip || '') +
+      '">?</span>'
+    );
+  }
+
+  function canDiscoverModels(data) {
+    var protocols = data.model_protocols || [];
+    if (!protocols.length) return false;
+    return (data.instance_pool || []).some(function (inst) {
+      return String(inst.addr || '').trim();
+    });
+  }
+
+  function renderDiscoverButton(data) {
+    var enabled = canDiscoverModels(data);
+    return (
+      '<button type="button" class="ivu-btn ' +
+      (enabled ? 'ivu-btn-primary' : 'ivu-btn-default proto-btn-disabled') +
+      '" id="provider-discover-models"' +
+      (enabled ? '' : ' disabled') +
+      '><span>获取</span></button>'
+    );
+  }
 
   function clone(obj) {
     return JSON.parse(JSON.stringify(obj || {}));
@@ -9,6 +39,55 @@ window.ProviderUpsert = (function () {
     if (!name) return false;
     if (name.length < 1 || name.length > 64) return false;
     return /^[A-Za-z0-9][A-Za-z0-9_.-]*[A-Za-z0-9]$|^[A-Za-z0-9]$/.test(name);
+  }
+
+  function instancePoolKey(addr, port) {
+    return String(addr || '').trim() + '|' + String(port);
+  }
+
+  /** 原型 mock：POST /providers/tools/discover-models */
+  function mockDiscoverModels(payload) {
+    var protocol = payload.model_protocol;
+    if (protocol === 'anthropic') {
+      return ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'];
+    }
+    if (payload.addr && String(payload.addr).indexOf('deepseek') !== -1) {
+      return ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'];
+    }
+    return ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+  }
+
+  function buildDiscoverPayload(data) {
+    var protocols = data.model_protocols || [];
+    var inst = ((data.instance_pool || [])[0] || {});
+    var addr = (inst.addr || '').trim();
+    var port = Number(inst.port);
+    var keys = (data.keys || []).filter(function (k) {
+      return (k.key || '').trim();
+    });
+    return {
+      model_protocol: protocols[0] || '',
+      schema: (data.model_endpoint && data.model_endpoint.schema) || 'https',
+      addr: addr,
+      port: port,
+      uri: (data.model_endpoint && data.model_endpoint.uri) || '/v1/models',
+      apikey: keys.length ? String(keys[0].key || '').trim() : '',
+    };
+  }
+
+  function validateDiscoverPayload(payload) {
+    if (!payload.model_protocol) return '请至少选择一个模型协议';
+    if (PROTOCOL_OPTIONS.indexOf(payload.model_protocol) === -1) {
+      return 'model_protocol 须为 openai 或 anthropic';
+    }
+    if (!payload.schema) return '请选择请求协议 schema';
+    if (!payload.addr) return '请填写实例地址后再获取模型';
+    if (!Number.isFinite(payload.port) || payload.port < 1 || payload.port > 65535) {
+      return '实例端口须为 1–65535';
+    }
+    var uri = payload.uri || '/v1/models';
+    if (uri && uri.charAt(0) !== '/') return '模型接口 URI 必须以 / 开头';
+    return null;
   }
 
   function maskSecretKey(key) {
@@ -150,7 +229,7 @@ window.ProviderUpsert = (function () {
             index +
             '" value="' +
             IvuUI.escapeHtml(item.addr || '') +
-            '" placeholder="请输入 IP 或域名"' +
+            '" placeholder="请输入IP地址"' +
             disabled +
             ' /></td>' +
             '<td style="width:110px;"><input type="number" class="ivu-input proto-instance-port" data-index="' +
@@ -186,13 +265,14 @@ window.ProviderUpsert = (function () {
         '<div class="ivu-form-item-content" style="margin-left:0!important;">' +
         '<table class="mapping-table">' +
         '<thead><tr>' +
-        '<th>IP/域名</th><th style="width:110px;">端口</th><th style="width:110px;">权重</th><th style="width:80px;">操作</th>' +
+        '<th>IP地址</th><th style="width:110px;">端口</th><th style="width:110px;">权重</th><th style="width:80px;">操作</th>' +
         '</tr></thead><tbody id="provider-instance-body">' +
         instanceRows +
         '</tbody></table>' +
         (isView
           ? ''
-          : '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="provider-add-instance" style="margin-top:12px;"><span>+ 创建</span></button>') +
+          : '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="provider-add-instance" style="margin-top:12px;"><span>+ 创建</span></button>' +
+            '<p id="proto-instance-error" class="proto-instance-error" style="display:none;"></p>') +
         '</div></div>';
     }
 
@@ -303,7 +383,7 @@ window.ProviderUpsert = (function () {
         IvuUI.formTop(IvuUI.formTopItem('实例形态', 'IP')) +
         renderDetailTable(
           [
-            { title: 'IP/域名' },
+            { title: 'IP地址' },
             { title: '端口', width: '110px' },
             { title: '权重', width: '110px' },
           ],
@@ -340,8 +420,7 @@ window.ProviderUpsert = (function () {
         '模型服务配置',
         IvuUI.formTop(
           IvuUI.formTopItem('模型协议', renderTags(data.model_protocols)) +
-            IvuUI.formTopItem('模型列表接口', IvuUI.escapeHtml(endpointUrl)) +
-            IvuUI.formTopItem('模型列表', renderTags(data.models)),
+            IvuUI.formTopItem('模型列表接口', IvuUI.escapeHtml(endpointUrl)),
         ),
       ) +
       IvuUI.card(
@@ -353,6 +432,12 @@ window.ProviderUpsert = (function () {
           ],
           keyRows,
         ),
+      ) +
+      IvuUI.card(
+        '模型列表',
+        '<div class="info-row"><div class="info-label">模型</div><div class="info-value">' +
+          renderTags(data.models) +
+          '</div></div>',
       ) +
       IvuUI.card(
         '时间戳',
@@ -411,18 +496,38 @@ window.ProviderUpsert = (function () {
       ? selectedModels
           .map(function (m) {
             return (
-              '<span class="ivu-tag ivu-tag-primary ivu-tag-checked proto-model-tag" data-model="' +
+              '<span class="ivu-tag ivu-tag-primary ivu-tag-checked ivu-tag-closable proto-model-tag" data-model="' +
               IvuUI.escapeHtml(m) +
               '">' +
               '<span class="ivu-tag-text">' +
               IvuUI.escapeHtml(m) +
               '</span>' +
-              (isView ? '' : '<i class="ivu-icon ivu-icon-ios-close"></i>') +
+              (isView
+                ? ''
+                : '<i class="ivu-icon ivu-icon-ios-close proto-model-remove" data-value="' +
+                  IvuUI.escapeHtml(m) +
+                  '"></i>') +
               '</span>'
             );
           })
           .join('')
-      : '<span class="proto-placeholder">可手动维护，或点击「获取」回填</span>';
+      : '<span class="proto-placeholder">' + MODEL_LIST_PLACEHOLDER + '</span>';
+
+    function renderModelListCard() {
+      return (
+        '<div class="llm-card"><div class="llm-card-title">' +
+        '模型列表' +
+        helpIcon(MODEL_LIST_TIP) +
+        '</div><div class="llm-card-body">' +
+        '<div class="proto-model-select-wrap" style="display:flex;align-items:flex-start;gap:10px;">' +
+        '<div class="proto-model-select" id="proto-provider-models" style="flex:1;min-height:32px;">' +
+        '<div class="proto-model-select-tags">' +
+        modelTags +
+        '</div></div>' +
+        (isView ? '' : renderDiscoverButton(data)) +
+        '</div></div></div>'
+      );
+    }
 
     return (
       '<div class="gateway-config">' +
@@ -460,24 +565,6 @@ window.ProviderUpsert = (function () {
             renderEndpointUrlGroup(data, isView),
           ),
       ) +
-      '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e8eaec;">' +
-      '<div class="ivu-form-item-label" style="float:none;display:block;text-align:left;padding:0 0 8px;">模型列表</div>' +
-      '<div class="proto-model-select-wrap" style="display:flex;align-items:flex-start;gap:10px;">' +
-      '<div class="proto-model-select" id="proto-provider-models" style="flex:1;min-height:32px;">' +
-      '<div class="proto-model-select-tags">' +
-      modelTags +
-      '</div></div>' +
-      (isView
-        ? ''
-        : '<button type="button" class="ivu-btn ivu-btn-primary" id="provider-discover-models"><span>获取</span></button>') +
-      '</div>' +
-      (isView
-        ? ''
-        : '<div style="margin-top:10px;display:flex;gap:8px;">' +
-          '<input type="text" class="ivu-input" id="provider-model-input" placeholder="手动添加模型名" style="flex:1;" />' +
-          IvuUI.btn('添加', 'default', 'small', '', 'id="provider-add-model"') +
-          '</div>') +
-      '</div>' +
       '</div></div>' +
       '<div class="llm-card"><div class="llm-card-title">服务鉴权 Keys</div><div class="llm-card-body">' +
       '<table class="mapping-table">' +
@@ -490,6 +577,7 @@ window.ProviderUpsert = (function () {
         ? ''
         : '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="provider-add-key" style="margin-top:20px;"><span>+ 添加 Key</span></button>') +
       '</div></div>' +
+      renderModelListCard() +
       '</div>'
     );
   }
@@ -512,17 +600,20 @@ window.ProviderUpsert = (function () {
     data.instance_pool = [];
     var domainInput = root.querySelector('.proto-domain-addr');
     if (domainInput) {
+      var domainAddr = (domainInput.value || '').trim();
       data.instance_pool.push({
-        name: '',
-        addr: domainInput.value || '',
+        name: domainAddr,
+        addr: domainAddr,
         port: 443,
         weight: 100,
       });
     } else {
       root.querySelectorAll('[data-instance-index]').forEach(function (row) {
+        var addr = (row.querySelector('.proto-instance-addr') || {}).value || '';
+        var trimmedAddr = addr.trim();
         data.instance_pool.push({
-          name: '',
-          addr: (row.querySelector('.proto-instance-addr') || {}).value || '',
+          name: trimmedAddr,
+          addr: trimmedAddr,
           port: Number((row.querySelector('.proto-instance-port') || {}).value || 443),
           weight: Number((row.querySelector('.proto-instance-weight') || {}).value || 0),
         });
@@ -570,7 +661,7 @@ window.ProviderUpsert = (function () {
 
     var instances = data.instance_pool || [];
     if (!instances.length) return '实例池至少需要 1 个实例';
-    var addrSet = {};
+    var poolKeySet = {};
     var hasWeight = false;
     for (var i = 0; i < instances.length; i++) {
       var inst = instances[i];
@@ -589,9 +680,11 @@ window.ProviderUpsert = (function () {
         return '第 ' + (i + 1) + ' 个实例权重须为 0–100';
       }
       if (weight > 0) hasWeight = true;
-      // 表单不填 name，提交后默认与 addr 相同，因此 (name, addr) 唯一性等价于 addr 唯一
-      if (addrSet[addr]) return '实例地址不能重复：' + addr;
-      addrSet[addr] = true;
+      var poolKey = instancePoolKey(addr, port);
+      if (poolKeySet[poolKey]) {
+        return '实例 IP 和端口不能重复: "' + addr + ':' + port + '"';
+      }
+      poolKeySet[poolKey] = true;
     }
     if (!hasWeight) return '至少有一个实例权重大于 0';
 
@@ -644,6 +737,21 @@ window.ProviderUpsert = (function () {
       bindProtocolSelect(keepOpen);
     }
 
+    function refreshDiscoverButton() {
+      syncFromDom(bodyEl, state.data);
+      var btn = bodyEl.querySelector('#provider-discover-models');
+      if (!btn) return;
+      var enabled = canDiscoverModels(state.data);
+      btn.disabled = !enabled;
+      if (enabled) {
+        btn.classList.remove('ivu-btn-default', 'proto-btn-disabled');
+        btn.classList.add('ivu-btn-primary');
+      } else {
+        btn.classList.remove('ivu-btn-primary');
+        btn.classList.add('ivu-btn-default', 'proto-btn-disabled');
+      }
+    }
+
     function toggleProtocol(value, keepOpen) {
       var list = state.data.model_protocols || [];
       var idx = list.indexOf(value);
@@ -651,6 +759,7 @@ window.ProviderUpsert = (function () {
       else list.splice(idx, 1);
       state.data.model_protocols = list;
       refreshProtocolSelect(!!keepOpen);
+      refreshDiscoverButton();
     }
 
     function bindProtocolSelect(keepOpen) {
@@ -729,13 +838,40 @@ window.ProviderUpsert = (function () {
           render();
         });
       });
-      function refreshEndpointHost() {
-        syncFromDom(bodyEl, state.data);
-        var hostEl = bodyEl.querySelector('.endpoint-host');
-        if (hostEl) hostEl.textContent = firstInstanceHost(state.data);
+      function isInstanceError(msg) {
+      if (!msg) return false;
+      return (
+        msg.indexOf('实例') !== -1 ||
+        msg.indexOf('IP') !== -1 ||
+        msg.indexOf('端口') !== -1 ||
+        msg.indexOf('权重') !== -1 ||
+        msg.indexOf('域名') !== -1
+      );
+    }
+
+    function syncInstanceError() {
+      var errEl = bodyEl.querySelector('#proto-instance-error');
+      if (!errEl || state.isView || state.instanceMode === 'domain') return;
+      syncFromDom(bodyEl, state.data);
+      var err = validate(state.data, state.isAdd, state.existingNames, state.instanceMode);
+      if (isInstanceError(err)) {
+        errEl.textContent = err;
+        errEl.style.display = 'block';
+      } else {
+        errEl.style.display = 'none';
       }
-      bodyEl.querySelectorAll('.proto-instance-addr, .proto-instance-port, .proto-domain-addr').forEach(function (input) {
+    }
+
+    function refreshEndpointHost() {
+      syncFromDom(bodyEl, state.data);
+      var hostEl = bodyEl.querySelector('.endpoint-host');
+      if (hostEl) hostEl.textContent = firstInstanceHost(state.data);
+      refreshDiscoverButton();
+      syncInstanceError();
+    }
+      bodyEl.querySelectorAll('.proto-instance-addr, .proto-instance-port, .proto-instance-weight, .proto-domain-addr').forEach(function (input) {
         input.addEventListener('input', refreshEndpointHost);
+        input.addEventListener('change', refreshEndpointHost);
       });
 
       var addKey = bodyEl.querySelector('#provider-add-key');
@@ -753,47 +889,38 @@ window.ProviderUpsert = (function () {
           render();
         });
       });
-      var addModel = bodyEl.querySelector('#provider-add-model');
-      if (addModel) {
-        addModel.addEventListener('click', function () {
-          var input = bodyEl.querySelector('#provider-model-input');
-          var value = input && input.value ? input.value.trim() : '';
-          if (!value) return;
-          syncFromDom(bodyEl, state.data);
-          if (state.data.models.indexOf(value) === -1) state.data.models.push(value);
-          render();
-        });
-      }
-      bodyEl.querySelectorAll('.proto-model-tag .ivu-icon-ios-close').forEach(function (icon) {
-        icon.addEventListener('click', function () {
-          var tag = icon.parentNode;
-          var model = tag.getAttribute('data-model');
-          syncFromDom(bodyEl, state.data);
-          state.data.models = (state.data.models || []).filter(function (item) {
-            return item !== model;
-          });
-          render();
-        });
-      });
 
       var discoverBtn = bodyEl.querySelector('#provider-discover-models');
       if (discoverBtn) {
         discoverBtn.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
-          var keys = (state.data.keys || []).filter(function (k) {
-            return k.name && k.key;
-          });
-          if (!keys.length) {
-            Prototype.toast('keys 为空时无法构造认证请求（422）', 'error');
+          if (!canDiscoverModels(state.data)) return;
+          var payload = buildDiscoverPayload(state.data);
+          var discoverErr = validateDiscoverPayload(payload);
+          if (discoverErr) {
+            Prototype.toast(discoverErr, 'error');
             return;
           }
-          if (!state.data.models.length) {
-            state.data.models = ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'];
-          }
-          Prototype.toast('已回填模型列表');
-          render();
+          discoverBtn.disabled = true;
+          setTimeout(function () {
+            var discovered = mockDiscoverModels(payload);
+            state.data.models = discovered.slice();
+            render();
+          }, 400);
         });
       }
+      refreshDiscoverButton();
+
+      bodyEl.querySelectorAll('.proto-model-remove').forEach(function (icon) {
+        icon.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var value = icon.getAttribute('data-value');
+          state.data.models = (state.data.models || []).filter(function (item) {
+            return item !== value;
+          });
+          render();
+        });
+      });
 
       var submitBtn = footerEl && footerEl.querySelector('#provider-upsert-submit');
       if (submitBtn) {
@@ -801,7 +928,10 @@ window.ProviderUpsert = (function () {
           syncFromDom(bodyEl, state.data);
           var err = validate(state.data, state.isAdd, state.existingNames, state.instanceMode);
           if (err) {
-            Prototype.toast(err, 'error');
+            syncInstanceError();
+            if (!isInstanceError(err)) {
+              Prototype.toast(err, 'error');
+            }
             return;
           }
           if (typeof options.onSubmit === 'function') options.onSubmit(state.data);

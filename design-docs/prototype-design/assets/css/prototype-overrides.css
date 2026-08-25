@@ -336,12 +336,28 @@ body {
   border-left-color: #a0cfff !important;
 }
 
-/* 侧边栏分组：子项缩进 */
-.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu {
+/* 侧边栏分组：子项缩进，确保子菜单项全部可见（含 Entity 管理） */
+.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu,
+.bfe-sidebar .Menu .ivu-menu-submenu.ivu-menu-opened > .ivu-menu {
   display: block !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
-.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu .ivu-menu-item {
+.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu .ivu-menu-item,
+.bfe-sidebar .Menu .ivu-menu-submenu .ivu-menu-item {
   padding-left: 48px !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 48px;
+  overflow: visible !important;
+  visibility: visible !important;
+}
+.bfe-sidebar .Menu .ivu-menu-item .menu-link {
+  position: relative;
+  z-index: 1;
 }
 /* 侧边栏分组标题：右侧显示折叠箭头（向上表示已展开） */
 .bfe-sidebar
@@ -855,6 +871,21 @@ body {
 }
 
 /* Entity 管理（对齐 Entity 模块） */
+.entity-page .ivu-tabs-bar {
+  display: block !important;
+  visibility: visible !important;
+  margin-bottom: 16px;
+}
+.entity-page .ivu-tabs-content {
+  display: block !important;
+  min-height: 200px;
+}
+.entity-page .ivu-tabs-content > .ivu-tabs-tabpane.ivu-tabs-tabpane-active {
+  display: block !important;
+  height: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 .entity-page .title {
   margin-bottom: 0;
 }
@@ -1094,6 +1125,13 @@ body {
   font-weight: 500;
   color: #1f2d3d;
 }
+.gateway-config .llm-card-title .form-help-icon {
+  margin-left: 4px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #808695;
+  cursor: help;
+}
 .gateway-config .llm-card-body {
   padding: 16px;
 }
@@ -1318,6 +1356,24 @@ body {
 .clusters .info-label {
   width: 140px;
   color: #808695;
+}
+
+/* 表格操作列：单行横排按钮（对齐 Vue pageTable 操作列） */
+.proto-table-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+.proto-table-actions .ivu-btn {
+  flex: 0 0 auto;
+  margin-right: 5px;
+}
+.proto-table-actions .ivu-btn:last-child {
+  margin-right: 0;
+}
+.page-table .ivu-table-cell .proto-table-actions {
+  overflow: visible;
 }
 
 /* 集群向导 newClusters */
@@ -1991,4 +2047,36 @@ body {
   font-size: 14px;
   line-height: 22px;
   word-break: break-all;
+}
+
+/* 服务商列表 · 模型列 Tag */
+.proto-provider-models-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
+}
+.proto-model-more-tag {
+  cursor: help;
+  font-size: 12px;
+  color: #515a6e;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 0 6px;
+  line-height: 20px;
+}
+
+/* 实例 IP 列表 · 底部校验提示 */
+.proto-instance-error {
+  color: #ed4014;
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* 转发模型 · 全选 */
+.proto-forward-select-all {
+  color: #2d8cf0;
+  font-weight: 500;
 }

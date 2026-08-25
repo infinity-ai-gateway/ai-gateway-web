@@ -1,4 +1,16 @@
 window.EntityUpsert = {
+  ENTITY_NAME_RE: /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/,
+
+  validateEntityName(value) {
+    var val = String(value || '');
+    if (!val || val.trim() === '') return '请输入名称';
+    if (val.length !== val.trim().length) return '名称不能包含前后空白字符';
+    if (val.length > 64) return '名称不能超过64个字符';
+    if (!EntityUpsert.ENTITY_NAME_RE.test(val)) {
+      return '名称须为小写字母、数字、下划线或连字符，且不能以 _ 或 - 开头/结尾';
+    }
+    return null;
+  },
   formatQuota(row) {
     var plan = row.quota_plan || {};
     if (plan.unlimited === true || plan.unlimited === 'true') return '-';
@@ -194,9 +206,9 @@ window.EntityUpsert = {
             (isAdd ? '' : ' readonly disabled') +
             ' maxlength="64" value="' +
             IvuUI.escapeHtml(data.name || '') +
-            '" placeholder="请输入Entity名称" />' +
+            '" placeholder="rd-dept" />' +
             '</div>' +
-            '<p class="form-tip">最多64个字符，不能包含前后空白和控制字符</p>',
+            '<p class="form-tip">1–64 字符；仅小写字母、数字、_、-；不能以 _ 或 - 开头/结尾</p>',
           true,
         ) +
           EntityUpsert.rowSpan2(
@@ -291,6 +303,7 @@ window.EntityUpsert = {
             rpmRules,
             maxMode,
             maxConc,
+            isAdd,
           ) +
           '</div>',
       ) +
@@ -586,21 +599,9 @@ window.EntityUpsert = {
     var nameInput = document.getElementById('entity-name');
     if (nameInput) {
       var validateName = function () {
-        var val = nameInput.value;
-        if (!val || val.trim() === '') {
-          setFieldError(nameInput, '请输入名称');
-          return false;
-        }
-        if (val.length !== val.trim().length) {
-          setFieldError(nameInput, '名称不能包含前后空白字符');
-          return false;
-        }
-        if (val.length > 64) {
-          setFieldError(nameInput, '名称不能超过64个字符');
-          return false;
-        }
-        if (/[\x00-\x1F\x7F]/.test(val)) {
-          setFieldError(nameInput, '名称不能包含控制字符');
+        var err = EntityUpsert.validateEntityName(nameInput.value);
+        if (err) {
+          setFieldError(nameInput, err);
           return false;
         }
         setFieldError(nameInput, null);
@@ -643,18 +644,9 @@ window.EntityUpsert = {
 
     // 名称校验
     if (nameInput) {
-      var val = nameInput.value;
-      if (!val || val.trim() === '') {
-        setFieldError(nameInput, '请输入名称');
-        valid = false;
-      } else if (val.length !== val.trim().length) {
-        setFieldError(nameInput, '名称不能包含前后空白字符');
-        valid = false;
-      } else if (val.length > 64) {
-        setFieldError(nameInput, '名称不能超过64个字符');
-        valid = false;
-      } else if (/[\x00-\x1F\x7F]/.test(val)) {
-        setFieldError(nameInput, '名称不能包含控制字符');
+      var nameErr = EntityUpsert.validateEntityName(nameInput.value);
+      if (nameErr) {
+        setFieldError(nameInput, nameErr);
         valid = false;
       } else {
         setFieldError(nameInput, null);

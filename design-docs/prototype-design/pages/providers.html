@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
   <script src="../assets/js/mock-data.js"></script>
   <script src="../assets/js/ivu-ui.js"></script>
-  <script src="../assets/js/provider-upsert.js"></script>
+  <script src="../assets/js/provider-upsert.js?v=2026082521"></script>
   <script src="../assets/js/layout.js"></script>
   <script src="../assets/js/prototype.js"></script>
 </head>
@@ -43,6 +43,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function escapeAttr(value) {
     return IvuUI.escapeHtml(value);
+  }
+
+  function renderModelTags(models) {
+    var list = (models || []).filter(Boolean);
+    if (!list.length) return '-';
+    var maxVisible = 2;
+    var visible = list.slice(0, maxVisible);
+    var hidden = list.slice(maxVisible);
+    var html = visible
+      .map(function (name) {
+        return '<span class="ivu-tag ivu-tag-default ivu-tag-small">' + escapeAttr(name) + '</span>';
+      })
+      .join(' ');
+    if (hidden.length) {
+      html +=
+        '<span class="proto-model-more-tag" title="' +
+        escapeAttr(list.join('\n')) +
+        '">+' +
+        hidden.length +
+        '</span>';
+    }
+    return '<span class="proto-provider-models-cell">' + html + '</span>';
   }
 
   function filterRows() {
@@ -108,16 +130,22 @@ document.addEventListener('DOMContentLoaded', function () {
           searchable: true,
           searchPlaceholder: '请输入模型查询',
           render: function (row) {
-            return (row.models || []).join(', ') || '-';
+            return renderModelTags(row.models);
           }
         },
         {
           title: '操作',
           key: 'action',
+          minWidth: 360,
           render: function (row) {
-            return IvuUI.btn('详情', 'success', 'small', '', 'style="margin-right:5px;" data-action="detail" data-name="' + escapeAttr(row.name) + '"') +
-              IvuUI.btn('编辑', 'primary', 'small', '', 'style="margin-right:5px;" data-action="edit" data-name="' + escapeAttr(row.name) + '"') +
-              IvuUI.btn('删除', 'error', 'small', '', 'data-action="delete" data-name="' + escapeAttr(row.name) + '"');
+            return (
+              '<div class="proto-table-actions">' +
+              IvuUI.btn('详情', 'success', 'small', '', 'data-action="detail" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('查询模型价格', 'primary', 'small', '', 'data-action="prices" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('编辑', 'primary', 'small', '', 'data-action="edit" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('删除', 'error', 'small', '', 'data-action="delete" data-name="' + escapeAttr(row.name) + '"') +
+              '</div>'
+            );
           }
         }
       ],
@@ -156,6 +184,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var action = btn.getAttribute('data-action');
         if (action === 'detail') openDetail(row);
         else if (action === 'edit') openUpsert(false, row);
+        else if (action === 'prices') {
+          window.location.href =
+            '../pages/model-prices.html?provider=' +
+            encodeURIComponent(name) +
+            '&autoView=1';
+        }
         else if (action === 'delete') handleDelete(name);
       });
     });

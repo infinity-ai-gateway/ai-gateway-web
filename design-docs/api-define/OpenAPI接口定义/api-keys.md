@@ -29,10 +29,10 @@
     "enabled": false,
     "rules": {
       "tpm": [
-        {"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
+        {"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
       ],
       "rpm": [
-        {"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}
+        {"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}
       ],
       "max_concurrency": -1
     }
@@ -156,10 +156,10 @@
         "enabled": true,
         "rules": {
             "tpm": [
-                {"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
+                {"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
             ],
             "rpm": [
-                {"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}
+                {"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}
             ],
             "max_concurrency": 50
         }
@@ -228,8 +228,8 @@
         "rate_limit_policy": {
             "enabled": true,
             "rules": {
-                "tpm": [{"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}],
-                "rpm": [{"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}],
+                "tpm": [{"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}],
+                "rpm": [{"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}],
                 "max_concurrency": 50
             }
         },
@@ -349,9 +349,11 @@
 **执行逻辑**
 
 1. 若传入新的 `quota_plan`：
-   - 若 `quota_plan.unlimited` 为 `false`，且 `quota` 的值发生了改变，则对 balance 进行重置（remaining = 新的quota，used = 0）
-   - 若 `quota_plan.unlimited` 由 `true` 改为 `false`，则创建新的 balance（remaining = quota，used = 0）
-   - 若 `quota_plan.unlimited` 由 `false` 改为 `true`，则删除对应的 balance
+   - 若 `quota_plan.unlimited` 为 `false`，且 `quota` 的值发生了改变（单位不变）：保留 `balance.used`，按 `balance.remaining = max(0, 新quota - balance.used)` 调整余额，并同步调整 Redis 剩余量。
+   - 若 `quota_plan.unit` 发生变化（如 `total_token` ↔ `RMB`）：由于新旧单位无法直接换算，对 balance 进行重置（remaining = 新的quota，used = 0），并将 Redis 剩余量重置为新的quota。
+   - 若 `quota_plan.unlimited` 由 `true` 改为 `false`：创建新的 balance（remaining = quota，used = 0），并将 Redis 剩余量重置为 quota。
+   - 若 `quota_plan.unlimited` 由 `false` 改为 `true`：将 balance 置为无限制状态（used = 0，remaining = 一个足够大的 sentinel 值），并将 Redis 剩余量重置为 sentinel。
+   - 若仅 `quota_plan` 的 `pass_when_no_enough_quota`、`reset_period` 等字段变化，而 `quota`、`unit`、`unlimited` 均未变化：不调整 balance。
 2. 若传入新的 `rate_limit_policy` 且 `enabled` 为 `true`：
    - 对于 `tpm` 和 `rpm` 规则：
      - 若规则的 `name` 与之前的规则相同，但其他参数（如 `window_minutes`、`max_tokens`、`max_requests`、`step_minutes`）发生变化，则重置该规则对应的计数器
@@ -395,7 +397,7 @@
 
 - `quota_plan`、`rate_limit_policy`、`route_rules` 的字段及合法性条件分别见 [QuotaPlan](./00-common.md#公共参数类型)、[RateLimitPolicy](./00-common.md#公共参数类型)、[RouteRules](./00-common.md#公共参数类型) 公共类型定义。
 - 若将 `entity_id` 修改为非空（挂载到新Entity），且 `unlimited_quota` 为 `false` 且 `quota_plan.unlimited` 为 `false`，则要求新Entity或其祖先链上至少存在一个有效的Quota Plan。
-- 若修改 `quota_plan.quota`，视为重置配额（同步更新balance.remaining和used）。
+- 修改 `quota_plan.quota`（单位不变）时，保留 `balance.used`，按 `新quota - used` 重新计算 `balance.remaining`；修改 `quota_plan.unit` 或 `quota_plan.unlimited` 时，会重置 `balance.used = 0`；仅修改 `quota_plan` 其他字段不会调整 balance。
 - 若修改 `route_rules`，视为全量替换该路由规则配置。
 
 **返回数据（Data内容）**

@@ -44,7 +44,7 @@
 | `model_endpoint` | object | 模型发现端点 | 用于调用第三方 AI 模型提供商的模型列表接口 | 非必填；未设置时默认 `schema=https`、`uri=/v1/models`；具体字段见下方 表：Endpoint |
 | `models` | []string | 该 provider 支持的模型列表 | - | 非必填；元素非空且不可重复；可通过模型发现接口自动填充 |
 | `keys` | []ProviderKey | 该 provider 可用的 API Key 明文 | - | 非必填；默认空数组 `[]`；元素须满足 表：ProviderKey 结构 |
-| `instance_pool` | []Instance | Provider 对应的后端实例池 | 系统自动据此创建实例池和子集群 | 必填；至少 1 个元素；同一 provider 内，对于 `name` 不为空的实例，`name` 不能重复；同一 provider 内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0` |
+| `instance_pool` | []Instance | Provider 对应的后端实例池 | 系统自动据此创建实例池和子集群 | 必填；至少 1 个元素；同一 provider 内，对于 `name` 不为空的实例，`name` 不能重复；同一 provider 内 `(name, addr, port)` 组合不能重复；至少有一个实例 `weight > 0` |
 | `model_protocols` | []string | 支持的模型访问协议 | 首期枚举：`openai`、`anthropic` | 必填；至少 1 个元素；元素不可重复；枚举值见下方 |
 | `create_time` | int64 | 创建时间 | - | 系统生成 |
 | `update_time` | int64 | 更新时间 | - | 系统生成 |
@@ -138,7 +138,7 @@
 1. 校验 `name` 全局唯一、`instance_pool` 合法、`model_protocols` 合法。
 2. 若未传 `model_endpoint`，使用默认值 `{schema: "https", uri: "/v1/models"}`。
 3. 若未传 `keys`，默认空数组。
-4. 若请求中携带 `models` 且非空，直接保存；否则可在创建后调用 `discover-models` 接口回填。
+4. 若请求中携带 `models` 且非空，直接保存；否则可在创建后调用 `/providers/tools/discover-models` 接口探测模型列表，再回填到 provider。
 5. 写入 provider 记录，返回完整对象。
 
 **返回数据（Data内容）**
@@ -294,27 +294,33 @@ Data 为 null。
 
 | 项目 | 值 | 说明 |
 | - | - | - |
-| 含义 | 触发模型发现，自动回填 `models` | - |
-| 端点 | /providers/{provider_name}/discover-models | - |
+| 含义 | 触发模型发现，返回模型名列表 | - |
+| 端点 | /providers/tools/discover-models | - |
 | 版本 | v1 | - |
 | method | POST | - |
 
-**输入参数（URI）**
+**输入参数（Body）**
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
-| provider_name | string | Provider 名字 | Y | - | 必填；类型为 [ProviderName](./00-common.md#17-provider-名称providername)；必须引用已存在的 provider |
+| model_protocol | string | 模型访问协议 | Y | - | 必填；枚举值：`openai`、`anthropic` |
+| schema | string | 请求协议 | Y | - | 必填；有效值 `http`、`https` |
+| addr | string | 目标实例地址 | Y | - | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
+| port | int | 目标实例端口 | Y | - | 必填；类型为 [Port](./00-common.md#3-网络端口port) |
+| `uri` | string | 模型列表接口 URI | N | 为空时默认使用 `/v1/models` | 非空时须以 `/` 开头 |
+| `apikey` | string | 调用模型列表接口的 API Key | N | - | 非空时长度 1-512 字符 |
 
 **执行逻辑**
 
-1. 读取 provider 的 `model_endpoint`、`instance_pool`、`keys`、`model_protocols`。
-2. 按 `model_protocols[0]`（或配置的主协议）确定认证头风格，并取 `keys` 中第一个 key 作为认证凭证。
-3. 构造请求 URL：`{schema}://{instance_pool[0].addr}:{port}{uri}`，调用模型列表接口。
-4. 根据 `model_protocols` 选择对应的响应解析器（如 `openai`、`anthropic`），提取模型名列表。
-5. 将解析结果写入 provider 的 `models` 字段，并更新 `update_time`。
-6. 返回更新后的 `models`。
+1. 若 `uri` 为空，默认使用 `/v1/models`；构造请求 URL：`{schema}://{addr}:{port}{uri}`。
+2. 若 `apikey` 非空，根据 `model_protocol` 生成认证头：
+   - `openai`：`Authorization: Bearer {apikey}`
+   - `anthropic`：`x-api-key: {apikey}`
+3. 携带认证头（若有）调用第三方模型列表接口。
+4. 根据 `model_protocol` 选择对应的响应解析器（如 `openai`、`anthropic`），提取模型名列表。
+5. 返回模型名列表。
 
-> **说明**：模型发现是“辅助填充”能力，不强制要求；用户也可以手动维护 `models`。发现失败不影响 provider 本身。
+> **说明**：本接口为无状态工具接口，不读写任何 Provider 资源；如需将发现结果回填到 Provider，调用方需再调用 `PATCH /providers/{provider_name}`。
 
 **返回数据（Data内容）**
 
@@ -334,11 +340,51 @@ Data 为 null。
 }
 ```
 
+### 2.7 获取所有 Provider 名称列表
+
+**基本信息**
+
+| 项目 | 值 | 说明 |
+| - | - | - |
+| 含义 | 获取所有 Provider 名称列表 | 用于需要全量 provider 名称的场景，如下拉选择、自动补全 |
+| 端点 | /providers/actions/get-provider-names | - |
+| 版本 | v1 | - |
+| method | GET | - |
+
+**输入参数**
+
+无。
+
+**执行逻辑**
+
+1. 查询所有 provider 的 `name` 字段。
+2. 返回按字典序升序排列的名称列表。
+
+> **说明**：本接口不返回 Provider 其他字段，仅用于获取全量名称；详细数据仍通过 `GET /providers` 分页查询。
+
+**返回数据（Data内容）**
+
+| 参数名 | 类型 | 参数含义 |
+| - | -  | - |
+| names | []string | 所有 Provider 名称列表 |
+
+**成功返回示例**
+
+```json
+{
+    "ErrNum": 200,
+    "ErrMsg": "success",
+    "Data": {
+        "names": ["anthropic", "deepseek", "openai"]
+    }
+}
+```
+
 ## 3. 校验规则
 
 1. `name` 必填，类型为 [ProviderName](./00-common.md#17-provider-名称providername)，全局唯一。
 2. `description` 可选；若传入，长度 0-256 字符，不能包含控制字符。
-3. `instance_pool` 必填，至少包含 1 个实例；同一 provider 内，对于 `name` 不为空的实例，`name` 不能重复；同一 provider 内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0`。
+3. `instance_pool` 必填，至少包含 1 个实例；同一 provider 内，对于 `name` 不为空的实例，`name` 不能重复；同一 provider 内 `(name, addr, port)` 组合不能重复；至少有一个实例 `weight > 0`。
 4. 每个实例的 `name` 选填，若传入长度须为 1-128 字符，未传入时默认与 `addr` 相同；`addr` 必填且类型为 [Hostname](./00-common.md#1-主机名hostname)；`weight` 取值范围 [0,100]；`port` 必填且类型为 [Port](./00-common.md#3-网络端口port)。
 5. `model_endpoint.schema` 有效值为 `http`、`https`，未设置时默认 `https`；`uri` 非空且须以 `/` 开头。
 6. `models` 元素非空且不可重复。
@@ -347,4 +393,4 @@ Data 为 null。
    - 每个元素 `key` 必填且非空，长度 1-512。
 8. `model_protocols` 必填，至少 1 个元素，元素不可重复，取值须为枚举值：`openai`、`anthropic`。
 9. 删除 provider 前，须校验无 cluster 引用，否则返回 `409 Conflict`；`/model-prices` 记录不再作为阻塞条件。
-10. 触发模型发现时，若 `keys` 为空，应返回 `422`（无法构造认证请求）。
+10. 触发模型发现时，`model_protocol`、`schema`、`addr`、`port` 为必填，`uri` 和 `apikey` 为选填；各参数须满足对应合法性条件；`model_protocol` 不在枚举值范围内时返回 `422`。

@@ -86,7 +86,7 @@ window.PrototypeNav = [
         id: 'Entity.list',
         i18n: 'EntityManage',
         page: 'entity.html',
-        text: 'Entity管理',
+        text: 'Entity 管理',
         icon: navIcon('Entity.list'),
       },
     ],

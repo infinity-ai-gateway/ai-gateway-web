@@ -131,7 +131,7 @@
           {{ $t('provider.modelList') }}
           <Tooltip placement="top" transfer max-width="360">
             <div slot="content" class="field-tip-content">
-              {{ $t('provider.modelsListTip') }}
+              <p>{{ $t('provider.modelsListTip') }}</p>
             </div>
             <Icon type="ios-help-circle-outline" class="field-help-icon" />
           </Tooltip>
@@ -143,10 +143,6 @@
               style="flex: 1;"
               size="small"
               multiple
-              clearable
-              filterable
-              allow-create
-              default-first-option
               :placeholder="modelsSelectPlaceholder"
             >
               <el-option
@@ -156,35 +152,15 @@
                 :label="item"
               />
             </el-select>
-            <Tooltip
-              v-if="!isAdd"
-              placement="top"
-              transfer
-              max-width="320"
-              :disabled="canDiscoverModels"
-            >
-              <div slot="content">{{ discoverDisabledTip }}</div>
-              <span class="discover-btn-wrap">
-                <Button
-                  type="primary"
-                  :loading="discoverLoading"
-                  :disabled="!canDiscoverModels"
-                  @click="confirmDiscoverModels"
-                >{{ $t('provider.syncModels') }}</Button>
-              </span>
-            </Tooltip>
+            <span class="discover-btn-wrap">
+              <Button
+                type="primary"
+                :loading="discoverLoading"
+                :disabled="!canDiscoverModels"
+                @click="discoverModels"
+              >{{ $t('provider.syncModels') }}</Button>
+            </span>
           </div>
-          <div class="models-add-row">
-            <Input
-              v-model="modelInput"
-              :placeholder="$t('provider.manualModelPlaceholder')"
-              @on-enter="addModel"
-            />
-            <Button size="small" @click="addModel">
-              {{ $t('provider.addModel') }}
-            </Button>
-          </div>
-          <p class="form-tip">{{ modelsSelectPlaceholder }}</p>
         </FormItem>
       </Card>
     </Form>
@@ -324,7 +300,6 @@ export default {
             instancePoolData: [],
             livePool: [],
             modelsList: [],
-            modelInput: '',
             formData: {
                 name: '',
                 description: '',
@@ -353,57 +328,24 @@ export default {
             const hosts = getInstanceEndpointHosts(syncInstancePoolPortBySchema(pool, schema));
             return hosts[0] || '';
         },
-        savedDiscoverSource() {
-            return this.currentProvider || {};
-        },
-        hasSavedDiscoverAuthKey() {
-            return ((this.savedDiscoverSource.keys) || []).some(
-                item => String((item && item.key) || '').trim()
-            );
-        },
-        hasSavedInstance() {
-            return ((this.savedDiscoverSource.instance_pool) || []).some(
-                item => String((item && item.addr) || '').trim()
-            );
-        },
-        hasSavedProtocols() {
-            return ((this.savedDiscoverSource.model_protocols) || []).length > 0;
-        },
-        discoverConfigDirty() {
-            return this.buildDiscoverFingerprint(this.savedDiscoverSource, this.savedDiscoverSource.instance_pool)
-                !== this.buildDiscoverFingerprint({
-                    model_protocols: this.formData.model_protocols,
-                    model_endpoint: this.formData.model_endpoint,
-                    keys: this.formKeysForCompare()
-                }, this.livePool.length ? this.livePool : this.instancePoolData);
-        },
         canDiscoverModels() {
-            return !this.isAdd
-                && String(this.formData.name || '').trim() !== ''
-                && this.hasSavedDiscoverAuthKey
-                && this.hasSavedInstance
-                && this.hasSavedProtocols
-                && !this.discoverConfigDirty;
+            const protocols = this.formData.model_protocols || [];
+            if (!protocols.length) {
+                return false;
+            }
+            const pool = this.livePool.length ? this.livePool : this.instancePoolData;
+            const schema = (this.formData.model_endpoint && this.formData.model_endpoint.schema) || 'https';
+            const instances = formatInstancePoolForApi(pool, schema);
+            return instances.some(item => String(item.addr || '').trim());
         },
         discoverDisabledTip() {
-            if (!this.hasSavedDiscoverAuthKey) {
-                return this.$t('provider.discoverNeedKey');
-            }
-            if (!this.hasSavedInstance) {
-                return this.$t('provider.discoverNeedInstance');
-            }
-            if (!this.hasSavedProtocols) {
+            if (!(this.formData.model_protocols || []).length) {
                 return this.$t('provider.discoverNeedProtocol');
             }
-            if (this.discoverConfigDirty) {
-                return this.$t('provider.discoverNeedSubmit');
-            }
-            return this.$t('provider.discoverNeedSave');
+            return this.$t('provider.discoverNeedInstance');
         },
         modelsSelectPlaceholder() {
-            return this.isAdd
-                ? this.$t('provider.modelsHintCreate')
-                : this.$t('provider.modelsHint');
+            return this.$t('provider.modelsHintDiscoverOnly');
         },
         hasExistingKey() {
             return (this.formData.keys || []).some(item => String(item.originalKey || '').trim());
@@ -439,7 +381,6 @@ export default {
                     : [this.emptyKey()]
             };
             this.modelsList = (data.models || []).slice();
-            this.modelInput = '';
             this.instancePoolData = data.instance_pool && data.instance_pool.length
                 ? cloneDeep(data.instance_pool)
                 : [];
@@ -550,70 +491,36 @@ export default {
                 this.formData.keys.push(this.emptyKey());
             }
         },
-        addModel() {
-            const value = String(this.modelInput || '').trim();
-            if (!value) {
-                return;
-            }
-            if (this.modelsList.indexOf(value) === -1) {
-                this.modelsList.push(value);
-            }
-            if (this.formData.models.indexOf(value) === -1) {
-                this.formData.models.push(value);
-            }
-            this.modelInput = '';
+        buildDiscoverPayload() {
+            const pool = this.livePool.length ? this.livePool : this.instancePoolData;
+            const schema = (this.formData.model_endpoint && this.formData.model_endpoint.schema) || 'https';
+            const instances = formatInstancePoolForApi(pool, schema)
+                .filter(item => String(item.addr || '').trim());
+            const first = instances[0] || {};
+            const keys = (this.formData.keys || [])
+                .map(item => this.resolveKeyValue(item))
+                .map(key => String(key || '').trim())
+                .filter(Boolean);
+            return {
+                model_protocol: (this.formData.model_protocols || [])[0],
+                schema,
+                addr: first.addr,
+                port: first.port,
+                uri: (this.formData.model_endpoint && this.formData.model_endpoint.uri) || '/v1/models',
+                apikey: keys[0] || ''
+            };
         },
-        formKeysForCompare() {
-            return (this.formData.keys || []).map(item => ({
-                name: String((item && item.name) || '').trim(),
-                key: this.resolveKeyValue(item)
-            }));
-        },
-        buildDiscoverFingerprint(source, pool) {
-            const data = source || {};
-            const endpoint = data.model_endpoint || {};
-            const schema = endpoint.schema || 'https';
-            const uri = endpoint.uri || '/v1/models';
-            const protocols = (data.model_protocols || []).join(',');
-            const keys = (data.keys || [])
-                .map(item => ({
-                    name: String((item && item.name) || '').trim(),
-                    key: String((item && item.key) || '').trim()
-                }))
-                .filter(item => item.name || item.key)
-                .map(item => `${item.name}\t${item.key}`)
-                .join('\n');
-            const instances = formatInstancePoolForApi(pool || [], schema)
-                .filter(item => String(item.addr || '').trim())
-                .map(item => `${item.addr}|${item.port}|${item.weight}`)
-                .join('\n');
-            return [protocols, schema, uri, keys, instances].join('||');
-        },
-        confirmDiscoverModels() {
+        discoverModels() {
             if (!this.canDiscoverModels) {
                 this.$Message.warning(this.discoverDisabledTip);
                 return;
             }
-            this.$Modal.confirm({
-                title: this.$t('com.informationTips'),
-                content: this.$t('provider.syncModelsConfirm'),
-                onOk: () => {
-                    this.discoverModels();
-                }
-            });
-        },
-        discoverModels() {
-            const name = String(this.formData.name || '').trim();
-            if (!this.canDiscoverModels || !name) {
-                this.$Message.warning(this.discoverDisabledTip);
-                return;
-            }
+            const payload = this.buildDiscoverPayload();
             this.discoverLoading = true;
             this.$request({
-                url: this.$urlFormat('providers/{provider_name}/discover-models', {
-                    provider_name: name
-                }),
+                url: 'providers/tools/discover-models',
                 method: 'post',
+                data: payload,
                 openapi: true
             })
                 .then(res => {
@@ -622,10 +529,6 @@ export default {
                             .filter(Boolean);
                         this.formData.models = discovered.slice();
                         this.modelsList = discovered.slice();
-                        this.$Message.success({
-                            content: this.$t('provider.syncModelsSucc', { count: discovered.length })
-                        });
-                        this.$emit('models-synced', discovered);
                     }
                 })
                 .finally(() => {
@@ -767,6 +670,14 @@ export default {
     max-width: 360px;
     white-space: normal;
     line-height: 1.5;
+
+    p {
+        margin: 0 0 8px;
+    }
+
+    p:last-child {
+        margin-bottom: 0;
+    }
 }
 
 .models-row {
@@ -777,13 +688,6 @@ export default {
 
 .discover-btn-wrap {
     display: inline-block;
-}
-
-.models-add-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
 }
 
 .keys-table {

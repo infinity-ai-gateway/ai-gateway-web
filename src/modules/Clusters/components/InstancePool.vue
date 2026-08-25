@@ -66,6 +66,7 @@
                     :label="$t('instancePool.list')"
                     prop="instances"
                     class="instance-list-form-item"
+                    :show-message="false"
                     style="width: 100%;"
                 >
                     <div class="formBox">
@@ -85,6 +86,7 @@
                                     <FormItem
                                         :prop="'instances.' + ind + '.addr'"
                                         :rules="instanceAddrRules"
+                                        :show-message="false"
                                         class="table-cell-form-item"
                                     >
                                         <Input
@@ -93,6 +95,8 @@
                                             :placeholder="
                                                 $t('com.tipEnterX', { obj: $t('instancePool.ipAddress') })
                                             "
+                                            @on-blur="scheduleInstanceErrorSync"
+                                            @on-change="scheduleInstanceErrorSync"
                                         />
                                     </FormItem>
                                 </td>
@@ -100,6 +104,7 @@
                                     <FormItem
                                         :prop="'instances.' + ind + '.port'"
                                         :rules="instancePortRules"
+                                        :show-message="false"
                                         class="table-cell-form-item table-cell-form-item-port"
                                     >
                                         <InputNumber
@@ -109,6 +114,7 @@
                                             class="poolInput"
                                             :placeholder="$t('instancePool.portValue')"
                                             style="width: 80px;"
+                                            @on-change="scheduleInstanceErrorSync"
                                         ></InputNumber>
                                     </FormItem>
                                 </td>
@@ -116,6 +122,7 @@
                                     <FormItem
                                         :prop="'instances.' + ind + '.weight'"
                                         :rules="instanceWeightRules"
+                                        :show-message="false"
                                         class="table-cell-form-item"
                                     >
                                         <InputNumber
@@ -124,6 +131,7 @@
                                             :min="0"
                                             class="poolInput"
                                             style="width: 80px;"
+                                            @on-change="scheduleInstanceErrorSync"
                                         ></InputNumber>
                                     </FormItem>
                                 </td>
@@ -141,6 +149,9 @@
                     <Button plain size="small" type="primary" @click="handleAdd">
                         + {{ $t('com.create') }}
                     </Button>
+                    <p v-if="instanceListError" class="instance-list-error">
+                        {{ instanceListError }}
+                    </p>
                 </FormItem>
             </template>
         </Form>
@@ -249,8 +260,10 @@ export function detectInstanceMode(instances) {
 
 export function formatInstanceForApi(instance) {
     const item = toFormInstance(instance);
+    const addr = String(item.addr || '').trim();
     return {
-        addr: String(item.addr || '').trim(),
+        name: addr,
+        addr,
         port: parseInt(item.port, 10),
         weight: parseInt(item.weight, 10)
     };
@@ -398,7 +411,7 @@ export default {
 
             const duplicateKeys = getDuplicateAddrPortKeys(list);
             if (duplicateKeys.length) {
-                callback(new Error(this.$t('instancePool.tipDuplicateIpPort', {
+                callback(new Error(this.$t('instancePool.tipDuplicateIpAndPort', {
                     ipPort: duplicateKeys[0]
                 })));
                 return;
@@ -410,32 +423,27 @@ export default {
             const addr = String(value || '').trim();
 
             if (!addr) {
-                this.triggerInstanceListValidate();
                 callback(new Error(this.$t('com.tipEnterX', {
                     obj: this.$t('instancePool.ipAddress')
                 })));
                 return;
             }
             if (!isIP(addr, 4) && !isIP(addr, 6)) {
-                this.triggerInstanceListValidate();
                 callback(new Error(this.$t('com.tipEnterX', {
                     obj: this.$t('instancePool.ipAddress')
                 })));
                 return;
             }
 
-            this.triggerInstanceListValidate();
             callback();
         };
 
         const validateInstancePort = (rule, value, callback) => {
             if (value == null || value === '' || value < 1 || value > 65535) {
-                this.triggerInstanceListValidate();
                 callback(new Error(this.$t('instancePool.tipPortRang')));
                 return;
             }
 
-            this.triggerInstanceListValidate();
             callback();
         };
 
@@ -454,6 +462,8 @@ export default {
         return {
             deleteAble: false,
             isApplyingPoolData: false,
+            instanceErrorSyncScheduled: false,
+            instanceListError: '',
             formData: {
                 instanceMode: 'ip',
                 domainName: '',
@@ -475,7 +485,8 @@ export default {
                 ],
                 instances: [
                     {
-                        validator: validateInstanceList
+                        validator: validateInstanceList,
+                        trigger: 'change'
                     }
                 ]
             },
@@ -507,10 +518,74 @@ export default {
         },
 
         triggerInstanceListValidate() {
+            this.scheduleInstanceErrorSync();
+        },
+
+        scheduleInstanceErrorSync() {
+            if (this.instanceErrorSyncScheduled) {
+                return;
+            }
+            this.instanceErrorSyncScheduled = true;
             this.$nextTick(() => {
-                if (this.$refs.formData) {
-                    this.$refs.formData.validateField('instances');
+                this.instanceErrorSyncScheduled = false;
+                this.syncInstanceListError();
+            });
+        },
+
+        getFieldError(prop) {
+            const form = this.$refs.formData;
+            if (!form || !form.fields) {
+                return '';
+            }
+            const field = form.fields.find(item => item.prop === prop);
+            if (field && field.validateState === 'error' && field.validateMessage) {
+                return field.validateMessage;
+            }
+            return '';
+        },
+
+        syncInstanceListError() {
+            const form = this.$refs.formData;
+            if (!form) {
+                this.instanceListError = '';
+                return;
+            }
+            const list = this.formData.instances || [];
+            const fieldProps = [];
+            list.forEach((_, index) => {
+                fieldProps.push(`instances.${index}.addr`);
+                fieldProps.push(`instances.${index}.port`);
+                fieldProps.push(`instances.${index}.weight`);
+            });
+            fieldProps.push('instances');
+            let pending = fieldProps.length;
+            if (!pending) {
+                this.instanceListError = '';
+                return;
+            }
+            const done = () => {
+                pending -= 1;
+                if (pending > 0) {
+                    return;
                 }
+                for (let index = 0; index < list.length; index += 1) {
+                    const rowProps = [
+                        `instances.${index}.addr`,
+                        `instances.${index}.port`,
+                        `instances.${index}.weight`
+                    ];
+                    for (let i = 0; i < rowProps.length; i += 1) {
+                        const message = this.getFieldError(rowProps[i]);
+                        if (message) {
+                            this.instanceListError = message;
+                            return;
+                        }
+                    }
+                }
+                this.instanceListError = this.getFieldError('instances') || '';
+            };
+            fieldProps.forEach(prop => {
+                form.validateField(prop, () => done());
             });
         },
 
@@ -535,6 +610,7 @@ export default {
             }
             this.$nextTick(() => {
                 this.isApplyingPoolData = false;
+                this.instanceListError = '';
             });
         },
 
@@ -571,6 +647,7 @@ export default {
                 }
                 this.$refs.formData.validate(valid => {
                     if (!valid) {
+                        this.syncInstanceListError();
                         reject(new Error('invalid'));
                         return;
                     }
@@ -592,6 +669,7 @@ export default {
             }
             this.$refs.formData.validate(valid => {
                 if (!valid) {
+                    this.syncInstanceListError();
                     return;
                 }
                 if (this.formData.instanceMode === 'domain') {
@@ -626,6 +704,7 @@ export default {
             padding: 5px 10px;
             border-left: 1px solid #d9dbe3;
             border-top: 1px solid #d9dbe3;
+            vertical-align: top;
         }
     }
 
@@ -680,10 +759,23 @@ export default {
         margin-left: 0 !important;
         line-height: normal;
     }
+
+    /deep/ .ivu-form-item-error-tip {
+        position: relative;
+        padding-top: 2px;
+        line-height: 1.4;
+        white-space: normal;
+    }
 }
 
 .table-cell-form-item-port {
     display: inline-block;
     vertical-align: middle;
+}
+
+.instance-list-error {
+    color: #ed4014;
+    margin-top: 8px;
+    line-height: 1.5;
 }
 </style>

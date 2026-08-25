@@ -31,13 +31,15 @@
                     '<div id="entity-type-table"></div>';
 
                   root.innerHTML =
+                    '<div class="entity-page">' +
                     IvuUI.tabs([
                       { name: 'entity', label: 'Entity组织管理' },
                       { name: 'entityType', label: 'Entity类型管理' }
                     ], IvuUI.tabPane('entity', orgContent, true) + IvuUI.tabPane('entityType', typeContent, false)) +
                     EntityUpsert.drawer('add', {}, []) +
                     EntityUpsert.typeDrawer('add', {}) +
-                    EntityUpsert.resetQuotaModal();
+                    EntityUpsert.resetQuotaModal() +
+                    '</div>';
 
                   Prototype.initTabs(root);
 
@@ -107,6 +109,8 @@
                       }
                     );
                   }
+
+                  function filterTypeRows() {
                     typeState.filteredRows = typeState.rows.filter(function (row) {
                       return Object.keys(typeState.search).every(function (key) {
                         var keyword = String(typeState.search[key] || '').trim();
@@ -376,7 +380,7 @@
             if (wrap) wrap.remove();
             window._entityUpsertRows = entityState.rows;
             window._entityUpsertCurrentId = data && data.id != null ? data.id : '';
-            document.getElementById('product-body').insertAdjacentHTML('beforeend', EntityUpsert.drawer(mode, data, entityState.rows));
+            root.insertAdjacentHTML('beforeend', EntityUpsert.drawer(mode, data, entityState.rows));
             bindEntityDrawerActions();
           }
 
@@ -394,7 +398,7 @@
                   function mountTypeDrawer(mode, data) {
                     var wrap = document.getElementById('drawer-entity-type');
                     if (wrap) wrap.remove();
-                    document.getElementById('product-body').insertAdjacentHTML('beforeend', EntityUpsert.typeDrawer(mode, data));
+                    root.insertAdjacentHTML('beforeend', EntityUpsert.typeDrawer(mode, data));
                     bindTypeDrawerActions();
                   }
 

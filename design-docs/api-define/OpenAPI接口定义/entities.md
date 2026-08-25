@@ -21,10 +21,10 @@
     "enabled": false,
     "rules": {
       "tpm": [
-        {"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
+        {"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
       ],
       "rpm": [
-        {"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}
+        {"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}
       ],
       "max_concurrency": -1
     }
@@ -43,7 +43,7 @@
 | 字段 | 类型 | 说明 | 可能取值 |
 |------|------|------|----------|
 | `id` | string | Entity唯一标识 | 系统生成，如`ent-001` |
-| `name` | string | Entity名称 | 在全局范围内唯一 | 必填；长度 1-64 字符；不能包含控制字符；不能包含前导/尾随空白字符；全局唯一 |
+| `name` | string | Entity名称 | 在全局范围内唯一 | 必填；类型为 [EntityName](./00-common.md#17-entity-名称entityname)；全局唯一 |
 | `type` | string | Entity类型 | 必须引用已定义的Entity-Type | 必填；类型为 [EntityTypeName](./00-common.md#16-entity-type-名称entitytypename)；必须引用已存在的 Entity-Type |
 | `parent_id` | string | 父Entity ID | 为空表示根节点 |
 | `allow_models` | []string | 允许访问的模型白名单 | 包含"*"表示允许访问所有模型，**默认值为允许访问所有模型** |
@@ -75,7 +75,7 @@
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
-| name | string | Entity名称 | Y | 全局唯一 | 必填；长度 1-64 字符；不能包含控制字符；不能包含前导/尾随空白字符；全局唯一 |
+| name | string | Entity名称 | Y | 全局唯一 | 必填；类型为 [EntityName](./00-common.md#17-entity-名称entityname)；全局唯一 |
 | type | string | Entity类型 | Y | 必须引用已定义的Entity-Type | 必填；类型为 [EntityTypeName](./00-common.md#16-entity-type-名称entitytypename)；必须引用已存在的 Entity-Type |
 | parent_id | string | 父Entity ID | N | 为空表示根节点 | 若传入非空值，父 Entity 必须存在，且父 Entity 对应 Entity-Type 的 level 必须小于本 Entity 对应 Entity-Type 的 level |
 | allow_models | []string | 允许访问的模型白名单 | N | 包含"*"表示允许访问所有模型，**默认值为允许访问所有模型** | 每个元素类型为 [AIModel](./00-common.md#5-ai-模型名称aimodel)；包含 `"*"` 时表示允许访问所有模型 |
@@ -88,7 +88,7 @@
 
 - `type` 必须引用系统中已存在的Entity-Type
 - `parent_id` 若不为空，该父Entity对应的Entity-Type的 `level` 必须**小于**本Entity对应的Entity-Type的 `level`（数字越小级别越高，父节点级别必须更高）
-- `name` 必填；长度 1-64 字符；不能包含控制字符；不能包含前导/尾随空白字符；全局唯一
+- `name` 必填；类型为 [EntityName](./00-common.md#17-entity-名称entityname)；全局唯一
 - `allow_models` 每个元素类型为 [AIModel](./00-common.md#5-ai-模型名称aimodel)；包含 `"*"` 时表示允许访问所有模型。
 - `block_models` 每个元素为非空字符串；包含 `"*"` 时表示禁止访问所有模型；元素无需为已配置的 `AIModel`（不必出现在 `/clusters` 的 `llm_config.models` 中）。
 - `quota_plan`、`rate_limit_policy`、`route_rules` 的字段及合法性条件分别见 [QuotaPlan](./00-common.md#公共参数类型)、[RateLimitPolicy](./00-common.md#公共参数类型)、[RouteRules](./00-common.md#公共参数类型) 公共类型定义。
@@ -113,10 +113,10 @@
         "enabled": true,
         "rules": {
             "tpm": [
-                {"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
+                {"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
             ],
             "rpm": [
-                {"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}
+                {"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}
             ],
             "max_concurrency": 50
         }
@@ -180,8 +180,8 @@
         "rate_limit_policy": {
             "enabled": true,
             "rules": {
-                "tpm": [{"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}],
-                "rpm": [{"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}],
+                "tpm": [{"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}],
+                "rpm": [{"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}],
                 "max_concurrency": 50
             }
         },
@@ -286,8 +286,8 @@
                 "rate_limit_policy": {
                     "enabled": true,
                     "rules": {
-                        "tpm": [{"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}],
-                        "rpm": [{"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}],
+                        "tpm": [{"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}],
+                        "rpm": [{"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}],
                         "max_concurrency": 50
                     }
                 },
@@ -390,15 +390,17 @@
 
 - `type` 不可修改（创建后固定）。
 - 若修改 `parent_id`，新父Entity对应的Entity-Type的 `level` 必须**小于**本Entity对应的Entity-Type的 `level`。
-- `name` 必填；长度 1-64 字符；不能包含控制字符；不能包含前导/尾随空白字符；全局唯一，不可与其他Entity冲突。
+- `name` 必填；类型为 [EntityName](./00-common.md#17-entity-名称entityname)；全局唯一，不可与其他Entity冲突。
 - `quota_plan`、`rate_limit_policy`、`route_rules` 的字段及合法性条件分别见 [QuotaPlan](./00-common.md#公共参数类型)、[RateLimitPolicy](./00-common.md#公共参数类型)、[RouteRules](./00-common.md#公共参数类型) 公共类型定义。
 
 **执行逻辑**
 
 1. 若传入新的 `quota_plan`：
-   - 若 `quota_plan.unlimited` 为 `false`，且 `quota` 的值发生了改变，则对 balance 进行重置（remaining = 新的quota，used = 0）
-   - 若 `quota_plan.unlimited` 由 `true` 改为 `false`，则创建新的 balance（remaining = quota，used = 0）
-   - 若 `quota_plan.unlimited` 由 `false` 改为 `true`，则删除对应的 balance
+   - 若 `quota_plan.unlimited` 为 `false`，且 `quota` 的值发生了改变（单位不变）：保留 `balance.used`，按 `balance.remaining = max(0, 新quota - balance.used)` 调整余额，并同步调整 Redis 剩余量。
+   - 若 `quota_plan.unit` 发生变化（如 `total_token` ↔ `RMB`）：由于新旧单位无法直接换算，对 balance 进行重置（remaining = 新的quota，used = 0），并将 Redis 剩余量重置为新的quota。
+   - 若 `quota_plan.unlimited` 由 `true` 改为 `false`：创建新的 balance（remaining = quota，used = 0），并将 Redis 剩余量重置为 quota。
+   - 若 `quota_plan.unlimited` 由 `false` 改为 `true`：将 balance 置为无限制状态（used = 0，remaining = 一个足够大的 sentinel 值），并将 Redis 剩余量重置为 sentinel。
+   - 若仅 `quota_plan` 的 `pass_when_no_enough_quota`、`reset_period` 等字段变化，而 `quota`、`unit`、`unlimited` 均未变化：不调整 balance。
 2. 若传入新的 `rate_limit_policy` 且 `enabled` 为 `true`：
    - 对于 `tpm` 和 `rpm` 规则：
      - 若规则的 `name` 与之前的规则相同，但其他参数发生变化，则重置该规则对应的计数器
@@ -440,17 +442,19 @@
 
 - `type` 不可修改。
 - 若修改 `parent_id`，新父Entity对应的Entity-Type的 `level` 必须**小于**本Entity对应的Entity-Type的 `level`。
-- `name` 必填；长度 1-64 字符；不能包含控制字符；不能包含前导/尾随空白字符；全局唯一，不可与其他Entity冲突。
+- `name` 必填；类型为 [EntityName](./00-common.md#17-entity-名称entityname)；全局唯一，不可与其他Entity冲突。
 - `quota_plan`、`rate_limit_policy`、`route_rules` 的字段及合法性条件分别见 [QuotaPlan](./00-common.md#公共参数类型)、[RateLimitPolicy](./00-common.md#公共参数类型)、[RouteRules](./00-common.md#公共参数类型) 公共类型定义。
-- 若修改 `quota_plan.quota`，视为重置配额（同步更新balance.remaining和used）。
+- 修改 `quota_plan.quota`（单位不变）时，保留 `balance.used`，按 `新quota - used` 重新计算 `balance.remaining`；修改 `quota_plan.unit` 或 `quota_plan.unlimited` 时，会重置 `balance.used = 0`；仅修改 `quota_plan` 其他字段不会调整 balance。
 - 若修改 `route_rules`，视为全量替换该路由规则配置。
 
 **执行逻辑**
 
 1. 若传入新的 `quota_plan`：
-   - 若 `quota_plan.unlimited` 为 `false`，且 `quota` 的值发生了改变，则对 balance 进行重置（remaining = 新的quota，used = 0）
-   - 若 `quota_plan.unlimited` 由 `true` 改为 `false`，则创建新的 balance（remaining = quota，used = 0）
-   - 若 `quota_plan.unlimited` 由 `false` 改为 `true`，则删除对应的 balance
+   - 若 `quota_plan.unlimited` 为 `false`，且 `quota` 的值发生了改变（单位不变）：保留 `balance.used`，按 `balance.remaining = max(0, 新quota - balance.used)` 调整余额，并同步调整 Redis 剩余量。
+   - 若 `quota_plan.unit` 发生变化（如 `total_token` ↔ `RMB`）：由于新旧单位无法直接换算，对 balance 进行重置（remaining = 新的quota，used = 0），并将 Redis 剩余量重置为新的quota。
+   - 若 `quota_plan.unlimited` 由 `true` 改为 `false`：创建新的 balance（remaining = quota，used = 0），并将 Redis 剩余量重置为 quota。
+   - 若 `quota_plan.unlimited` 由 `false` 改为 `true`：将 balance 置为无限制状态（used = 0，remaining = 一个足够大的 sentinel 值），并将 Redis 剩余量重置为 sentinel。
+   - 若仅 `quota_plan` 的 `pass_when_no_enough_quota`、`reset_period` 等字段变化，而 `quota`、`unit`、`unlimited` 均未变化：不调整 balance。
 2. 若传入新的 `rate_limit_policy` 且 `enabled` 为 `true`：
    - 对于 `tpm` 和 `rpm` 规则：
      - 若规则的 `name` 与之前的规则相同，但其他参数发生变化，则重置该规则对应的计数器

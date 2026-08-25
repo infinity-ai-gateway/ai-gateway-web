@@ -5,6 +5,37 @@ window.ApiKeyUpsert = {
   WINDOW_MAX_MINUTES: 360,
   RMB_QUOTA_MAX: 90000000,
   INT64_MAX: 9223372036854775807,
+  RATE_LIMIT_NAME_RE: /^[a-zA-Z0-9_-]{1,128}$/,
+
+  validateRateLimitRuleName(name) {
+    var val = String(name || '').trim();
+    if (!val) return '请输入规则名称';
+    if (val.length > 128) return '规则名称长度须为 1–128 字符';
+    if (!ApiKeyUpsert.RATE_LIMIT_NAME_RE.test(val)) {
+      return '规则名称仅允许字母、数字、下划线、连字符';
+    }
+    return null;
+  },
+
+  suggestRateLimitRuleName(type, existingNames) {
+    var base = type === 'tpm' ? 'tpm_1min' : 'rpm_1min';
+    var names = existingNames || {};
+    if (!names[base]) return base;
+    for (var i = 2; i <= 99; i++) {
+      var candidate = base + '_' + i;
+      if (!names[candidate]) return candidate;
+    }
+    return base + '_' + Date.now();
+  },
+
+  collectRateLimitRuleNames(root) {
+    var names = {};
+    (root || document).querySelectorAll('.rule-name-input').forEach(function (input) {
+      var val = String(input.value || '').trim();
+      if (val) names[val] = true;
+    });
+    return names;
+  },
 
   maskKey(key) {
     if (!key) return '-';
@@ -341,6 +372,7 @@ window.ApiKeyUpsert = {
             rpmRules,
             maxMode,
             maxConc,
+            isAdd,
           ) +
           '</div>',
       ) +
@@ -710,7 +742,10 @@ window.ApiKeyUpsert = {
           return;
         }
         var newRule = {
-          name: '',
+          name: ApiKeyUpsert.suggestRateLimitRuleName(
+            'tpm',
+            ApiKeyUpsert.collectRateLimitRuleNames(section),
+          ),
           model: '*',
           window_minutes: 1,
           max_tokens: 10000,
@@ -719,7 +754,7 @@ window.ApiKeyUpsert = {
         var actionsEl = section.querySelector('.rules-section-actions');
         if (actionsEl) {
           var tempDiv = document.createElement('div');
-          tempDiv.innerHTML = ApiKeyUpsert.ruleRow('tpm', newRule, rows.length);
+          tempDiv.innerHTML = ApiKeyUpsert.ruleRow('tpm', newRule, rows.length, false);
           var newRow = tempDiv.firstElementChild;
           actionsEl.parentNode.insertBefore(newRow, actionsEl);
           ApiKeyUpsert.bindRuleRowEvents(newRow, 'tpm');
@@ -746,7 +781,10 @@ window.ApiKeyUpsert = {
           return;
         }
         var newRule = {
-          name: '',
+          name: ApiKeyUpsert.suggestRateLimitRuleName(
+            'rpm',
+            ApiKeyUpsert.collectRateLimitRuleNames(section),
+          ),
           model: '*',
           window_minutes: 1,
           max_requests: 100,
@@ -754,7 +792,7 @@ window.ApiKeyUpsert = {
         var actionsEl = section.querySelector('.rules-section-actions');
         if (actionsEl) {
           var tempDiv = document.createElement('div');
-          tempDiv.innerHTML = ApiKeyUpsert.ruleRow('rpm', newRule, rows.length);
+          tempDiv.innerHTML = ApiKeyUpsert.ruleRow('rpm', newRule, rows.length, false);
           var newRow = tempDiv.firstElementChild;
           actionsEl.parentNode.insertBefore(newRow, actionsEl);
           ApiKeyUpsert.bindRuleRowEvents(newRow, 'rpm');
@@ -844,6 +882,18 @@ window.ApiKeyUpsert = {
   bindRuleRowEvents(row, type) {
     var delBtn = row.querySelector('.rule-delete-btn');
     if (!delBtn) return;
+    var nameInput = row.querySelector('.rule-name-input');
+    if (nameInput && !nameInput.readOnly) {
+      nameInput.addEventListener('blur', function () {
+        var err = ApiKeyUpsert.validateRateLimitRuleName(nameInput.value);
+        if (err) {
+          nameInput.classList.add('ivu-input-error');
+          Prototype.toast(err, 'error');
+        } else {
+          nameInput.classList.remove('ivu-input-error');
+        }
+      });
+    }
     delBtn.addEventListener('click', function () {
       var section =
         row.closest('#tpm-rules-section') || row.closest('#rpm-rules-section');
@@ -887,8 +937,14 @@ window.ApiKeyUpsert = {
     }
   },
 
-  ruleRow(type, rule, index) {
+  ruleRow(type, rule, index, nameReadonly) {
     var isTpm = type === 'tpm';
+    var readonly = !!nameReadonly && !!(rule.name && String(rule.name).trim());
+    var nameAttrs =
+      ' type="text" class="ivu-input rule-name-input" value="' +
+      IvuUI.escapeHtml(rule.name || '') +
+      '" placeholder="tpm_1min / rpm_1min"' +
+      (readonly ? ' readonly disabled' : '');
     var modelSelect = ApiKeyUpsert.nativeSelect(
       '',
       ['*', 'gpt-4o'],
@@ -899,9 +955,12 @@ window.ApiKeyUpsert = {
       ApiKeyUpsert.ruleField(
         IvuUI.formTopItem(
           '规则名称',
-          '<input type="text" class="ivu-input rule-name-input" value="' +
-            IvuUI.escapeHtml(rule.name || '') +
-            '" placeholder="请输入规则名称" />',
+          '<input' +
+            nameAttrs +
+            ' />' +
+            (readonly
+              ? '<p class="form-tip">创建后不可修改</p>'
+              : '<p class="form-tip">字符集 [a-zA-Z0-9_-]，1–128 字符</p>'),
         ),
       ) +
       ApiKeyUpsert.ruleField(IvuUI.formTopItem('适用模型', modelSelect)) +
@@ -968,17 +1027,18 @@ window.ApiKeyUpsert = {
     );
   },
 
-  renderRateLimitRules(tpmRules, rpmRules, maxMode, maxConc) {
+  renderRateLimitRules(tpmRules, rpmRules, maxMode, maxConc, isAdd) {
     tpmRules = tpmRules && tpmRules.length ? tpmRules : [];
     rpmRules = rpmRules && rpmRules.length ? rpmRules : [];
+    var nameReadonly = isAdd === false;
     var tpmRows = tpmRules
       .map(function (rule, i) {
-        return ApiKeyUpsert.ruleRow('tpm', rule, i);
+        return ApiKeyUpsert.ruleRow('tpm', rule, i, nameReadonly);
       })
       .join('');
     var rpmRows = rpmRules
       .map(function (rule, i) {
-        return ApiKeyUpsert.ruleRow('rpm', rule, i);
+        return ApiKeyUpsert.ruleRow('rpm', rule, i, nameReadonly);
       })
       .join('');
     var tpmAddBtn =

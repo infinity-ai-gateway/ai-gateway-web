@@ -36,12 +36,18 @@
               <Icon type="ios-help-circle-outline" class="provider-help-icon" />
             </Tooltip>
           </span>
-          <el-select v-model="formData.provider" filterable size="small"  @change="onProviderChange">
+          <el-select
+            v-model="formData.provider"
+            filterable
+            size="small"
+            :loading="providerNamesLoading"
+            @change="onProviderChange"
+          >
             <el-option
-              v-for="item in providers"
-              :key="item.name"
-              :label="item.name"
-              :value="item.name"
+              v-for="item in providerNames"
+              :key="item"
+              :label="item"
+              :value="item"
             />
           </el-select>
         </FormItem>
@@ -62,8 +68,16 @@
             multiple
             clearable
             filterable
-            :disabled="!formData.provider"
+            :disabled="!formData.provider || providerDetailLoading"
+            @change="onForwardModelsChange"
           >
+            <el-option
+              v-if="providerModels.length && !allModelsSelected"
+              key="__select_all_models__"
+              class="forward-models-select-all"
+              :label="$t('gatewayConfig.selectAll')"
+              :value="selectAllModelsMarker"
+            />
             <el-option
               v-for="item in providerModels"
               :key="item"
@@ -171,7 +185,7 @@
                     <Select
                       v-model="keyItem.name"
                       :placeholder="$t('gatewayConfig.providerKeyPlaceholder')"
-                      :disabled="!formData.provider"
+                      :disabled="!formData.provider || providerDetailLoading"
                       @on-change="validateKeysState"
                     >
                       <Option
@@ -206,9 +220,6 @@
               </tr>
             </tbody>
           </table>
-          <p v-if="keysWeightError" class="weight-error">
-            {{ $t('gatewayConfig.keysWeightSumError') }}
-          </p>
           <Button class="mt20" size="small" type="primary" @click="addKey">
             + {{ $t('gatewayConfig.addKey') }}
           </Button>
@@ -276,6 +287,8 @@
 
 <script>
 import { cloneDeep } from 'lodash';
+
+const SELECT_ALL_MODELS_VALUE = '__SELECT_ALL_MODELS__';
 
 function defaultKeyPolicy() {
     return {
@@ -416,9 +429,11 @@ export default {
         };
 
         return {
-            providers: [],
+            selectAllModelsMarker: SELECT_ALL_MODELS_VALUE,
+            providerNames: [],
+            providerNamesLoading: false,
+            providerDetailLoading: false,
             selectedProvider: null,
-            keysWeightError: false,
             formData: {
                 provider: '',
                 match_prefix: '',
@@ -445,6 +460,14 @@ export default {
         },
         providerKeys() {
             return (this.selectedProvider && this.selectedProvider.keys) || [];
+        },
+        allModelsSelected() {
+            const all = this.providerModels;
+            if (!all.length) {
+                return false;
+            }
+            const selected = this.formData.models || [];
+            return all.every(model => selected.includes(model));
         }
     },
 
@@ -467,27 +490,72 @@ export default {
     },
 
     mounted() {
-        this.fetchProviders();
+        this.fetchProviderNames();
     },
 
     methods: {
-        fetchProviders() {
+        onForwardModelsChange(value) {
+            const selected = value || [];
+            const marker = this.selectAllModelsMarker;
+            if (!selected.includes(marker)) {
+                this.formData.models = selected;
+                return;
+            }
+            this.formData.models = this.providerModels.slice();
+        },
+        fetchProviderNames() {
+            this.providerNamesLoading = true;
             this.$request({
-                url: 'providers',
+                url: 'providers/actions/get-provider-names',
                 method: 'get',
                 openapi: true
-            }).then(res => {
-                if (res.status === 200) {
-                    const data = res.data.Data;
-                    this.providers = Array.isArray(data)
-                        ? data
-                        : (data && data.list) || [];
-                    this.syncSelectedProvider(this.formData.provider);
-                    if (this.formData.provider) {
-                        this.onProviderChange(this.formData.provider);
+            })
+                .then(res => {
+                    if (res.status === 200) {
+                        this.providerNames = (res.data.Data && res.data.Data.names) || [];
+                        if (this.formData.provider) {
+                            this.loadProviderDetail(this.formData.provider);
+                        }
                     }
-                }
-            });
+                })
+                .finally(() => {
+                    this.providerNamesLoading = false;
+                });
+        },
+        loadProviderDetail(name) {
+            if (!name) {
+                this.selectedProvider = null;
+                return Promise.resolve();
+            }
+            this.providerDetailLoading = true;
+            return this.$request({
+                url: this.$urlFormat('providers/{provider_name}', {
+                    provider_name: name
+                }),
+                method: 'get',
+                openapi: true
+            })
+                .then(res => {
+                    if (this.formData.provider !== name) {
+                        return;
+                    }
+                    if (res.status === 200 && res.data.Data) {
+                        this.selectedProvider = res.data.Data;
+                        this.syncFormWithProvider();
+                    } else {
+                        this.selectedProvider = null;
+                    }
+                })
+                .catch(() => {
+                    if (this.formData.provider === name) {
+                        this.selectedProvider = null;
+                    }
+                })
+                .finally(() => {
+                    if (this.formData.provider === name) {
+                        this.providerDetailLoading = false;
+                    }
+                });
         },
         applyLlmConfig(val) {
             const src = val || {};
@@ -510,17 +578,13 @@ export default {
                 ...defaultKeyPolicy(),
                 ...(src.key_policy || {})
             };
-            this.syncSelectedProvider(this.formData.provider);
-            if (this.providers.length && this.formData.provider) {
-                this.onProviderChange(this.formData.provider);
+            if (this.formData.provider) {
+                this.loadProviderDetail(this.formData.provider);
+            } else {
+                this.selectedProvider = null;
             }
         },
-        syncSelectedProvider(name) {
-            this.selectedProvider =
-                this.providers.find(item => item.name === name) || null;
-        },
-        onProviderChange(name) {
-            this.syncSelectedProvider(name);
+        syncFormWithProvider() {
             const allowedModels = this.providerModels;
             this.formData.models = (this.formData.models || []).filter(
                 item => allowedModels.indexOf(item) !== -1
@@ -534,6 +598,16 @@ export default {
                 this.formData.keys = [{ name: '', weight: 100 }];
             }
             this.validateKeysState();
+        },
+        onProviderChange(name) {
+            if (!name) {
+                this.selectedProvider = null;
+                this.formData.models = [];
+                this.formData.keys = [{ name: '', weight: 100 }];
+                this.validateKeysState();
+                return;
+            }
+            this.loadProviderDetail(name);
         },
         changeMappingSource(index, value) {
             this.formData.model_mappings[index].source_model = value;
@@ -583,18 +657,14 @@ export default {
             ];
         },
         validateKeysState() {
-            const keys = (this.formData.keys || []).filter(item => String(item.name || '').trim());
-            if (!keys.length) {
-                this.keysWeightError = false;
-                return;
+            if (this.$refs.formData) {
+                this.$refs.formData.validateField('keys');
             }
-            const sum = keys.reduce((total, item) => total + (Number(item.weight) || 0), 0);
-            this.keysWeightError = sum !== 100;
         },
         handleSubmit() {
             this.validateKeysState();
             this.$refs.formData.validate(valid => {
-                if (!valid || this.keysWeightError) {
+                if (!valid) {
                     this.$Message.error(this.$t('com.tipValidateError'));
                     return;
                 }
@@ -671,9 +741,9 @@ table {
     }
 }
 
-.weight-error {
-    color: #ed4014;
-    margin-top: 8px;
+.forward-models-select-all {
+    font-weight: 500;
+    color: #2d8cf0;
 }
 
 .inline-form-item {

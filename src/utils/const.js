@@ -60,6 +60,28 @@ export function ProviderNameRegCheck(value) {
   return /^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,62}[a-zA-Z0-9])?$/.test(value);
 }
 
+export function EntityNameRegCheck(value) {
+  // EntityName: 1-64 chars; lowercase letters, digits, _, -; cannot start/end with _ or -
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+  if (/\s/.test(value)) {
+    return false;
+  }
+  if (value.length < 1 || value.length > 64) {
+    return false;
+  }
+  return /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/.test(value);
+}
+
+export function RateLimitRuleNameRegCheck(value) {
+  const trimmed = String(value || '').trim();
+  if (trimmed.length < 1 || trimmed.length > 128) {
+    return false;
+  }
+  return /^[a-zA-Z0-9_-]+$/.test(trimmed);
+}
+
 export function BaseClustersNameRegCheck(value) {
   const reg = /^.+$/;
   return reg.test(value);
