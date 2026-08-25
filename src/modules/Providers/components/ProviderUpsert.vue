@@ -1,0 +1,829 @@
+/**
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+<template>
+  <div class="provider-upsert">
+    <Form
+      ref="formData"
+      :model="formData"
+      :rules="ruleValidate"
+      label-position="top"
+    >
+      <Card :title="$t('provider.basicInfo')" class="llm-section-card">
+        <FormItem :label="$t('com.name')" prop="name">
+          <Input v-model="formData.name" :disabled="!isAdd" :maxlength="64" />
+        </FormItem>
+        <FormItem :label="$t('com.desc')" prop="description">
+          <Input v-model="formData.description" :maxlength="256" />
+        </FormItem>
+      </Card>
+
+      <Card :title="$t('instancePool.name')" class="llm-section-card">
+        <InstancePool
+          ref="instancePool"
+          :instancePoolData="instancePoolData"
+          :endpointSchema="formData.model_endpoint.schema"
+          @pool-change="onPoolChange"
+        />
+      </Card>
+
+      <Card :title="$t('gatewayConfig.modelServiceConfig')" class="llm-section-card">
+        <FormItem :label="$t('gatewayConfig.modelProtocol')" prop="model_protocols">
+          <Select v-model="formData.model_protocols" multiple>
+            <Option
+              v-for="item in protocolOptions"
+              :key="item"
+              :value="item"
+            >{{ item }}</Option>
+          </Select>
+        </FormItem>
+        <FormItem :label="$t('gatewayConfig.modelListEndpoint')" prop="model_endpoint">
+          <div class="endpoint-url-group">
+            <Select
+              class="endpoint-protocol"
+              v-model="formData.model_endpoint.schema"
+            >
+              <Option value="https">https://</Option>
+              <Option value="http">http://</Option>
+            </Select>
+            <span class="endpoint-host" :title="endpointHostDisplay">
+              {{ endpointHostDisplay || $t('provider.instanceHostPlaceholder') }}
+            </span>
+            <Input
+              class="endpoint-uri"
+              v-model="formData.model_endpoint.uri"
+              placeholder="/v1/models"
+            />
+          </div>
+        </FormItem>
+      </Card>
+
+      <Card :title="$t('gatewayConfig.serviceAuthKeys')" class="llm-section-card">
+        <FormItem prop="keys">
+          <table class="keys-table">
+            <thead>
+              <tr>
+                <th>{{ $t('gatewayConfig.keyName') }}</th>
+                <th>{{ $t('gatewayConfig.keyValue') }}</th>
+                <th style="width: 80px;">{{ $t('com.operation') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(keyItem, index) in formData.keys" :key="`key-${index}`">
+                <td>
+                  <FormItem
+                    :prop="`keys.${index}.name`"
+                    :rules="keyNameRules(index)"
+                    class="inline-form-item"
+                  >
+                    <Input
+                      v-model="keyItem.name"
+                      :placeholder="$t('gatewayConfig.keyNamePlaceholder')"
+                    />
+                  </FormItem>
+                </td>
+                <td>
+                  <FormItem
+                    :prop="`keys.${index}.key`"
+                    :rules="keyValueRules(index)"
+                    class="inline-form-item"
+                  >
+                    <Input
+                      v-model="keyItem.key"
+                      :placeholder="keyPlaceholder(keyItem)"
+                      autocomplete="new-password"
+                      @on-focus="onKeyFocus(index)"
+                      @on-change="onKeyChange(index)"
+                    />
+                  </FormItem>
+                </td>
+                <td>
+                  <Button type="error" size="small" @click="removeKey(index)">
+                    {{ $t('com.del') }}
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="hasExistingKey" class="form-tip">
+            {{ $t('gatewayConfig.serviceAuthKeyEditTip') }}
+          </p>
+          <Button class="mt20" size="small" type="primary" @click="addKey">
+            + {{ $t('gatewayConfig.addKey') }}
+          </Button>
+        </FormItem>
+      </Card>
+
+      <Card class="llm-section-card">
+        <p slot="title" class="field-label">
+          {{ $t('provider.modelList') }}
+          <Tooltip placement="top" transfer max-width="360">
+            <div slot="content" class="field-tip-content">
+              {{ $t('provider.modelsListTip') }}
+            </div>
+            <Icon type="ios-help-circle-outline" class="field-help-icon" />
+          </Tooltip>
+        </p>
+        <FormItem prop="models">
+          <div class="models-row">
+            <el-select
+              v-model="formData.models"
+              style="flex: 1;"
+              size="small"
+              multiple
+              clearable
+              filterable
+              allow-create
+              default-first-option
+              :placeholder="modelsSelectPlaceholder"
+            >
+              <el-option
+                v-for="item in modelsList"
+                :key="item"
+                :value="item"
+                :label="item"
+              />
+            </el-select>
+            <Tooltip
+              v-if="!isAdd"
+              placement="top"
+              transfer
+              max-width="320"
+              :disabled="canDiscoverModels"
+            >
+              <div slot="content">{{ discoverDisabledTip }}</div>
+              <span class="discover-btn-wrap">
+                <Button
+                  type="primary"
+                  :loading="discoverLoading"
+                  :disabled="!canDiscoverModels"
+                  @click="confirmDiscoverModels"
+                >{{ $t('provider.syncModels') }}</Button>
+              </span>
+            </Tooltip>
+          </div>
+          <div class="models-add-row">
+            <Input
+              v-model="modelInput"
+              :placeholder="$t('provider.manualModelPlaceholder')"
+              @on-enter="addModel"
+            />
+            <Button size="small" @click="addModel">
+              {{ $t('provider.addModel') }}
+            </Button>
+          </div>
+          <p class="form-tip">{{ modelsSelectPlaceholder }}</p>
+        </FormItem>
+      </Card>
+    </Form>
+
+    <div class="com-btn-box drawer-footer">
+      <Button type="primary" size="small" @click="handleSubmit">{{ $t('com.submit') }}</Button>
+    </div>
+  </div>
+</template>
+
+<script>
+import { cloneDeep } from 'lodash';
+import { ProviderNameRegCheck, maskSecretKey } from '@/utils/const';
+import InstancePool, {
+    formatInstancePoolForApi,
+    getInstanceEndpointHosts,
+    syncInstancePoolPortBySchema
+} from '@/modules/Clusters/components/InstancePool';
+
+const PROTOCOL_OPTIONS = ['openai', 'anthropic'];
+
+export default {
+    name: 'ProviderUpsert',
+
+    components: { InstancePool },
+
+    props: {
+        currentProvider: {
+            type: Object,
+            default() {
+                return {};
+            }
+        },
+        providerNames: {
+            type: Array,
+            default() {
+                return [];
+            }
+        },
+        isAdd: {
+            type: Boolean,
+            default: true
+        }
+    },
+
+    data() {
+        const that = this;
+        const validateName = (rule, value, callback) => {
+            if (!value) {
+                callback(new Error(that.$t('com.tipEnterX', { obj: that.$t('com.name') })));
+                return;
+            }
+            if (!ProviderNameRegCheck(value)) {
+                callback(new Error(that.$t('provider.tipNameRule')));
+                return;
+            }
+            if (that.isAdd && (that.providerNames || []).indexOf(value) !== -1) {
+                callback(new Error(that.$t('com.tipAlreadyExistsX', { obj: that.$t('com.name') })));
+                return;
+            }
+            callback();
+        };
+        const validateDescription = (rule, value, callback) => {
+            if (!value) {
+                callback();
+                return;
+            }
+            if (value.length > 256) {
+                callback(new Error(that.$t('cluster.descriptionLengthError')));
+                return;
+            }
+            if (/[\x00-\x1F\x7F]/.test(value)) {
+                callback(new Error(that.$t('cluster.descriptionControlCharsError')));
+                return;
+            }
+            callback();
+        };
+        const validateProtocols = (rule, value, callback) => {
+            if (!value || !value.length) {
+                callback(new Error(that.$t('provider.protocolRequired')));
+                return;
+            }
+            const invalid = value.some(item => PROTOCOL_OPTIONS.indexOf(item) === -1);
+            if (invalid) {
+                callback(new Error(that.$t('provider.protocolInvalid')));
+                return;
+            }
+            callback();
+        };
+        const validateEndpoint = (rule, value, callback) => {
+            const endpoint = value || {};
+            const uri = endpoint.uri || '';
+            if (uri && uri.charAt(0) !== '/') {
+                callback(new Error(that.$t('gatewayConfig.uriMustStartWithSlash')));
+                return;
+            }
+            callback();
+        };
+        const validateKeys = (rule, value, callback) => {
+            const keys = (value || []).filter(item =>
+                String(item.name || '').trim() ||
+                String(item.key || '').trim() ||
+                String(item.originalKey || '').trim()
+            );
+            const names = {};
+            for (let i = 0; i < keys.length; i++) {
+                const name = String(keys[i].name || '').trim();
+                const key = that.resolveKeyValue(keys[i]);
+                if (!name) {
+                    callback(new Error(that.$t('gatewayConfig.keyNameRequired')));
+                    return;
+                }
+                if (name.length > 128) {
+                    callback(new Error(that.$t('gatewayConfig.keyNameTooLong')));
+                    return;
+                }
+                if (!key) {
+                    callback(new Error(that.$t('gatewayConfig.keyValueRequired')));
+                    return;
+                }
+                if (key.length > 512) {
+                    callback(new Error(that.$t('gatewayConfig.keyValueTooLong')));
+                    return;
+                }
+                if (names[name]) {
+                    callback(new Error(that.$t('gatewayConfig.keyNameDuplicate')));
+                    return;
+                }
+                names[name] = true;
+            }
+            callback();
+        };
+
+        return {
+            protocolOptions: PROTOCOL_OPTIONS,
+            discoverLoading: false,
+            instancePoolData: [],
+            livePool: [],
+            modelsList: [],
+            modelInput: '',
+            formData: {
+                name: '',
+                description: '',
+                model_protocols: ['openai'],
+                model_endpoint: {
+                    schema: 'https',
+                    uri: '/v1/models'
+                },
+                models: [],
+                keys: [{ name: '', key: '', originalKey: '', keyModified: false }]
+            },
+            ruleValidate: {
+                name: [{ required: true, validator: validateName, trigger: 'blur' }],
+                description: [{ validator: validateDescription, trigger: 'blur' }],
+                model_protocols: [{ validator: validateProtocols, trigger: 'change', required: true }],
+                model_endpoint: [{ validator: validateEndpoint, trigger: 'blur' }],
+                keys: [{ validator: validateKeys, trigger: 'change' }]
+            }
+        };
+    },
+
+    computed: {
+        endpointHostDisplay() {
+            const pool = this.livePool.length ? this.livePool : this.instancePoolData;
+            const schema = this.formData.model_endpoint.schema;
+            const hosts = getInstanceEndpointHosts(syncInstancePoolPortBySchema(pool, schema));
+            return hosts[0] || '';
+        },
+        savedDiscoverSource() {
+            return this.currentProvider || {};
+        },
+        hasSavedDiscoverAuthKey() {
+            return ((this.savedDiscoverSource.keys) || []).some(
+                item => String((item && item.key) || '').trim()
+            );
+        },
+        hasSavedInstance() {
+            return ((this.savedDiscoverSource.instance_pool) || []).some(
+                item => String((item && item.addr) || '').trim()
+            );
+        },
+        hasSavedProtocols() {
+            return ((this.savedDiscoverSource.model_protocols) || []).length > 0;
+        },
+        discoverConfigDirty() {
+            return this.buildDiscoverFingerprint(this.savedDiscoverSource, this.savedDiscoverSource.instance_pool)
+                !== this.buildDiscoverFingerprint({
+                    model_protocols: this.formData.model_protocols,
+                    model_endpoint: this.formData.model_endpoint,
+                    keys: this.formKeysForCompare()
+                }, this.livePool.length ? this.livePool : this.instancePoolData);
+        },
+        canDiscoverModels() {
+            return !this.isAdd
+                && String(this.formData.name || '').trim() !== ''
+                && this.hasSavedDiscoverAuthKey
+                && this.hasSavedInstance
+                && this.hasSavedProtocols
+                && !this.discoverConfigDirty;
+        },
+        discoverDisabledTip() {
+            if (!this.hasSavedDiscoverAuthKey) {
+                return this.$t('provider.discoverNeedKey');
+            }
+            if (!this.hasSavedInstance) {
+                return this.$t('provider.discoverNeedInstance');
+            }
+            if (!this.hasSavedProtocols) {
+                return this.$t('provider.discoverNeedProtocol');
+            }
+            if (this.discoverConfigDirty) {
+                return this.$t('provider.discoverNeedSubmit');
+            }
+            return this.$t('provider.discoverNeedSave');
+        },
+        modelsSelectPlaceholder() {
+            return this.isAdd
+                ? this.$t('provider.modelsHintCreate')
+                : this.$t('provider.modelsHint');
+        },
+        hasExistingKey() {
+            return (this.formData.keys || []).some(item => String(item.originalKey || '').trim());
+        }
+    },
+
+    watch: {
+        currentProvider: {
+            handler(val) {
+                this.applyProvider(val);
+            },
+            immediate: true,
+            deep: true
+        }
+    },
+
+    methods: {
+        applyProvider(row) {
+            const data = row || {};
+            this.formData = {
+                name: data.name || '',
+                description: data.description || '',
+                model_protocols: (data.model_protocols && data.model_protocols.length)
+                    ? data.model_protocols.slice()
+                    : ['openai'],
+                model_endpoint: {
+                    schema: (data.model_endpoint && data.model_endpoint.schema) || 'https',
+                    uri: (data.model_endpoint && data.model_endpoint.uri) || '/v1/models'
+                },
+                models: (data.models || []).slice(),
+                keys: data.keys && data.keys.length
+                    ? data.keys.map(item => this.decorateKey(item))
+                    : [this.emptyKey()]
+            };
+            this.modelsList = (data.models || []).slice();
+            this.modelInput = '';
+            this.instancePoolData = data.instance_pool && data.instance_pool.length
+                ? cloneDeep(data.instance_pool)
+                : [];
+            this.livePool = this.instancePoolData.slice();
+        },
+        onPoolChange(pool) {
+            this.livePool = pool || [];
+        },
+        emptyKey() {
+            return { name: '', key: '', originalKey: '', keyModified: false };
+        },
+        decorateKey(item) {
+            const originalKey = String((item && item.key) || '');
+            return {
+                name: (item && item.name) || '',
+                originalKey,
+                keyModified: false,
+                key: originalKey ? maskSecretKey(originalKey) : ''
+            };
+        },
+        isKeyUnchanged(item) {
+            const originalKey = String((item && item.originalKey) || '');
+            const display = String((item && item.key) || '').trim();
+            if (!originalKey) {
+                return !display;
+            }
+            if (!(item && item.keyModified)) {
+                return true;
+            }
+            return !display || display === originalKey || display === maskSecretKey(originalKey);
+        },
+        resolveKeyValue(item) {
+            if (this.isKeyUnchanged(item)) {
+                return String((item && item.originalKey) || '').trim();
+            }
+            return String((item && item.key) || '').trim();
+        },
+        keyPlaceholder(item) {
+            return String((item && item.originalKey) || '').trim()
+                ? this.$t('gatewayConfig.serviceAuthKeyEditTip')
+                : this.$t('gatewayConfig.keyValuePlaceholder');
+        },
+        onKeyFocus(index) {
+            const item = this.formData.keys[index];
+            if (!item || item.keyModified || !item.originalKey) {
+                return;
+            }
+            if (item.key === maskSecretKey(item.originalKey)) {
+                item.key = '';
+                item.keyModified = true;
+            }
+        },
+        onKeyChange(index) {
+            const item = this.formData.keys[index];
+            if (!item) {
+                return;
+            }
+            if (item.originalKey && !item.keyModified) {
+                if (String(item.key || '') !== maskSecretKey(item.originalKey)) {
+                    item.keyModified = true;
+                }
+            } else if (!item.originalKey && String(item.key || '').trim()) {
+                item.keyModified = true;
+            }
+            this.$nextTick(() => {
+                if (this.$refs.formData) {
+                    this.$refs.formData.validateField(`keys.${index}.key`);
+                }
+            });
+        },
+        keyNameRules(index) {
+            const item = this.formData.keys[index] || {};
+            const hasContent =
+                String(item.name || '').trim() ||
+                String(item.key || '').trim() ||
+                String(item.originalKey || '').trim();
+            return [
+                {
+                    required: !!hasContent,
+                    message: this.$t('gatewayConfig.keyNameRequired'),
+                    trigger: 'blur'
+                }
+            ];
+        },
+        keyValueRules(index) {
+            const item = this.formData.keys[index] || {};
+            if (this.isKeyUnchanged(item) && item.originalKey) {
+                return [];
+            }
+            const hasContent =
+                String(item.name || '').trim() ||
+                String(item.key || '').trim() ||
+                String(item.originalKey || '').trim();
+            return [
+                {
+                    required: !!hasContent,
+                    message: this.$t('gatewayConfig.keyValueRequired'),
+                    trigger: 'blur'
+                }
+            ];
+        },
+        addKey() {
+            this.formData.keys.push(this.emptyKey());
+        },
+        removeKey(index) {
+            this.formData.keys.splice(index, 1);
+            if (!this.formData.keys.length) {
+                this.formData.keys.push(this.emptyKey());
+            }
+        },
+        addModel() {
+            const value = String(this.modelInput || '').trim();
+            if (!value) {
+                return;
+            }
+            if (this.modelsList.indexOf(value) === -1) {
+                this.modelsList.push(value);
+            }
+            if (this.formData.models.indexOf(value) === -1) {
+                this.formData.models.push(value);
+            }
+            this.modelInput = '';
+        },
+        formKeysForCompare() {
+            return (this.formData.keys || []).map(item => ({
+                name: String((item && item.name) || '').trim(),
+                key: this.resolveKeyValue(item)
+            }));
+        },
+        buildDiscoverFingerprint(source, pool) {
+            const data = source || {};
+            const endpoint = data.model_endpoint || {};
+            const schema = endpoint.schema || 'https';
+            const uri = endpoint.uri || '/v1/models';
+            const protocols = (data.model_protocols || []).join(',');
+            const keys = (data.keys || [])
+                .map(item => ({
+                    name: String((item && item.name) || '').trim(),
+                    key: String((item && item.key) || '').trim()
+                }))
+                .filter(item => item.name || item.key)
+                .map(item => `${item.name}\t${item.key}`)
+                .join('\n');
+            const instances = formatInstancePoolForApi(pool || [], schema)
+                .filter(item => String(item.addr || '').trim())
+                .map(item => `${item.addr}|${item.port}|${item.weight}`)
+                .join('\n');
+            return [protocols, schema, uri, keys, instances].join('||');
+        },
+        confirmDiscoverModels() {
+            if (!this.canDiscoverModels) {
+                this.$Message.warning(this.discoverDisabledTip);
+                return;
+            }
+            this.$Modal.confirm({
+                title: this.$t('com.informationTips'),
+                content: this.$t('provider.syncModelsConfirm'),
+                onOk: () => {
+                    this.discoverModels();
+                }
+            });
+        },
+        discoverModels() {
+            const name = String(this.formData.name || '').trim();
+            if (!this.canDiscoverModels || !name) {
+                this.$Message.warning(this.discoverDisabledTip);
+                return;
+            }
+            this.discoverLoading = true;
+            this.$request({
+                url: this.$urlFormat('providers/{provider_name}/discover-models', {
+                    provider_name: name
+                }),
+                method: 'post',
+                openapi: true
+            })
+                .then(res => {
+                    if (res.status === 200) {
+                        const discovered = ((res.data.Data && res.data.Data.models) || [])
+                            .filter(Boolean);
+                        this.formData.models = discovered.slice();
+                        this.modelsList = discovered.slice();
+                        this.$Message.success({
+                            content: this.$t('provider.syncModelsSucc', { count: discovered.length })
+                        });
+                        this.$emit('models-synced', discovered);
+                    }
+                })
+                .finally(() => {
+                    this.discoverLoading = false;
+                });
+        },
+        buildPayload(instances) {
+            const keys = (this.formData.keys || [])
+                .map(item => ({
+                    name: String(item.name || '').trim(),
+                    key: this.resolveKeyValue(item)
+                }))
+                .filter(item => item.name || item.key);
+            const models = Array.from(new Set((this.formData.models || []).filter(Boolean)));
+            const schema = this.formData.model_endpoint.schema || 'https';
+            return {
+                name: String(this.formData.name || '').trim(),
+                description: this.formData.description || '',
+                model_protocols: (this.formData.model_protocols || []).slice(),
+                model_endpoint: {
+                    schema,
+                    uri: this.formData.model_endpoint.uri || '/v1/models'
+                },
+                models,
+                keys,
+                instance_pool: formatInstancePoolForApi(instances, schema)
+            };
+        },
+        handleSubmit() {
+            this.$refs.formData.validate(valid => {
+                if (!valid) {
+                    this.$Message.error(this.$t('com.tipValidateError'));
+                    return;
+                }
+                const poolRef = this.$refs.instancePool;
+                if (!poolRef || typeof poolRef.validateAndExport !== 'function') {
+                    return;
+                }
+                poolRef.validateAndExport()
+                    .then(instances => {
+                        const payload = this.buildPayload(instances);
+                        const req = this.isAdd
+                            ? {
+                                url: 'providers',
+                                method: 'post',
+                                data: payload,
+                                openapi: true
+                            }
+                            : {
+                                url: this.$urlFormat('providers/{provider_name}', {
+                                    provider_name: this.formData.name
+                                }),
+                                method: 'patch',
+                                data: payload,
+                                openapi: true
+                            };
+                        return this.$request(req);
+                    })
+                    .then(res => {
+                        if (res && res.status === 200) {
+                            this.$Message.success({ content: this.$t('com.tipSubmitSucc') });
+                            this.$emit('submit');
+                        }
+                    })
+                    .catch(() => {});
+            });
+        }
+    }
+};
+</script>
+
+<style lang="less" scoped>
+.llm-section-card {
+    margin-bottom: 16px;
+
+    /deep/ .ivu-card-head p {
+        font-size: 13px;
+    }
+}
+
+.endpoint-url-group {
+    display: flex;
+    align-items: center;
+    max-width: 680px;
+    border: 1px solid #dcdee2;
+    border-radius: 4px;
+    overflow: hidden;
+
+    .endpoint-protocol {
+        width: 96px;
+        border-right: 1px solid #dcdee2;
+        flex-shrink: 0;
+
+        /deep/ .ivu-select-selection {
+            border: none;
+            border-radius: 0;
+        }
+    }
+
+    .endpoint-host {
+        min-width: 120px;
+        padding: 0 8px;
+        color: #909399;
+        background: #f5f5f5;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 30px;
+        cursor: not-allowed;
+        flex: 1;
+    }
+
+    .endpoint-uri {
+        width: 180px;
+        flex-shrink: 0;
+        border-left: 1px solid #dcdee2;
+
+        /deep/ .ivu-input {
+            border: none;
+            border-radius: 0;
+        }
+    }
+}
+
+.field-label {
+    display: inline-flex;
+    align-items: center;
+}
+
+.field-help-icon {
+    margin-left: 4px;
+    font-size: 16px;
+    color: #2d8cf0;
+    vertical-align: middle;
+    cursor: help;
+}
+
+.field-tip-content {
+    max-width: 360px;
+    white-space: normal;
+    line-height: 1.5;
+}
+
+.models-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.discover-btn-wrap {
+    display: inline-block;
+}
+
+.models-add-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.keys-table {
+    width: 100%;
+    margin-top: 0;
+    font-size: 14px;
+    border-top: 1px solid #e7e9f0;
+    border-left: 1px solid #e7e9f0;
+    border-collapse: collapse;
+
+    td,
+    th {
+        border-bottom: 1px solid #e7e9f0;
+        border-right: 1px solid #e7e9f0;
+        padding: 10px;
+        text-align: left;
+    }
+
+    th {
+        background-color: #f8f8f9;
+        font-size: 13px;
+    }
+}
+
+.inline-form-item {
+    margin-bottom: 0;
+}
+
+.mt20 {
+    margin-top: 20px;
+}
+
+.form-tip {
+    margin-top: 8px;
+    color: #808695;
+    font-size: 12px;
+    line-height: 18px;
+}
+
+.com-btn-box {
+    margin-top: 16px;
+}
+</style>

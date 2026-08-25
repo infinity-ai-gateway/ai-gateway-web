@@ -1014,33 +1014,59 @@ body {
   font-size: 12px;
 }
 
-/* 模型列表接口 - endpoint host 灰底样式 */
+/* 模型列表接口：协议 + 实例地址:端口 + URI 拼接输入 */
 .gateway-config .endpoint-url-group {
   display: flex;
   align-items: stretch;
-  gap: 0;
+  height: 32px;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
 }
 .gateway-config .endpoint-url-group .endpoint-protocol {
-  width: 90px;
+  width: 108px;
   flex-shrink: 0;
+  height: 32px;
+  border: 0;
+  border-right: 1px solid #dcdee2;
+  padding: 0 24px 0 10px;
+  background: #f0faff;
+  color: #2d8cf0;
+  font-size: 13px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%232d8cf0'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
 }
 .gateway-config .endpoint-url-group .endpoint-host {
-  flex: 1;
-  border: 1px solid #dcdee2;
-  border-left: 0;
-  border-right: 0;
+  flex: 0 1 200px;
+  min-width: 140px;
+  max-width: 260px;
+  border: 0;
+  border-right: 1px solid #dcdee2;
   padding: 0 10px;
   background: #f8f8f9;
   font-size: 13px;
   color: #515a6e;
-  line-height: 30px;
+  line-height: 32px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.gateway-config .endpoint-url-group .endpoint-uri {
+  flex: 1;
+  min-width: 120px;
+  height: 32px;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
 .gateway-config .endpoint-url-group .ivu-input-wrapper {
-  width: 180px;
-  flex-shrink: 0;
+  display: none;
 }
 
 /* GatewayConfig Card 间距 */
@@ -1070,6 +1096,64 @@ body {
 }
 .gateway-config .llm-card-body {
   padding: 16px;
+}
+.gateway-config .proto-protocol-select {
+  position: relative;
+  width: 100%;
+}
+.gateway-config .proto-protocol-select .ivu-select-selection {
+  min-height: 32px;
+  padding: 2px 24px 2px 4px;
+  cursor: pointer;
+}
+.gateway-config .proto-protocol-select .ivu-select-placeholder {
+  color: #c5c8ce;
+  line-height: 26px;
+  padding-left: 4px;
+}
+.gateway-config .proto-protocol-select .ivu-tag {
+  margin: 2px 4px 2px 0;
+}
+.gateway-config .proto-protocol-select .ivu-select-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  margin-top: -7px;
+  color: #808695;
+}
+.gateway-config .proto-protocol-select.ivu-select-disabled .ivu-select-selection {
+  cursor: not-allowed;
+  background: #f3f3f3;
+  color: #c5c8ce;
+}
+.gateway-config .proto-protocol-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 900;
+  width: 100%;
+  margin-top: 2px;
+  background: #fff;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  max-height: 180px;
+  overflow: auto;
+  white-space: normal;
+}
+.gateway-config .proto-protocol-dropdown .ivu-select-item {
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.gateway-config .proto-protocol-dropdown .ivu-select-item:hover,
+.gateway-config .proto-protocol-dropdown .ivu-select-item-selected {
+  background: #f3f3f3;
+  color: #2d8cf0;
+}
+.gateway-config .proto-protocol-remove {
+  margin-left: 4px;
+  cursor: pointer;
 }
 
 /* 表单帮助图标 (?) */
@@ -1651,6 +1735,32 @@ body {
 }
 #model-price-drawer .proto-kv-table .info-value {
   padding: 8px 12px;
+}
+
+/* 服务商详情：只读展示，对齐模型定价详情 */
+.provider-detail .info-row {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.provider-detail .info-row:last-child {
+  border-bottom: none;
+}
+.provider-detail .info-label {
+  width: 120px;
+  flex-shrink: 0;
+  color: #666;
+}
+.provider-detail .info-value {
+  flex: 1;
+  color: #333;
+  word-break: break-all;
+}
+.provider-detail .ivu-tag {
+  margin: 2px 4px 2px 0;
+}
+.provider-detail .mapping-table {
+  margin-top: 4px;
 }
 #model-price-drawer .ivu-drawer-footer {
   flex-shrink: 0;

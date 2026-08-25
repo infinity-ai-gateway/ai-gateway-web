@@ -24,6 +24,8 @@
         pageSize: 20,
         searchParams: {},
         filtered: [],
+        sortKey: '',
+        sortOrder: '',
         isView: false,
         currentData: null,
         drawerVisible: false,
@@ -34,11 +36,10 @@
       };
 
       function getProviderOptions() {
-        var providers = {};
-        MockData.modelPrices.forEach(function (item) {
-          providers[item.provider] = item.provider;
-        });
-        return Object.keys(providers).map(function (p) { return { value: p, label: p }; });
+        var names = MockData.getModelPriceProviders
+          ? MockData.getModelPriceProviders()
+          : [];
+        return names.map(function (p) { return { value: p, label: p }; });
       }
 
       function applyFilter() {
@@ -47,8 +48,10 @@
           if (sp.provider && item.provider !== sp.provider) return false;
           if (sp.model && item.model.toLowerCase().indexOf(sp.model.toLowerCase()) === -1) return false;
           if (sp.mode && item.mode !== sp.mode) return false;
+          if (sp.base_model && String(item.base_model || '').toLowerCase().indexOf(String(sp.base_model).toLowerCase()) === -1) return false;
           return true;
         });
+        state.filtered = Prototype.sortRows(state.filtered, state.sortKey, state.sortOrder);
       }
 
       function getPageData() {
@@ -66,7 +69,7 @@
           { key: 'provider', title: '提供商', sortable: true, searchable: true, searchType: 'select', searchFilters: providerOptions },
           { key: 'model', title: '模型名', sortable: true, searchable: true },
           { key: 'mode', title: '模型模式', sortable: true, searchable: true, searchType: 'select', searchFilters: modeOptions },
-          { key: 'base_model', title: '归一化模型名', sortable: true },
+          { key: 'base_model', title: '归一化模型名', sortable: true, searchable: true, searchPlaceholder: '请输入归一化模型名查询' },
           {
             key: 'operation', title: '操作', width: 240,
             render: function (row) {
@@ -163,6 +166,7 @@
           state.page = 1;
           renderTable();
         });
+        Prototype.bindPageTableSort(root, state, renderTable);
 
         root.querySelectorAll('.proto-page-size').forEach(function (sel) {
           sel.onchange = function () {

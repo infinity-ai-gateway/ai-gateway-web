@@ -22,389 +22,274 @@
       :rules="ruleValidate"
       @submit.native.prevent
     >
-      <div>
-        <Card
-          :title="$t('gatewayConfig.modelServiceConfig')"
-          class="llm-section-card"
-        >
-          <FormItem prop="provider_type">
-            <span slot="label" class="provider-label">
-              {{ $t('gatewayConfig.modelServiceProvider') }}
-              <Tooltip placement="top" transfer max-width="320">
-                <div slot="content" class="provider-tip-content">
-                  {{ $t('gatewayConfig.providerTypeTip') }}
-                </div>
-                <Icon
-                  type="ios-help-circle-outline"
-                  class="provider-help-icon"
-                />
-              </Tooltip>
-            </span>
-            <Select v-model="formData.provider_type">
-              <Option v-for="item in providers" :value="item.id" :key="item.id">
-                {{ item.name }}
-              </Option>
-            </Select>
-          </FormItem>
-          <FormItem prop="provider">
-            <span slot="label" class="provider-label">
-              {{ $t('gatewayConfig.provider') }}
-              <Tooltip placement="top" transfer max-width="320">
-                <div slot="content" class="provider-tip-content">
-                  {{ $t('gatewayConfig.providerTip') }}
-                </div>
-                <Icon
-                  type="ios-help-circle-outline"
-                  class="provider-help-icon"
-                />
-              </Tooltip>
-            </span>
-            <Input v-model="formData.provider" />
-          </FormItem>
-          <FormItem prop="strip_prefix">
-            <span slot="label" class="provider-label">
-              {{ $t('gatewayConfig.stripPrefix') }}
-              <Tooltip placement="top" transfer max-width="320">
-                <div slot="content" class="provider-tip-content">
-                  {{ $t('gatewayConfig.stripPrefixTip') }}
-                </div>
-                <Icon
-                  type="ios-help-circle-outline"
-                  class="provider-help-icon"
-                />
-              </Tooltip>
-            </span>
-            <i-switch v-model="formData.strip_prefix" />
-          </FormItem>
-          <FormItem v-if="formData.strip_prefix" prop="match_prefix">
-            <span slot="label" class="provider-label">
-              {{ $t('gatewayConfig.matchPrefix') }}
-              <Tooltip placement="top" transfer max-width="320">
-                <div slot="content" class="provider-tip-content">
-                  {{ $t('gatewayConfig.matchPrefixTip') }}
-                </div>
-                <Icon
-                  type="ios-help-circle-outline"
-                  class="provider-help-icon"
-                />
-              </Tooltip>
-            </span>
-            <Input
-              v-model="formData.match_prefix"
-              :placeholder="$t('gatewayConfig.matchPrefixPlaceholder')"
-            />
-          </FormItem>
-          <FormItem
-            :label="$t('gatewayConfig.modelListEndpoint')"
-            prop="model_endpoint"
-          >
-            <div class="endpoint-url-group">
-              <Select
-                class="endpoint-protocol"
-                v-model="formData.model_endpoint.schema"
-              >
-                <Option value="http">http://</Option>
-                <Option value="https">https://</Option>
-              </Select>
-              <span
-                class="endpoint-host"
-                :title="endpointHostDisplay"
-                >{{ endpointHostDisplay }}</span
-              >
-              <Input
-                class="endpoint-uri"
-                v-model="formData.model_endpoint.uri"
-              />
-            </div>
-            <Button
-              type="primary"
-              style="margin-top: 14px; margin-bottom: 14px;"
-              @click="addHeader"
-              size="small"
-              >+{{ $t('com.createX', { obj: 'Header' }) }}</Button
-            >
-            <div class="header-controls">
-              <div
-                v-for="(header, index) in headerList"
-                :key="index"
-                class="header-pair"
-              >
-                <Input
-                  class="header-input"
-                  v-model="header.key"
-                  placeholder="Header Key"
-                  @on-change="onHeaderKeyChange(header)"
-                />
-                <span class="header-separator">:</span>
-                <Input
-                  class="header-input"
-                  v-model="header.value"
-                  placeholder="Header Value"
-                  autocomplete="new-password"
-                  @on-focus="onHeaderValueFocus(header)"
-                  @on-change="onHeaderValueChange(header)"
-                />
-                <Button type="error" @click="removeHeader(index)" size="small"
-                  >-</Button
-                >
+      <Card
+        :title="$t('gatewayConfig.modelServiceConfig')"
+        class="llm-section-card"
+      >
+        <FormItem prop="provider">
+          <span slot="label" class="provider-label">
+            {{ $t('gatewayConfig.ownedProvider') }}
+            <Tooltip placement="top" transfer max-width="320">
+              <div slot="content" class="provider-tip-content">
+                {{ $t('gatewayConfig.ownedProviderTip') }}
               </div>
-            </div>
-          </FormItem>
-          <FormItem :label="$t('apiKey.models')" prop="models">
-            <el-select
-              v-model="formData.models"
-              style="width: 487px;"
-              size="small"
-              multiple
-              clearable
-              filterable
-              @change="onModelsChange"
-            >
-              <el-option
-                v-for="item in modelsList"
-                :value="item.id"
-                :key="item.id"
-                :label="item.id"
+              <Icon type="ios-help-circle-outline" class="provider-help-icon" />
+            </Tooltip>
+          </span>
+          <el-select v-model="formData.provider" filterable size="small"  @change="onProviderChange">
+            <el-option
+              v-for="item in providers"
+              :key="item.name"
+              :label="item.name"
+              :value="item.name"
+            />
+          </el-select>
+        </FormItem>
+        <FormItem prop="models">
+          <span slot="label" class="provider-label">
+            {{ $t('gatewayConfig.forwardModels') }}
+            <Tooltip placement="top" transfer max-width="320">
+              <div slot="content" class="provider-tip-content">
+                {{ $t('gatewayConfig.forwardModelsTip') }}
+              </div>
+              <Icon type="ios-help-circle-outline" class="provider-help-icon" />
+            </Tooltip>
+          </span>
+          <el-select
+            v-model="formData.models"
+            style="width: 100%;"
+            size="small"
+            multiple
+            clearable
+            filterable
+            :disabled="!formData.provider"
+          >
+            <el-option
+              v-for="item in providerModels"
+              :key="item"
+              :value="item"
+              :label="item"
+            />
+          </el-select>
+        </FormItem>
+        <FormItem prop="strip_prefix">
+          <span slot="label" class="provider-label">
+            {{ $t('gatewayConfig.stripPrefix') }}
+            <Tooltip placement="top" transfer max-width="320">
+              <div slot="content" class="provider-tip-content">
+                {{ $t('gatewayConfig.stripPrefixTip') }}
+              </div>
+              <Icon type="ios-help-circle-outline" class="provider-help-icon" />
+            </Tooltip>
+          </span>
+          <i-switch v-model="formData.strip_prefix" />
+        </FormItem>
+        <FormItem v-if="formData.strip_prefix" prop="match_prefix">
+          <span slot="label" class="provider-label">
+            {{ $t('gatewayConfig.matchPrefix') }}
+            <Tooltip placement="top" transfer max-width="320">
+              <div slot="content" class="provider-tip-content">
+                {{ $t('gatewayConfig.matchPrefixTip') }}
+              </div>
+              <Icon type="ios-help-circle-outline" class="provider-help-icon" />
+            </Tooltip>
+          </span>
+          <Input
+            v-model="formData.match_prefix"
+            :placeholder="$t('gatewayConfig.matchPrefixPlaceholder')"
+          />
+        </FormItem>
+      </Card>
+
+      <Card :title="$t('gatewayConfig.modelRedirect')" class="llm-section-card">
+        <FormItem prop="model_mappings">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ $t('gatewayConfig.originalModelName') }}</th>
+                <th>{{ $t('gatewayConfig.backendModelName') }}</th>
+                <th>{{ $t('com.operation') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(model, index) in formData.model_mappings"
+                :key="index"
               >
-              </el-option>
-            </el-select>
-            <Button
-              type="primary"
-              :disabled="!endpointHostDisplay || !formData.provider_type"
-              :loading="btnLoading"
-              @click="queryModels"
-              >{{ $t('gatewayConfig.get') }}
-            </Button>
-          </FormItem>
-        </Card>
-        <Card
-          :title="$t('gatewayConfig.modelRedirect')"
-          class="llm-section-card"
-        >
-          <FormItem prop="model_mappings">
-            <table>
-              <thead>
-                <tr>
-                  <th>{{ $t('gatewayConfig.originalModelName') }}</th>
-                  <th>{{ $t('gatewayConfig.backendModelName') }}</th>
-                  <th>{{ $t('com.operation') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(model, index) in formData.model_mappings"
-                  :key="index"
-                >
-                  <td>
-                    <Input
-                      :value="model.source_model"
-                      @on-change="e => changeMappingSource(index, e.target.value)"
-                      :placeholder="$t('gatewayConfig.enterOriginalModelName')"
-                    />
-                  </td>
-                  <td>
+                <td>
+                  <Input
+                    :value="model.source_model"
+                    @on-change="e => changeMappingSource(index, e.target.value)"
+                    :placeholder="$t('gatewayConfig.enterOriginalModelName')"
+                  />
+                </td>
+                <td>
+                  <Select
+                    v-model="model.target_model"
+                    :placeholder="$t('gatewayConfig.selectTargetModel')"
+                    @on-change="value => changeMappingTarget(index, value)"
+                  >
+                    <Option
+                      v-for="(item, idx) in formData.models"
+                      :value="item"
+                      :key="idx"
+                    >{{ item }}</Option>
+                  </Select>
+                </td>
+                <td>
+                  <Button type="error" size="small" @click="removeModelMapping(index)">
+                    {{ $t('com.del') }}
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <Button class="mt20" size="small" type="primary" @click="addModelRedirect">
+            {{ $t('gatewayConfig.add') }}
+          </Button>
+        </FormItem>
+      </Card>
+
+      <Card :title="$t('gatewayConfig.serviceAuthKeys')" class="llm-section-card">
+        <FormItem prop="keys">
+          <table class="keys-table">
+            <thead>
+              <tr>
+                <th>{{ $t('gatewayConfig.providerKey') }}</th>
+                <th style="width: 120px;">{{ $t('gatewayConfig.keyWeight') }}</th>
+                <th style="width: 80px;">{{ $t('com.operation') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(keyItem, index) in formData.keys" :key="`key-${index}`">
+                <td>
+                  <FormItem
+                    :prop="`keys.${index}.name`"
+                    :rules="keyNameRules(index)"
+                    class="inline-form-item"
+                  >
                     <Select
-                      v-model="model.target_model"
-                      :placeholder="$t('gatewayConfig.selectTargetModel')"
-                      @on-change="value => changeMappingTarget(index, value)"
+                      v-model="keyItem.name"
+                      :placeholder="$t('gatewayConfig.providerKeyPlaceholder')"
+                      :disabled="!formData.provider"
+                      @on-change="validateKeysState"
                     >
                       <Option
-                        v-for="(item, idx) in formData.models"
-                        :value="item"
-                        :key="idx"
-                      >
-                        {{ item }}
-                      </Option>
+                        v-for="item in providerKeys"
+                        :key="item.name"
+                        :value="item.name"
+                      >{{ item.name }}</Option>
                     </Select>
-                  </td>
-                  <td>
-                    <Button
-                      type="error"
-                      size="small"
-                      @click="removeModelMapping(index)"
-                      >{{ $t('com.del') }}</Button
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <Button
-              class="mt20"
-              size="small"
-              type="primary"
-              @click="addModelRedirect"
-              >{{
-                          $t('gatewayConfig.add')
-              }}</Button
-            >
-          </FormItem>
-        </Card>
-        <Card
-          :title="$t('gatewayConfig.serviceAuthKeys')"
-          class="llm-section-card"
-        >
-          <FormItem prop="keys">
-            <table class="keys-table">
-              <thead>
-                <tr>
-                  <th>{{ $t('gatewayConfig.keyName') }}</th>
-                  <th>{{ $t('gatewayConfig.keyValue') }}</th>
-                  <th style="width: 120px;">
-                    {{ $t('gatewayConfig.keyWeight') }}
-                  </th>
-                  <th style="width: 80px;">{{ $t('com.operation') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(keyItem, index) in formData.keys"
-                  :key="`key-${index}`"
-                >
-                  <td>
-                    <FormItem
-                      :prop="`keys.${index}.name`"
-                      :rules="keyNameRules(index)"
-                      class="inline-form-item"
-                    >
-                      <Input
-                        v-model="keyItem.name"
-                        :placeholder="$t('gatewayConfig.keyNamePlaceholder')"
-                        @on-blur="validateKeysState"
-                      />
-                    </FormItem>
-                  </td>
-                  <td>
-                    <FormItem
-                      :prop="`keys.${index}.key`"
-                      :rules="keyValueRules(index)"
-                      class="inline-form-item"
-                    >
-                      <Input
-                        v-model="keyItem.key"
-                        :placeholder="$t('gatewayConfig.keyValuePlaceholder')"
-                        autocomplete="new-password"
-                        @on-focus="onKeyValueFocus(keyItem)"
-                        @on-change="onKeyValueChange(keyItem)"
-                      />
-                    </FormItem>
-                  </td>
-                  <td>
-                    <FormItem
-                      :prop="`keys.${index}.weight`"
-                      :rules="keyWeightRules(index)"
-                      class="inline-form-item"
-                    >
-                      <InputNumber
-                        v-model="keyItem.weight"
-                        :min="0"
-                        :max="100"
-                        :precision="0"
-                        style="width: 100%;"
-                        @on-change="validateKeysState"
-                      />
-                    </FormItem>
-                  </td>
-                  <td>
-                    <Button
-                      type="error"
-                      size="small"
-                      @click="removeKey(index)"
-                      >{{ $t('com.del') }}</Button
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-if="keysWeightError" class="weight-error">
-              {{ $t('gatewayConfig.keysWeightSumError') }}
-            </p>
-            <p v-if="keysPlaceholderError" class="weight-error">
-              {{ $t('gatewayConfig.keysPlaceholderError') }}
-            </p>
-            <Button class="mt20" size="small" type="primary" @click="addKey"
-              >+ {{ $t('gatewayConfig.addKey') }}</Button
-            >
-          </FormItem>
-        </Card>
+                  </FormItem>
+                </td>
+                <td>
+                  <FormItem
+                    :prop="`keys.${index}.weight`"
+                    :rules="keyWeightRules(index)"
+                    class="inline-form-item"
+                  >
+                    <InputNumber
+                      v-model="keyItem.weight"
+                      :min="0"
+                      :max="100"
+                      :precision="0"
+                      style="width: 100%;"
+                      @on-change="validateKeysState"
+                    />
+                  </FormItem>
+                </td>
+                <td>
+                  <Button type="error" size="small" @click="removeKey(index)">
+                    {{ $t('com.del') }}
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="keysWeightError" class="weight-error">
+            {{ $t('gatewayConfig.keysWeightSumError') }}
+          </p>
+          <Button class="mt20" size="small" type="primary" @click="addKey">
+            + {{ $t('gatewayConfig.addKey') }}
+          </Button>
+        </FormItem>
+      </Card>
 
-        <Card :title="$t('gatewayConfig.keyPolicy')" class="llm-section-card">
-          <Row :gutter="24">
-            <Col span="12">
-              <FormItem
-                :label="$t('gatewayConfig.keyPolicyStrategy')"
-                prop="key_policy.strategy"
-              >
-                <Select v-model="formData.key_policy.strategy">
-                  <Option value="weighted_random">weighted_random</Option>
-                </Select>
-              </FormItem>
-            </Col>
-            <Col span="12">
-              <FormItem
-                :label="$t('gatewayConfig.keyPolicyMaxRetries')"
-                prop="key_policy.max_retries"
-              >
-                <InputNumber
-                  v-model="formData.key_policy.max_retries"
-                  :min="0"
-                  :precision="0"
-                  style="width: 100%;"
-                />
-              </FormItem>
-            </Col>
-          </Row>
-          <Row :gutter="24">
-            <Col span="12">
-              <FormItem
-                :label="$t('gatewayConfig.keyPolicyRetryBackoffInitial')"
-                prop="key_policy.retry_backoff_initial"
-              >
-                <InputNumber
-                  v-model="formData.key_policy.retry_backoff_initial"
-                  :min="0"
-                  :precision="0"
-                  style="width: 100%;"
-                  @on-change="onRetryBackoffInitialChange"
-                />
-              </FormItem>
-            </Col>
-            <Col span="12">
-              <FormItem
-                :label="$t('gatewayConfig.keyPolicyRetryBackoffMax')"
-                prop="key_policy.retry_backoff_max"
-              >
-                <InputNumber
-                  v-model="formData.key_policy.retry_backoff_max"
-                  :min="0"
-                  :precision="0"
-                  style="width: 100%;"
-                />
-              </FormItem>
-            </Col>
-          </Row>
-        </Card>
-      </div>
+      <Card :title="$t('gatewayConfig.keyPolicy')" class="llm-section-card">
+        <Row :gutter="24">
+          <Col span="12">
+            <FormItem
+              :label="$t('gatewayConfig.keyPolicyStrategy')"
+              prop="key_policy.strategy"
+            >
+              <Select v-model="formData.key_policy.strategy">
+                <Option value="weighted_random">weighted_random</Option>
+              </Select>
+            </FormItem>
+          </Col>
+          <Col span="12">
+            <FormItem
+              :label="$t('gatewayConfig.keyPolicyMaxRetries')"
+              prop="key_policy.max_retries"
+            >
+              <InputNumber
+                v-model="formData.key_policy.max_retries"
+                :min="0"
+                :precision="0"
+                style="width: 100%;"
+              />
+            </FormItem>
+          </Col>
+        </Row>
+        <Row :gutter="24">
+          <Col span="12">
+            <FormItem
+              :label="$t('gatewayConfig.keyPolicyRetryBackoffInitial')"
+              prop="key_policy.retry_backoff_initial"
+            >
+              <InputNumber
+                v-model="formData.key_policy.retry_backoff_initial"
+                :min="0"
+                :precision="0"
+                style="width: 100%;"
+              />
+            </FormItem>
+          </Col>
+          <Col span="12">
+            <FormItem
+              :label="$t('gatewayConfig.keyPolicyRetryBackoffMax')"
+              prop="key_policy.retry_backoff_max"
+            >
+              <InputNumber
+                v-model="formData.key_policy.retry_backoff_max"
+                :min="0"
+                :precision="0"
+                style="width: 100%;"
+              />
+            </FormItem>
+          </Col>
+        </Row>
+      </Card>
     </Form>
   </div>
 </template>
 
 <script>
-import { cloneDeep, isEmpty } from 'lodash';
-import { maskSecretKey } from '@/utils/const';
-import {
-    getInstanceEndpointHosts,
-    syncInstancePoolPortBySchema,
-    detectInstanceMode
-} from './InstancePool';
+import { cloneDeep } from 'lodash';
+
+function defaultKeyPolicy() {
+    return {
+        strategy: 'weighted_random',
+        max_retries: 0,
+        retry_backoff_initial: 500,
+        retry_backoff_max: 5000
+    };
+}
+
 export default {
-    components: {},
+    name: 'GatewayConfig',
+
     props: {
-        instancePoolData: {
-            type: Array,
-            default() {
-                return [];
-            }
-        },
         reportFlag: {
             type: Boolean,
             default: false
@@ -413,22 +298,6 @@ export default {
             type: Object,
             default() {
                 return {};
-            }
-        },
-        originalLlmConfigKey: {
-            type: String,
-            default: ''
-        },
-        originalLlmConfigHeaders: {
-            type: Object,
-            default() {
-                return {};
-            }
-        },
-        originalLlmConfigKeys: {
-            type: Array,
-            default() {
-                return [];
             }
         },
         isAdd: {
@@ -440,863 +309,309 @@ export default {
             default: 0
         }
     },
+
     data() {
-        const validEndpoint = (rule, value, callback) => {
-            const endpoint = value || {};
-            const schema = endpoint.schema;
-            const uri = endpoint.uri;
-
-            if (!schema && !uri) {
-                callback();
+        const that = this;
+        const validateProvider = (rule, value, callback) => {
+            if (!value) {
+                callback(new Error(that.$t('gatewayConfig.ownedProviderRequired')));
                 return;
             }
-            if (!schema) {
-                callback(new Error(this.$t('gatewayConfig.schemaRequired')));
-                return;
-            }
-            if (!uri) {
-                callback(new Error(this.$t('gatewayConfig.uriRequired')));
-                return;
-            }
-
-            if (!uri.startsWith('/')) {
-                callback(new Error(this.$t('gatewayConfig.uriMustStartWithSlash')));
-                return;
-            }
-
-            const uriPattern = /^[\/a-zA-Z0-9\-_\.~!$&'()*+,;=:@]*$/;
-            if (!uriPattern.test(uri)) {
-                callback(new Error(this.$t('gatewayConfig.uriContainsIllegalChars')));
-                return;
-            }
-
-            if (uri.includes('//') && uri !== '//') {
-                callback(new Error(this.$t('gatewayConfig.uriCannotConsecutiveSlash')));
-                return;
-            }
-
-            if (uri.length > 1 && uri.endsWith('/')) {
-                callback(new Error(this.$t('gatewayConfig.uriCannotEndWithSlash')));
-                return;
-            }
-
             callback();
         };
-
-        const validModelMappings = (rule, value, callback) => {
-            if (!value || !Array.isArray(value) || value.length === 0) {
+        const validateModels = (rule, value, callback) => {
+            if (!value || !value.length) {
+                callback(new Error(that.$t('gatewayConfig.modelsRequired')));
+                return;
+            }
+            const allowed = that.providerModels;
+            const invalid = value.find(item => allowed.indexOf(item) === -1);
+            if (invalid) {
+                callback(new Error(that.$t('gatewayConfig.modelNotInProvider', { model: invalid })));
+                return;
+            }
+            callback();
+        };
+        const validateMatchPrefix = (rule, value, callback) => {
+            if (!that.formData.strip_prefix) {
                 callback();
                 return;
             }
-
-            for (let i = 0; i < value.length; i++) {
-                const item = value[i];
-                const key = (item.source_model || '').trim();
-                const val = (item.target_model || '').trim();
-
-                if (!key && !val) {
+            if (!value || !String(value).trim()) {
+                callback(new Error(that.$t('gatewayConfig.matchPrefixRequiredWhenStrip')));
+                return;
+            }
+            if (!String(value).endsWith('/')) {
+                callback(new Error(that.$t('gatewayConfig.matchPrefixMustEndWithSlash')));
+                return;
+            }
+            callback();
+        };
+        const validateMappings = (rule, value, callback) => {
+            const mappings = value || [];
+            const sources = {};
+            for (let i = 0; i < mappings.length; i++) {
+                const source = String(mappings[i].source_model || '').trim();
+                const target = String(mappings[i].target_model || '').trim();
+                if (!source && !target) {
                     continue;
                 }
-
-                if (!key) {
-                    callback(new Error(this.$t('gatewayConfig.modelMappingKeyRequired', { line: i + 1 })));
+                if (!source) {
+                    callback(new Error(that.$t('gatewayConfig.modelMappingKeyRequired', { line: i + 1 })));
                     return;
                 }
-                if (!val) {
-                    callback(new Error(this.$t('gatewayConfig.modelMappingValueRequired', { line: i + 1 })));
+                if (!target) {
+                    callback(new Error(that.$t('gatewayConfig.modelMappingValueRequired', { line: i + 1 })));
                     return;
                 }
+                if (sources[source]) {
+                    callback(new Error(that.$t('gatewayConfig.duplicateModelName')));
+                    return;
+                }
+                sources[source] = true;
             }
-
-            const keys = value.map(item => item.source_model).filter(key => key !== '');
-
-            const uniqueKeys = [...new Set(keys)];
-
-            if (keys.length !== uniqueKeys.length) {
-                callback(new Error(this.$t('gatewayConfig.duplicateModelName')));
-                return;
-            }
-
             callback();
         };
+        const validateKeys = (rule, value, callback) => {
+            const keys = (value || []).filter(item => String(item.name || '').trim());
+            if (!keys.length) {
+                callback();
+                return;
+            }
+            const names = {};
+            const providerKeyNames = that.providerKeys.map(item => item.name);
+            let sum = 0;
+            for (let i = 0; i < keys.length; i++) {
+                const name = String(keys[i].name || '').trim();
+                const weight = Number(keys[i].weight);
+                if (providerKeyNames.indexOf(name) === -1) {
+                    callback(new Error(that.$t('gatewayConfig.keyNotInProvider', { name })));
+                    return;
+                }
+                if (names[name]) {
+                    callback(new Error(that.$t('gatewayConfig.keyNameDuplicate')));
+                    return;
+                }
+                names[name] = true;
+                if (!Number.isFinite(weight) || weight < 0 || weight > 100) {
+                    callback(new Error(that.$t('gatewayConfig.keyWeightRangeError')));
+                    return;
+                }
+                sum += weight;
+            }
+            if (sum !== 100) {
+                callback(new Error(that.$t('gatewayConfig.keysWeightSumError')));
+                return;
+            }
+            callback();
+        };
+        const validateBackoffMax = (rule, value, callback) => {
+            const initial = Number(that.formData.key_policy.retry_backoff_initial);
+            const max = Number(value);
+            if (Number.isFinite(initial) && Number.isFinite(max) && max < initial) {
+                callback(new Error(that.$t('gatewayConfig.keyPolicyBackoffMaxInvalid')));
+                return;
+            }
+            callback();
+        };
+
         return {
-            ruleValidate: {
-                provider_type: [],
-                model_endpoint: [
-                    {
-                        required: false,
-                        validator: validEndpoint
-                    }
-                ],
-                model_mappings: [
-                    {
-                        required: false,
-                        validator: validModelMappings
-                    }
-                ],
-                models: [
-                    {
-                        required: true,
-                        message: this.$t('gatewayConfig.modelsRequired')
-                    }
-                ],
-                keys: [
-                    {
-                        required: false,
-                        validator: this.validateKeys,
-                        trigger: 'change'
-                    }
-                ],
-                'key_policy.strategy': [
-                    {
-                        required: false,
-                        message: this.$t('gatewayConfig.keyPolicyStrategyInvalid') || '选择策略仅支持 weighted_random',
-                        trigger: 'change'
-                    }
-                ],
-                'key_policy.max_retries': [
-                    {
-                        required: false,
-                        type: 'number',
-                        min: 0,
-                        message: this.$t('gatewayConfig.keyPolicyMaxRetriesInvalid') || '最大重试次数必须大于或等于 0',
-                        trigger: 'change'
-                    }
-                ],
-                'key_policy.retry_backoff_initial': [
-                    {
-                        required: false,
-                        type: 'number',
-                        min: 0,
-                        message: this.$t('gatewayConfig.keyPolicyBackoffInvalid') || '退避时间必须大于或等于 0',
-                        trigger: 'change'
-                    }
-                ],
-                'key_policy.retry_backoff_max': [
-                    {
-                        required: false,
-                        type: 'number',
-                        min: 0,
-                        message: this.$t('gatewayConfig.keyPolicyBackoffInvalid') || '退避时间必须大于或等于 0',
-                        trigger: 'change'
-                    },
-                    {
-                        validator: this.validateRetryBackoffMax,
-                        trigger: 'change'
-                    }
-                ],
-                match_prefix: [
-                    {
-                        validator: this.validateMatchPrefix,
-                        trigger: 'blur'
-                    }
-                ]
-            },
-            selectData: [],
+            providers: [],
+            selectedProvider: null,
             keysWeightError: false,
-            keysPlaceholderError: false,
-            keyNameRules: index => {
-                const item = this.formData.keys[index] || {};
-                const hasContent =
-                    String(item.name || '').trim() ||
-                    String(item.key || '').trim() ||
-                    (item.originalKeyValue && this.isKeyValueUnchanged(item));
-                return [
-                    { required: !!hasContent, message: this.$t('gatewayConfig.keyNameRequired'), trigger: 'blur' },
-                    { type: 'string', min: 1, max: 128, message: this.$t('gatewayConfig.keyNameTooLong'), trigger: 'blur' },
-                    { validator: this.validateKeyNameUnique, trigger: 'blur' }
-                ];
-            },
-            keyValueRules: index => {
-                const item = this.formData.keys[index] || {};
-                const hasContent =
-                    String(item.name || '').trim() ||
-                    String(item.key || '').trim() ||
-                    item.originalKeyValue;
-                const keyUnchanged = item.originalKeyValue && this.isKeyValueUnchanged(item);
-                return [
-                    {
-                        required: !!hasContent && !keyUnchanged,
-                        message: this.$t('gatewayConfig.keyValueRequired'),
-                        trigger: 'blur'
-                    },
-                    {
-                        type: 'string',
-                        min: 1,
-                        max: 512,
-                        message: this.$t('gatewayConfig.keyValueTooLong'),
-                        trigger: 'blur'
-                    }
-                ];
-            },
-            keyWeightRules: index => {
-                const item = this.formData.keys[index] || {};
-                const hasContent =
-                    String(item.name || '').trim() ||
-                    String(item.key || '').trim() ||
-                    (item.originalKeyValue && this.isKeyValueUnchanged(item));
-                return [
-                    { required: !!hasContent, type: 'number', min: 0, max: 100, message: this.$t('gatewayConfig.keyWeightRangeError'), trigger: 'change' }
-                ];
-            },
-            previousProviderType: '',
             formData: {
-                provider_type: '',
                 provider: '',
                 match_prefix: '',
                 strip_prefix: false,
-                model_endpoint: {
-                    schema: 'https',
-                    uri: '/v1/models',
-                    headers: {}
-                },
                 models: [],
-                model_mappings: [
-                    {
-                        source_model: '',
-                        target_model: ''
-                    }
-                ],
-                keys: [
-                    { name: '', key: '', weight: 100 }
-                ],
-                key_policy: {
-                    strategy: 'weighted_random',
-                    max_retries: 0,
-                    retry_backoff_initial: 500,
-                    retry_backoff_max: 5000
-                }
+                model_mappings: [{ source_model: '', target_model: '' }],
+                keys: [{ name: '', weight: 100 }],
+                key_policy: defaultKeyPolicy()
             },
-            headerList: [],
-            modelsList: [],
-            providers: [],
-
-            btnLoading: false
+            ruleValidate: {
+                provider: [{ validator: validateProvider, trigger: 'change', required: true }],
+                models: [{ validator: validateModels, trigger: 'change', required: true }],
+                match_prefix: [{ validator: validateMatchPrefix, trigger: 'blur' }],
+                model_mappings: [{ validator: validateMappings, trigger: 'change' }],
+                keys: [{ validator: validateKeys, trigger: 'change' }],
+                'key_policy.retry_backoff_max': [{ validator: validateBackoffMax, trigger: 'change' }]
+            }
         };
     },
+
     computed: {
-        endpointHostDisplay() {
-            const schema =
-                (this.formData.model_endpoint && this.formData.model_endpoint.schema) || 'https';
-            const hosts = getInstanceEndpointHosts(
-                syncInstancePoolPortBySchema(this.instancePoolData, schema)
-            );
-            if (!hosts.length) {
-                return '';
-            }
-            const modeInfo = detectInstanceMode(this.instancePoolData);
-            if (modeInfo.mode === 'domain') {
-                return hosts.join('\n');
-            }
-            return hosts[0];
+        providerModels() {
+            return (this.selectedProvider && this.selectedProvider.models) || [];
+        },
+        providerKeys() {
+            return (this.selectedProvider && this.selectedProvider.keys) || [];
         }
     },
+
     watch: {
-        'formData.strip_prefix'(val) {
-            if (!val) {
-                this.formData.match_prefix = '';
-            }
-        },
-        reportFlag: {
-            handler(v) {
-                this.handleSubmit('formData');
-            }
+        reportFlag() {
+            this.handleSubmit();
         },
         llmConfigData: {
-            handler(data) {
-                if (!this.isAdd) {
-                    if (!data || Object.keys(data).length === 0) {
-                        this.resetLlmForm();
-                        return;
-                    }
-                    if (data && !isEmpty(data)) {
-                        this.applyLlmConfigData(data);
-                    }
-                }
+            handler(val) {
+                this.applyLlmConfig(val);
             },
             immediate: true,
             deep: true
         },
-        stepsCurrentState: {
-            handler(val) {
-                const endpoint = this.formData && this.formData.model_endpoint;
-                const hasEndpoint = endpoint && endpoint.schema && endpoint.uri;
-
-                if (hasEndpoint && val === 4) {
-                    this.getProviders();
-                    if (this.formData.provider_type) {
-                        this.getModels();
-                    }
-                }
-            },
-            immediate: true
+        'formData.strip_prefix'(val) {
+            if (!val) {
+                this.formData.match_prefix = '';
+            }
         }
     },
+
     mounted() {
-        if (!this.isAdd) {
-            this.$nextTick(() => {
-                if (this.llmConfigData && Object.keys(this.llmConfigData).length > 0) {
-                    this.applyLlmConfigData(this.llmConfigData);
-                }
-            });
-        }
+        this.fetchProviders();
     },
+
     methods: {
-        resetLlmForm() {
-            this.formData = {
-                provider_type: '',
-                provider: '',
-                match_prefix: '',
-                strip_prefix: false,
-                model_endpoint: {
-                    schema: 'https',
-                    uri: '/v1/models',
-                    headers: {}
-                },
-                models: [],
-                model_mappings: [
-                    {
-                        source_model: '',
-                        target_model: ''
-                    }
-                ],
-                keys: [
-                    { name: '', key: '', weight: 100 }
-                ],
-                key_policy: {
-                    strategy: 'weighted_random',
-                    max_retries: 0,
-                    retry_backoff_initial: 500,
-                    retry_backoff_max: 5000
-                }
-            };
-            this.keysWeightError = false;
-            this.keysPlaceholderError = false;
-            this.headerList = [];
-        },
-        addKey() {
-            if (!Array.isArray(this.formData.keys)) {
-                this.$set(this.formData, 'keys', []);
-            }
-            this.formData.keys.push({
-                name: '',
-                key: '',
-                weight: 0,
-                originalKeyValue: '',
-                keyModifiedInSession: false
-            });
-            this.$nextTick(() => {
-                this.validateKeysState();
-            });
-        },
-
-        removeKey(index) {
-            this.formData.keys.splice(index, 1);
-            this.validateKeysState();
-        },
-
-        getKeyFieldIndex(field) {
-            const match = field.match(/keys\.(\d+)\.name/);
-            return match ? parseInt(match[1], 10) : -1;
-        },
-
-        validateKeyNameUnique(rule, value, callback) {
-            const index = this.getKeyFieldIndex(rule.field);
-            if (index < 0) {
-                callback();
-                return;
-            }
-            const currentName = String(value || '').trim();
-            if (!currentName) {
-                callback();
-                return;
-            }
-            const keys = this.formData.keys || [];
-            const duplicate = keys.some((item, idx) => {
-                if (idx === index) return false;
-                return String(item.name || '').trim() === currentName;
-            });
-            if (duplicate) {
-                callback(new Error(this.$t('gatewayConfig.keyNameDuplicate') || 'Key 名称不能重复'));
-                return;
-            }
-            callback();
-        },
-
-        validateKeysState() {
-            const keys = this.formData.keys || [];
-            const validKeys = keys.filter(item => {
-                const name = String(item.name || '').trim();
-                const key =
-                    String(item.key || '').trim() ||
-                    (item.originalKeyValue && this.isKeyValueUnchanged(item) ? item.originalKeyValue : '');
-                return name || key;
-            });
-
-            // 权重之和校验
-            const sum = validKeys.reduce((acc, k) => acc + (Number(k.weight) || 0), 0);
-            this.keysWeightError = validKeys.length > 0 && sum !== 100;
-
-            const headers = (this.formData.model_endpoint && this.formData.model_endpoint.headers) || {};
-            const hasPlaceholder = Object.values(headers).some(v => String(v).includes('${API_KEY}'));
-            this.keysPlaceholderError = hasPlaceholder && validKeys.length === 0;
-        },
-
-        validateKeys(rule, value, callback) {
-            this.validateKeysState();
-            const keys = value || [];
-            const validKeys = keys.filter(item => {
-                const name = String(item.name || '').trim();
-                const key =
-                    String(item.key || '').trim() ||
-                    (item.originalKeyValue && this.isKeyValueUnchanged(item) ? item.originalKeyValue : '');
-                return name || key;
-            });
-            const sum = validKeys.reduce((acc, k) => acc + (Number(k.weight) || 0), 0);
-            if (validKeys.length > 0 && sum !== 100) {
-                callback(new Error(this.$t('gatewayConfig.keysWeightSumError') || '所有 Key 的权重之和必须等于 100'));
-                return;
-            }
-            callback();
-        },
-
-        validateRetryBackoffMax(rule, value, callback) {
-            const initial = this.formData && this.formData.key_policy && this.formData.key_policy.retry_backoff_initial;
-            if (value !== undefined && value !== null && initial !== undefined && initial !== null && value < initial) {
-                callback(new Error(this.$t('gatewayConfig.keyPolicyBackoffMaxInvalid') || '最大退避时间必须大于或等于初始退避时间'));
-                return;
-            }
-            callback();
-        },
-
-        validateMatchPrefix(rule, value, callback) {
-            const prefix = String(value || '').trim();
-            if (!prefix) {
-                if (this.formData.strip_prefix) {
-                    callback(new Error(this.$t('gatewayConfig.matchPrefixRequiredWhenStrip') || '开启裁剪前缀时，模型前缀匹配必填'));
-                    return;
-                }
-                callback();
-                return;
-            }
-            if (!prefix.endsWith('/')) {
-                callback(new Error(this.$t('gatewayConfig.matchPrefixMustEndWithSlash') || '模型前缀匹配必须以 / 结尾'));
-                return;
-            }
-            callback();
-        },
-
-        onRetryBackoffInitialChange() {
-            this.$nextTick(() => {
-                if (this.$refs.formData) {
-                    this.$refs.formData.validateField('key_policy.retry_backoff_max');
-                }
-            });
-        },
-        applyLlmConfigData(data) {
-            this.formData = cloneDeep(data);
-            delete this.formData.key;
-            delete this.formData.service_name;
-            delete this.formData.group;
-            this.initHeaders();
-            if (!this.formData.model_endpoint) {
-                this.$set(this.formData, 'model_endpoint', {
-                    schema: 'https',
-                    uri: '/v1/models',
-                    headers: {}
-                });
-            }
-
-            if (!this.formData.models) {
-                this.$set(this.formData, 'models', []);
-            }
-
-            if (!this.formData.model_mappings || this.formData.model_mappings.length === 0) {
-                this.$set(this.formData, 'model_mappings', [
-                    {
-                        source_model: '',
-                        target_model: ''
-                    }
-                ]);
-            }
-
-            if (!Array.isArray(this.formData.keys) || this.formData.keys.length === 0) {
-                this.$set(this.formData, 'keys', [{ name: '', key: '', weight: 100 }]);
-            }
-            this.initKeys();
-
-            if (!this.formData.key_policy) {
-                this.$set(this.formData, 'key_policy', {
-                    strategy: 'weighted_random',
-                    max_retries: 0,
-                    retry_backoff_initial: 500,
-                    retry_backoff_max: 5000
-                });
-            }
-
-            this.formData.provider = this.formData.provider || '';
-            this.formData.match_prefix = this.formData.match_prefix || '';
-            this.formData.strip_prefix = !!this.formData.strip_prefix;
-
-            this.mergeSelectedModelsIntoList();
-            this.validateKeysState();
-            this.previousProviderType = this.formData.provider_type || '';
-        },
-        initKeys() {
-            if (this.isAdd || !Array.isArray(this.originalLlmConfigKeys) || this.originalLlmConfigKeys.length === 0) {
-                return;
-            }
-
-            const originalByName = {};
-            this.originalLlmConfigKeys.forEach(item => {
-                const name = String(item.name || '').trim();
-                if (name) {
-                    originalByName[name] = String(item.key || '');
-                }
-            });
-
-            this.formData.keys = (this.formData.keys || []).map(keyItem => {
-                const name = String(keyItem.name || '').trim();
-                const originalKeyValue =
-                    keyItem.originalKeyValue || originalByName[name] || '';
-                const currentKey = keyItem.key != null ? String(keyItem.key) : '';
-                const hasOriginal = !!originalKeyValue;
-                const isUnchangedFromApi = hasOriginal && currentKey === originalKeyValue;
-                const isShowingMasked =
-                    hasOriginal && currentKey === maskSecretKey(originalKeyValue);
-                const isUnchanged =
-                    hasOriginal &&
-                    (isUnchangedFromApi || isShowingMasked || !keyItem.keyModifiedInSession);
-
-                return {
-                    name: keyItem.name != null ? keyItem.name : '',
-                    key: isUnchanged ? maskSecretKey(originalKeyValue) : currentKey,
-                    weight: keyItem.weight != null ? keyItem.weight : 0,
-                    originalKeyValue: hasOriginal ? originalKeyValue : '',
-                    keyModifiedInSession: hasOriginal ? !isUnchanged : !!currentKey
-                };
-            });
-        },
-        getKeyMaskedValue(keyItem) {
-            return keyItem.originalKeyValue ? maskSecretKey(keyItem.originalKeyValue) : '';
-        },
-        isKeyValueUnchanged(keyItem) {
-            if (!keyItem.originalKeyValue) {
-                return !String(keyItem.key || '').trim();
-            }
-            if (!keyItem.keyModifiedInSession) {
-                return true;
-            }
-            const trimmed = String(keyItem.key || '').trim();
-            if (!trimmed) {
-                return true;
-            }
-            return trimmed === keyItem.originalKeyValue;
-        },
-        resolveKeyForSubmit(keyItem) {
-            if (!keyItem.originalKeyValue) {
-                return keyItem.key;
-            }
-            if (this.isKeyValueUnchanged(keyItem)) {
-                return keyItem.originalKeyValue;
-            }
-            return keyItem.key;
-        },
-        onKeyValueFocus(keyItem) {
-            if (keyItem.originalKeyValue && !keyItem.keyModifiedInSession) {
-                const masked = this.getKeyMaskedValue(keyItem);
-                if (keyItem.key === masked) {
-                    keyItem.key = '';
-                    keyItem.keyModifiedInSession = true;
-                }
-            }
-        },
-        onKeyValueChange(keyItem) {
-            if (keyItem.originalKeyValue && !keyItem.keyModifiedInSession) {
-                const masked = this.getKeyMaskedValue(keyItem);
-                if (keyItem.key !== masked) {
-                    keyItem.keyModifiedInSession = true;
-                }
-            } else if (!keyItem.originalKeyValue && String(keyItem.key || '').trim()) {
-                keyItem.keyModifiedInSession = true;
-            }
-        },
-        initHeaders() {
-            const headers =
-                (this.formData.model_endpoint && this.formData.model_endpoint.headers) || {};
-            const originalHeaders = this.originalLlmConfigHeaders || {};
-
-            this.headerList = Object.keys(headers).map(key => {
-                const originalValue =
-                    originalHeaders[key] != null ? String(originalHeaders[key]) : '';
-                const currentValue = headers[key] != null ? String(headers[key]) : '';
-                const hasOriginal = !!originalValue;
-                const isUnchangedFromApi = hasOriginal && currentValue === originalValue;
-
-                return {
-                    key,
-                    originalKey: hasOriginal ? key : '',
-                    value: isUnchangedFromApi ? maskSecretKey(originalValue) : currentValue,
-                    originalValue: hasOriginal ? originalValue : '',
-                    valueModifiedInSession: hasOriginal ? !isUnchangedFromApi : !!currentValue
-                };
-            });
-        },
-        createEmptyHeaderRow() {
-            return {
-                key: '',
-                originalKey: '',
-                value: '',
-                originalValue: '',
-                valueModifiedInSession: false
-            };
-        },
-        getHeaderMaskedValue(header) {
-            return header.originalValue ? maskSecretKey(header.originalValue) : '';
-        },
-        isHeaderValueUnchanged(header) {
-            if (!header.originalValue) {
-                return !String(header.value || '').trim();
-            }
-            if (!header.valueModifiedInSession) {
-                return true;
-            }
-            const trimmed = String(header.value || '').trim();
-            if (!trimmed) {
-                return true;
-            }
-            return trimmed === header.originalValue;
-        },
-        resolveHeaderValueForSubmit(header) {
-            if (!header.originalValue) {
-                return header.value;
-            }
-            if (this.isHeaderValueUnchanged(header)) {
-                return header.originalValue;
-            }
-            return header.value;
-        },
-        onHeaderKeyChange(header) {
-            if (header.originalKey && header.key !== header.originalKey) {
-                header.originalKey = '';
-                header.originalValue = '';
-                header.valueModifiedInSession = true;
-            }
-        },
-        onHeaderValueFocus(header) {
-            if (header.originalValue && !header.valueModifiedInSession) {
-                const masked = this.getHeaderMaskedValue(header);
-                if (header.value === masked) {
-                    header.value = '';
-                    header.valueModifiedInSession = true;
-                }
-            }
-        },
-        onHeaderValueChange(header) {
-            if (header.originalValue && !header.valueModifiedInSession) {
-                const masked = this.getHeaderMaskedValue(header);
-                if (header.value !== masked) {
-                    header.valueModifiedInSession = true;
-                }
-            } else if (!header.originalValue && String(header.value || '').trim()) {
-                header.valueModifiedInSession = true;
-            }
-        },
-        addHeader() {
-            this.headerList.push(this.createEmptyHeaderRow());
-        },
-        removeHeader(index) {
-            this.headerList.splice(index, 1);
-        },
-        prepareHeadersForSubmit() {
-            const headers = {};
-            this.headerList.forEach(header => {
-                if (header.key && header.key.trim() !== '') {
-                    headers[header.key] = this.resolveHeaderValueForSubmit(header);
-                }
-            });
-            return headers;
-        },
-        mergeSelectedModelsIntoList() {
-            const selected = Array.isArray(this.formData.models) ? this.formData.models : [];
-            const list = Array.isArray(this.modelsList) ? [...this.modelsList] : [];
-            const existingIds = new Set(
-                list.map(item => (item && item.id != null ? String(item.id) : ''))
-            );
-            selected.forEach(modelId => {
-                if (modelId == null || modelId === '') {
-                    return;
-                }
-                const id = String(modelId);
-                if (!existingIds.has(id)) {
-                    list.push({ id });
-                    existingIds.add(id);
-                }
-            });
-            this.modelsList = list;
-        },
-
-        onModelsChange() {
-            this.$nextTick(() => {
-                if (!this.$refs.formData) return;
-                this.$refs.formData.validateField('models');
-            });
-        },
-
-        addModelRedirect() {
-            this.formData.model_mappings.push({
-                source_model: '',
-                target_model: ''
-            });
-        },
-
-        removeModelMapping(index) {
-            this.formData.model_mappings.splice(index, 1);
-
-            this.$nextTick(() => {
-                this.$refs.formData.validateField('model_mappings');
-            });
-        },
-
-        changeMappingSource(index, newKey) {
-            if (this.formData.model_mappings && this.formData.model_mappings[index]) {
-                this.$set(this.formData.model_mappings[index], 'source_model', newKey);
-
-                this.$nextTick(() => {
-                    this.$refs.formData.validateField('model_mappings');
-                });
-            }
-        },
-        changeMappingTarget(index, newValue) {
-            if (this.formData.model_mappings && this.formData.model_mappings[index]) {
-                this.$set(this.formData.model_mappings[index], 'target_model', newValue);
-            }
-        },
-        queryModels() {
-            this.getModels('query');
-        },
-        getModels(val) {
-            const schema = this.formData.model_endpoint.schema || 'https';
-            const ipPort = [
-                ...new Set(
-                    getInstanceEndpointHosts(
-                        syncInstancePoolPortBySchema(this.instancePoolData, schema)
-                    )
-                )
-            ];
-            this.modelsList = [];
-            this.btnLoading = true;
+        fetchProviders() {
             this.$request({
-                url: 'tools/get-models-from-provider',
-                method: 'post',
-                data: {
-                    schema,
-                    uri: this.formData.model_endpoint.uri,
-                    hosts: ipPort,
-                    headers: this.prepareHeadersForSubmit(),
-                    provider_type: this.formData.provider_type
-                },
-                openapi: true
-            })
-                .then(data => {
-                    if (data.status === 200) {
-                        this.modelsList = data.data.Data || [];
-                        this.mergeSelectedModelsIntoList();
-                        if (val) {
-                            this.$Message.success({
-                                content: this.$t('gatewayConfig.getModelListSucc')
-                            });
-                        }
-                    } else {
-                        console.error('获取模型列表失败，状态码:', data.status);
-                        this.$Message.error('获取模型列表异常: ' + (error.message || '网络错误'));
-                    }
-                })
-                .catch(error => {
-                    console.error('获取模型列表异常:', error);
-
-                })
-                .finally(() => {
-                    this.btnLoading = false;
-                });
-        },
-        getProviders() {
-            this.$request({
-                url: 'model-provider-types',
+                url: 'providers',
                 method: 'get',
                 openapi: true
-            }).then(data => {
-                if (data.status === 200) {
-                    this.providers = (data.data.Data || []).map(item => ({
-                        id: item,
-                        name: item
-                    }));
+            }).then(res => {
+                if (res.status === 200) {
+                    const data = res.data.Data;
+                    this.providers = Array.isArray(data)
+                        ? data
+                        : (data && data.list) || [];
+                    this.syncSelectedProvider(this.formData.provider);
+                    if (this.formData.provider) {
+                        this.onProviderChange(this.formData.provider);
+                    }
                 }
             });
         },
-        handleSubmit(name) {
-            this.$refs[name].validate(valid => {
-                if (!valid) {
+        applyLlmConfig(val) {
+            const src = val || {};
+            this.formData.provider = src.provider || '';
+            this.formData.match_prefix = src.match_prefix || '';
+            this.formData.strip_prefix = !!src.strip_prefix;
+            this.formData.models = (src.models || []).slice();
+            this.formData.model_mappings =
+                src.model_mappings && src.model_mappings.length
+                    ? cloneDeep(src.model_mappings)
+                    : [{ source_model: '', target_model: '' }];
+            this.formData.keys =
+                src.keys && src.keys.length
+                    ? src.keys.map(item => ({
+                        name: item.name || '',
+                        weight: item.weight != null ? Number(item.weight) : 0
+                    }))
+                    : [{ name: '', weight: 100 }];
+            this.formData.key_policy = {
+                ...defaultKeyPolicy(),
+                ...(src.key_policy || {})
+            };
+            this.syncSelectedProvider(this.formData.provider);
+            if (this.providers.length && this.formData.provider) {
+                this.onProviderChange(this.formData.provider);
+            }
+        },
+        syncSelectedProvider(name) {
+            this.selectedProvider =
+                this.providers.find(item => item.name === name) || null;
+        },
+        onProviderChange(name) {
+            this.syncSelectedProvider(name);
+            const allowedModels = this.providerModels;
+            this.formData.models = (this.formData.models || []).filter(
+                item => allowedModels.indexOf(item) !== -1
+            );
+            const allowedKeys = this.providerKeys.map(item => item.name);
+            this.formData.keys = (this.formData.keys || []).map(item => ({
+                ...item,
+                name: allowedKeys.indexOf(item.name) !== -1 ? item.name : ''
+            }));
+            if (!this.formData.keys.length) {
+                this.formData.keys = [{ name: '', weight: 100 }];
+            }
+            this.validateKeysState();
+        },
+        changeMappingSource(index, value) {
+            this.formData.model_mappings[index].source_model = value;
+        },
+        changeMappingTarget(index, value) {
+            this.formData.model_mappings[index].target_model = value;
+        },
+        addModelRedirect() {
+            this.formData.model_mappings.push({ source_model: '', target_model: '' });
+        },
+        removeModelMapping(index) {
+            this.formData.model_mappings.splice(index, 1);
+            if (!this.formData.model_mappings.length) {
+                this.formData.model_mappings.push({ source_model: '', target_model: '' });
+            }
+        },
+        addKey() {
+            this.formData.keys.push({ name: '', weight: 0 });
+        },
+        removeKey(index) {
+            this.formData.keys.splice(index, 1);
+            if (!this.formData.keys.length) {
+                this.formData.keys.push({ name: '', weight: 100 });
+            }
+            this.validateKeysState();
+        },
+        keyNameRules(index) {
+            const item = this.formData.keys[index] || {};
+            const hasContent = String(item.name || '').trim() || Number(item.weight) > 0;
+            return [
+                {
+                    required: !!hasContent,
+                    message: this.$t('gatewayConfig.keyNameRequired'),
+                    trigger: 'change'
+                }
+            ];
+        },
+        keyWeightRules() {
+            return [
+                {
+                    type: 'number',
+                    min: 0,
+                    max: 100,
+                    message: this.$t('gatewayConfig.keyWeightRangeError'),
+                    trigger: 'change'
+                }
+            ];
+        },
+        validateKeysState() {
+            const keys = (this.formData.keys || []).filter(item => String(item.name || '').trim());
+            if (!keys.length) {
+                this.keysWeightError = false;
+                return;
+            }
+            const sum = keys.reduce((total, item) => total + (Number(item.weight) || 0), 0);
+            this.keysWeightError = sum !== 100;
+        },
+        handleSubmit() {
+            this.validateKeysState();
+            this.$refs.formData.validate(valid => {
+                if (!valid || this.keysWeightError) {
                     this.$Message.error(this.$t('com.tipValidateError'));
                     return;
                 }
-
-                let tmpData = {};
-                tmpData = cloneDeep(this.formData);
-
-                tmpData.model_endpoint = tmpData.model_endpoint || {};
-                if (!tmpData.model_endpoint.schema) {
-                    tmpData.model_endpoint.schema = 'https';
-                }
-                if (!tmpData.model_endpoint.uri) {
-                    tmpData.model_endpoint.uri = '/v1/models';
-                }
-                tmpData.model_endpoint.headers = this.prepareHeadersForSubmit();
-                if (tmpData.model_mappings && Array.isArray(tmpData.model_mappings)) {
-                    tmpData.model_mappings = tmpData.model_mappings.filter(
-                        item => item.source_model !== '' || item.target_model !== ''
-                    );
-                }
-
-                if (!Array.isArray(tmpData.keys)) {
-                    tmpData.keys = [];
-                }
-                tmpData.keys = tmpData.keys
+                const tmpData = cloneDeep(this.formData);
+                tmpData.model_mappings = (tmpData.model_mappings || []).filter(
+                    item => item.source_model || item.target_model
+                );
+                tmpData.keys = (tmpData.keys || [])
                     .map(item => ({
                         name: String(item.name || '').trim(),
-                        key: String(this.resolveKeyForSubmit(item) || '').trim(),
                         weight: Number(item.weight) || 0
                     }))
-                    .filter(item => item.name || item.key);
-
-                const headers = (tmpData.model_endpoint && tmpData.model_endpoint.headers) || {};
-                const hasPlaceholder = Object.values(headers).some(v => String(v).includes('${API_KEY}'));
-                if (hasPlaceholder && tmpData.keys.length === 0) {
-                    this.$Message.error(this.$t('gatewayConfig.keysPlaceholderError') || '请求头中包含 ${API_KEY} 占位符时，Keys 不能为空');
-                    return;
-                }
-
-                if (!tmpData.key_policy) {
-                    tmpData.key_policy = {
-                        strategy: 'weighted_random',
-                        max_retries: 0,
-                        retry_backoff_initial: 500,
-                        retry_backoff_max: 5000
-                    };
-                }
-
-                delete tmpData.service_name;
-                delete tmpData.group;
-                if (!tmpData.provider_type) {
-                    delete tmpData.provider_type;
-                }
-                if (!tmpData.match_prefix) {
-                    delete tmpData.match_prefix;
-                }
+                    .filter(item => item.name);
                 if (!tmpData.strip_prefix) {
+                    delete tmpData.match_prefix;
                     delete tmpData.strip_prefix;
                 }
-
                 this.$emit('submitData', {
                     topic: 'llmConfigData',
                     data: tmpData
@@ -1308,83 +623,15 @@ export default {
 </script>
 
 <style lang="less" scoped>
-.endpoint-url-group {
-    display: flex;
-    align-items: center;
-    max-width: 680px;
-    border: 1px solid #dcdee2;
-    border-radius: 4px;
-    overflow: hidden;
-    .endpoint-protocol {
-        width: 80px;
-        border-right: 1px solid #dcdee2;
-        flex-shrink: 0;
-        /deep/ .ivu-select-selection {
-            border: none;
-            border-radius: 0;
-        }
-    }
-    .endpoint-host {
-        min-width: 120px;
-        padding: 0 8px;
-        color: #909399;
-        background: #f5f5f5;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 30px;
-        cursor: not-allowed;
-    }
-    .endpoint-uri {
-        width: 180px;
-        flex-shrink: 0;
-        border-left: 1px solid #dcdee2;
-        /deep/ .ivu-input {
-            border: none;
-            border-radius: 0;
-        }
-    }
-}
-
-.header-controls {
-    width: 50%;
-    display: flex;
-    flex-direction: column;
-    margin-left: 10px;
-}
-
-.header-pairs {
-    margin-top: 10px;
-}
-
-.header-pair {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.header-input {
-    flex: 1;
-    margin: 0 5px;
-}
-
-.header-separator {
-    margin: 0 5px;
-    color: #666;
-}
-
 table {
     width: 100%;
     margin-top: 15px;
     font-size: 14px;
-    @border-style:1px solid #e7e9f0;
+    @border-style: 1px solid #e7e9f0;
     border-top: @border-style;
     border-left: @border-style;
     border-collapse: collapse;
-    color: #000000a6;
-    tbody {
-        position: relative;
-    }
+
     td,
     th {
         border-bottom: @border-style;
@@ -1395,23 +642,11 @@ table {
         word-break: break-all;
         min-width: 130px;
     }
+
     th {
         background-color: #f8f8f9;
         font-size: 13px;
     }
-    .table-title {
-        font-weight: 500;
-    }
-    .spe_td {
-        width: 400px;
-        padding: 0px;
-    }
-}
-
-.form-tip {
-    font-size: 12px;
-    color: #999;
-    margin-top: 4px;
 }
 
 .keys-table {
@@ -1428,8 +663,6 @@ table {
         border-right: 1px solid #e7e9f0;
         padding: 10px;
         text-align: left;
-        word-wrap: break-word;
-        word-break: break-all;
     }
 
     th {
@@ -1471,5 +704,9 @@ table {
     max-width: 320px;
     white-space: normal;
     line-height: 1.5;
+}
+
+.mt20 {
+    margin-top: 20px;
 }
 </style>

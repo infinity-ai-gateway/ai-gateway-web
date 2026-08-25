@@ -211,9 +211,59 @@ window.MockData = {
       },
     },
   ],
+  providers: [
+    {
+      name: 'deepseek',
+      description: 'DeepSeek 官方 API',
+      model_endpoint: { schema: 'https', uri: '/v1/models' },
+      models: ['deepseek-chat', 'deepseek-coder'],
+      keys: [
+        { name: 'key-primary', key: 'sk-aaaaaaaaaaaa' },
+        { name: 'key-secondary', key: 'sk-bbbbbbbbbbbb' },
+      ],
+      instance_pool: [
+        {
+          name: 'backend-1',
+          addr: 'api.deepseek.com',
+          weight: 100,
+          port: 443,
+        },
+      ],
+      model_protocols: ['openai'],
+      create_time: 1716883200,
+      update_time: 1716883200,
+    },
+    {
+      name: 'openai',
+      description: 'OpenAI 官方 API',
+      model_endpoint: { schema: 'https', uri: '/v1/models' },
+      models: ['gpt-4o', 'gpt-4o-mini'],
+      keys: [{ name: 'key-prod', key: 'sk-openai-xxxx' }],
+      instance_pool: [
+        { name: 'api', addr: 'api.openai.com', weight: 100, port: 443 },
+      ],
+      model_protocols: ['openai'],
+      create_time: 1704067200,
+      update_time: 1717209600,
+    },
+    {
+      name: 'anthropic',
+      description: 'Anthropic Claude API',
+      model_endpoint: { schema: 'https', uri: '/v1/models' },
+      models: ['claude-3-5-sonnet'],
+      keys: [{ name: 'key-claude', key: 'sk-ant-xxxx' }],
+      instance_pool: [
+        { name: 'api', addr: 'api.anthropic.com', weight: 100, port: 443 },
+      ],
+      model_protocols: ['anthropic'],
+      create_time: 1714521600,
+      update_time: 1719878400,
+    },
+  ],
+  modelProtocols: ['openai', 'anthropic'],
   clusters: [
-    { name: 'test', description: '' },
-    { name: 'cluster-test1', description: '测试更新' },
+    { name: 'test', description: '', provider: 'deepseek' },
+    { name: 'cluster-test1', description: '测试更新', provider: 'openai' },
   ],
   routeTables: [
     { type: 'global', owner: 'global', enabled: true },
@@ -480,11 +530,13 @@ window.MockData = {
       update_time: 1717209600,
     },
   ],
-  modelProviderTypes: [
-    { type: 'openai_compatible', label: 'OpenAI 兼容' },
-    { type: 'anthropic', label: 'Anthropic' },
-    { type: 'azure_openai', label: 'Azure OpenAI' },
-  ],
+  getModelPriceProviders: function () {
+    var names = {};
+    (this.modelPrices || []).forEach(function (item) {
+      if (item.provider) names[item.provider] = true;
+    });
+    return Object.keys(names).sort();
+  },
   modelModeOptions: [
     'chat',
     'completion',
@@ -555,6 +607,10 @@ window.MockData = {
     'output_cost_per_token_above_200k_tokens',
     'output_cost_per_image',
     'output_cost_per_pixel',
+    'output_cost_per_image_low_quality',
+    'output_cost_per_image_high_quality',
+    'input_cost_per_audio_per_second',
+    'input_cost_per_video_per_second',
     'output_cost_per_second',
     'input_cost_per_query',
     'search_context_cost_per_query',

@@ -162,7 +162,10 @@ const PRICE_KEY_OPTIONS = [
     'input_cost_per_token', 'output_cost_per_token',
     'cache_read_input_token_cost', 'cache_creation_input_token_cost',
     'input_cost_per_token_above_200k_tokens', 'output_cost_per_token_above_200k_tokens',
-    'output_cost_per_image', 'output_cost_per_pixel', 'output_cost_per_second',
+    'output_cost_per_image', 'output_cost_per_pixel',
+    'output_cost_per_image_low_quality', 'output_cost_per_image_high_quality',
+    'input_cost_per_audio_per_second', 'input_cost_per_video_per_second',
+    'output_cost_per_second',
     'input_cost_per_query', 'search_context_cost_per_query', 'ocr_cost_per_page',
     'output_cost_per_character', 'output_cost_per_image_hd', 'output_cost_per_video',
     'output_cost_per_video_per_second'

@@ -273,7 +273,8 @@ window.IvuUI = {
           '<i class="ivu-icon ivu-icon-md-arrow-dropup"></i>' +
           '<i class="ivu-icon ivu-icon-md-arrow-dropdown"></i></span>';
       }
-      return '<th><div class="ivu-table-cell"><span>' + col.title + '</span>' + sortHtml + '</div></th>';
+      var sortAttr = col.sortable && col.key ? ' data-sort-key="' + col.key + '"' : '';
+      return '<th' + sortAttr + '><div class="ivu-table-cell"><span>' + col.title + '</span>' + sortHtml + '</div></th>';
     }).join('');
 
     var tbody = rows.map(function (row, rowIndex) {

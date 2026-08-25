@@ -50,7 +50,20 @@
 | `AIInstancePool/index.vue` | `GET` | `alb-pool` | 查询 AI 实例池列表。 |
 | `AIInstancePool/index.vue` | `POST` | `alb-pool` | 创建/更新实例池。 |
 
-## 7. AI 业务集群（`modules/Clusters`）
+## 7. 模型服务商（`modules/Providers`）
+
+| 前端组件 | 请求方法 | 相对 URL | 说明 |
+|----------|----------|----------|------|
+| `Providers/index.vue` | `GET` | `providers` | 分页查询服务商列表（`page` / `page_size`，可带 `model_protocol`）；`Data` 为 `{ list, pagination }`。 |
+| `Providers/index.vue` | `GET` | `providers/{provider_name}` | 查询单个服务商详情。 |
+| `Providers/index.vue` | `DELETE` | `providers/{provider_name}` | 删除服务商；被 cluster 引用时 `409`。 |
+| `Providers/components/ProviderUpsert.vue` | `POST` | `providers` | 新建服务商。 |
+| `Providers/components/ProviderUpsert.vue` | `PATCH` | `providers/{provider_name}` | 更新服务商；`keys`、`instance_pool` 全量替换。 |
+| `Providers/components/ProviderUpsert.vue` | `POST` | `providers/{provider_name}/discover-models` | 触发模型发现并回填 `models`。 |
+
+服务商持有实例池、模型协议、模型发现端点与 Key 明文。集群通过 `llm_config.provider` 引用，不再消费 `model-provider-types` 与 `tools/get-models-from-provider`。
+
+## 8. AI 业务集群（`modules/Clusters`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -58,13 +71,11 @@
 | `Clusters/index.vue` | `GET` | `clusters/{cluster_name}` | 查询单个集群详情。 |
 | `Clusters/index.vue` | `DELETE` | `clusters/{cluster_name}` | 删除集群。 |
 | `Clusters/index.vue` | `GET` | `route-tables` / `entities` / `api-keys` | 删除被引用时解析引用方，用于提示跳转。 |
-| `Clusters/components/index.vue` | `POST` | `clusters` | 新建集群。 |
+| `Clusters/components/index.vue` | `POST` | `clusters` | 新建集群。不提交 `instance_pool`。 |
 | `Clusters/components/index.vue` | `PATCH` | `clusters/{cluster_name}` | 更新集群。 |
-| `Clusters/components/GatewayConfig.vue` | `GET` | `model-provider-types` | 查询模型服务商类型。 |
-| `Clusters/components/GatewayConfig.vue` | `POST` | `tools/get-models-from-provider` | 按 endpoint 探测下游模型列表。 |
-| `Clusters/components/Review.vue` | `GET` | `model-provider-types` | 详情展示服务商类型名称。 |
+| `Clusters/components/GatewayConfig.vue` | `GET` | `providers` | 所属服务商下拉（`page=1&page_size=1000`，解析 `Data.list`）。 |
 
-## 8. 路由表（`modules/RouteTable`）
+## 9. 路由表（`modules/RouteTable`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -82,7 +93,7 @@
 
 规则字段使用 snake_case：`cond`、`targets[].cluster_name/model/weight`、`fallbacks[].cluster_name/model`。同一规则内 `(cluster_name, model)` 在 `targets` 与 `fallbacks` 之间不可重复。
 
-## 9. API Key 管理（`modules/APIKey`）
+## 10. API Key 管理（`modules/APIKey`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -97,7 +108,7 @@
 
 `quota_plan.unit` 支持 `total_token` 与 `RMB`；RMB 上限 90,000,000.00，展示 4 位小数。
 
-## 10. Entity 管理（`modules/Entity`）
+## 11. Entity 管理（`modules/Entity`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -116,7 +127,7 @@
 
 配额单位与 API Key 相同：`total_token` / `RMB`。
 
-## 11. 模型定价（`modules/ModelPrices`）
+## 12. 模型定价（`modules/ModelPrices`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -129,7 +140,7 @@
 
 时间字段为 `create_time` / `update_time`（Unix 秒）。
 
-## 12. 证书管理（`modules/Cert`，未启用）
+## 13. 证书管理（`modules/Cert`，未启用）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
@@ -138,7 +149,7 @@
 | `Cert/index.vue` | `PUT` | `certificates/{cert_name}` | 更新证书。 |
 | `Cert/index.vue` | `PUT` | `certificates/{cert_name}/default` | 设置默认证书。 |
 
-## 13. 变更影响分析
+## 14. 变更影响分析
 
 当 `ai-gateway-api` 接口发生变更时，按以下顺序评估影响：
 
@@ -148,7 +159,7 @@
 4. 若涉及 i18n 文案变化，同步更新 `en.js` 与 `zh.js`。
 5. 若涉及路由/权限变化，同步更新 `路由与导航设计文档.md` 与 `状态管理设计文档.md`。
 
-## 14. 引用规范
+## 15. 引用规范
 
 - 接口定义位置：`design-docs/api-define/OpenAPI接口定义/`（按模块拆分，见该目录 `README.md`）。
 - 引用方式：在文档中直接写明相对路径或仓库链接，不复制接口定义内容。

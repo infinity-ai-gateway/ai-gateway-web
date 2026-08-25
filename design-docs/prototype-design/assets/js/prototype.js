@@ -17,6 +17,7 @@ window.Prototype = {
       'nav.home': '首页',
       'nav.ResourceManage': '资源管理',
       'nav.AIGatewayInstancePoolManage': 'AI网关实例池',
+      'nav.ProviderManage': '模型服务商',
       'nav.AIClusterManage': 'AI业务集群',
       'nav.RouteManage': '路由管理',
       'nav.RouteTableManage': '路由表',
@@ -42,6 +43,7 @@ window.Prototype = {
       'nav.home': 'Home',
       'nav.ResourceManage': 'Resource Manage',
       'nav.AIGatewayInstancePoolManage': 'AI Gateway Instance Pool Manage',
+      'nav.ProviderManage': 'Model Providers',
       'nav.AIClusterManage': 'AI Cluster Manage',
       'nav.RouteManage': 'Route Manage',
       'nav.RouteTableManage': 'Route Tables',
@@ -408,6 +410,73 @@ window.Prototype = {
       event.preventDefault();
       Prototype.closeModal(closeEl.getAttribute('data-close-modal'));
     });
+  },
+
+  cellText(row, key) {
+    if (!row) return '';
+    var value = row[key];
+    if (Array.isArray(value)) return value.join(', ');
+    if (value === true || value === false) return String(value);
+    if (value == null) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  },
+
+  sortRows(rows, sortKey, sortOrder, getValue) {
+    if (!sortKey || !sortOrder) return (rows || []).slice();
+    var getter = getValue || function (row, key) {
+      return Prototype.cellText(row, key);
+    };
+    return (rows || []).slice().sort(function (a, b) {
+      var av = String(getter(a, sortKey) || '').toUpperCase();
+      var bv = String(getter(b, sortKey) || '').toUpperCase();
+      if (av < bv) return sortOrder === 'asc' ? -1 : 1;
+      if (av > bv) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  },
+
+  cycleSort(state, key) {
+    if (state.sortKey === key) {
+      if (state.sortOrder === 'asc') {
+        state.sortOrder = 'desc';
+      } else {
+        state.sortKey = '';
+        state.sortOrder = '';
+      }
+    } else {
+      state.sortKey = key;
+      state.sortOrder = 'asc';
+    }
+    if (state.currentPage != null) state.currentPage = 1;
+    if (state.page != null) state.page = 1;
+  },
+
+  paintSort(container, sortKey, sortOrder) {
+    if (!container) return;
+    container.querySelectorAll('th[data-sort-key]').forEach(function (th) {
+      var icons = th.querySelectorAll('.ivu-table-sort i');
+      if (icons.length < 2) return;
+      icons[0].style.color = '#c5c8ce';
+      icons[1].style.color = '#c5c8ce';
+      if (th.getAttribute('data-sort-key') === sortKey) {
+        if (sortOrder === 'asc') icons[0].style.color = '#2d8cf0';
+        else if (sortOrder === 'desc') icons[1].style.color = '#2d8cf0';
+      }
+    });
+  },
+
+  bindPageTableSort(container, state, rerender) {
+    if (!container || !state || !rerender) return;
+    container.querySelectorAll('th[data-sort-key]').forEach(function (th) {
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', function (event) {
+        if (event.target.closest && event.target.closest('input, select, button, a')) return;
+        Prototype.cycleSort(state, th.getAttribute('data-sort-key'));
+        rerender();
+      });
+    });
+    Prototype.paintSort(container, state.sortKey, state.sortOrder);
   },
 
   bindPageTableSearch(container, onSearch) {

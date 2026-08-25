@@ -147,7 +147,7 @@ window.ModelPriceUpsert = {
           : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-provider" value="' +
               IvuUI.escapeHtml(d.provider || '') +
               '" placeholder="deepseek" /></div>',
-        true,
+        !isView,
       ) +
       '</div>' +
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
@@ -158,7 +158,7 @@ window.ModelPriceUpsert = {
           : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-model" value="' +
               IvuUI.escapeHtml(d.model || '') +
               '" placeholder="DeepSeek V3" /></div>',
-        true,
+        !isView,
       ) +
       '</div>' +
       '</div>' +
@@ -171,7 +171,7 @@ window.ModelPriceUpsert = {
           : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-base_model" value="' +
               IvuUI.escapeHtml(d.base_model || '') +
               '" placeholder="deepseek-v3" /></div>',
-        true,
+        !isView,
       ) +
       '</div>' +
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
@@ -186,7 +186,7 @@ window.ModelPriceUpsert = {
               '</select>' +
               '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
               '</div></div>',
-        true,
+        !isView,
       ) +
       '</div>' +
       '</div>';

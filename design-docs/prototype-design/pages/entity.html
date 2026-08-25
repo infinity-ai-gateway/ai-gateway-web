@@ -47,6 +47,8 @@
                     search: { id: '', name: '', type: '', parent_id: '', quota_plan: '', rate_limit_policy_enabled: '' },
                     pageSize: 20,
                     currentPage: 1,
+                    sortKey: '',
+                    sortOrder: '',
                     drawerMode: 'add',
                     currentRow: null,
                     currentId: ''
@@ -55,9 +57,11 @@
                   var typeState = {
                     rows: cloneRows(MockData.entityTypes),
                     filteredRows: [],
-                    search: { type_name: '', level: '' },
+                    search: { type_name: '', description: '', level: '' },
                     pageSize: 20,
                     currentPage: 1,
+                    sortKey: '',
+                    sortOrder: '',
                     drawerMode: 'add',
                     currentRow: null,
                     currentId: ''
@@ -92,18 +96,28 @@
                         return true;
                       });
                     });
+                    entityState.filteredRows = Prototype.sortRows(
+                      entityState.filteredRows,
+                      entityState.sortKey,
+                      entityState.sortOrder,
+                      function (row, key) {
+                        if (key === 'parent_id') return EntityUpsert.parentName(row, entityState.rows);
+                        if (key === 'quota_plan') return EntityUpsert.formatQuota(row);
+                        return Prototype.cellText(row, key);
+                      }
+                    );
                   }
-
-                  function filterTypeRows() {
                     typeState.filteredRows = typeState.rows.filter(function (row) {
                       return Object.keys(typeState.search).every(function (key) {
                         var keyword = String(typeState.search[key] || '').trim();
                         if (!keyword) return true;
                         if (key === 'type_name') return String(row.type_name || '').toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
+                        if (key === 'description') return String(row.description || '').toUpperCase().indexOf(keyword.toUpperCase()) !== -1;
                         if (key === 'level') return String(row.level) === keyword;
                         return true;
                       });
                     });
+                    typeState.filteredRows = Prototype.sortRows(typeState.filteredRows, typeState.sortKey, typeState.sortOrder);
                   }
 
                   function getEntityPageRows() {
@@ -174,7 +188,7 @@
                       tableId: 'entity-type-page-table',
                       columns: [
                         { title: '类型名', key: 'type_name', minWidth: 120, searchable: true, sortable: true },
-                        { title: '描述', key: 'description', minWidth: 180, sortable: true },
+                        { title: '描述', key: 'description', minWidth: 180, sortable: true, searchable: true, searchPlaceholder: '请输入描述查询' },
                         {
                           title: '级别', key: 'level', minWidth: 100, searchable: true, sortable: true,
                           searchType: 'select',
@@ -219,6 +233,7 @@
                       entityState.currentPage = 1;
                       renderEntityTable();
                     });
+                    Prototype.bindPageTableSort(tableRoot, entityState, renderEntityTable);
 
                     tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
                       item.onclick = function () {
@@ -301,6 +316,7 @@
                       typeState.currentPage = 1;
                       renderTypeTable();
                     });
+                    Prototype.bindPageTableSort(tableRoot, typeState, renderTypeTable);
 
                     tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
                       item.onclick = function () {

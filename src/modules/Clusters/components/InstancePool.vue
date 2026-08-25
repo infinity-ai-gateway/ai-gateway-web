@@ -152,7 +152,6 @@ import { cloneDeep } from 'lodash';
 import { isIP } from 'validator';
 import { isHostname, NumRegCheck } from '@/utils/const';
 
-const DOMAIN_PORT = 443;
 const DOMAIN_WEIGHT = 100;
 
 export function getDefaultPortBySchema(schema) {
@@ -250,16 +249,11 @@ export function detectInstanceMode(instances) {
 
 export function formatInstanceForApi(instance) {
     const item = toFormInstance(instance);
-    const payload = {
+    return {
         addr: String(item.addr || '').trim(),
         port: parseInt(item.port, 10),
         weight: parseInt(item.weight, 10)
     };
-    const name = String(item.name || '').trim();
-    if (name) {
-        payload.name = name;
-    }
-    return payload;
 }
 
 export function syncInstancePoolPortBySchema(instances, schema) {
@@ -298,11 +292,11 @@ export function getInstanceEndpointHosts(instances) {
         .filter(Boolean);
 }
 
-function buildDomainInstance(domain) {
+function buildDomainInstance(domain, schema) {
     const value = String(domain || '').trim();
     return {
         addr: value,
-        port: DOMAIN_PORT,
+        port: getDefaultPortBySchema(schema),
         weight: DOMAIN_WEIGHT
     };
 }
@@ -319,6 +313,10 @@ export default {
         },
         reportFlag: {
             type: Boolean
+        },
+        endpointSchema: {
+            type: String,
+            default: 'https'
         }
     },
 
@@ -334,6 +332,21 @@ export default {
             handler() {
                 this.handleSubmit();
             }
+        },
+        formData: {
+            handler() {
+                if (this.isApplyingPoolData) {
+                    return;
+                }
+                this.$emit('pool-change', this.getCurrentInstances());
+            },
+            deep: true
+        },
+        endpointSchema() {
+            if (this.isApplyingPoolData) {
+                return;
+            }
+            this.$emit('pool-change', this.getCurrentInstances());
         }
     },
 
@@ -543,6 +556,29 @@ export default {
             this.triggerInstanceListValidate();
         },
 
+        getCurrentInstances() {
+            if (this.formData.instanceMode === 'domain') {
+                return [buildDomainInstance(this.formData.domainName, this.endpointSchema)];
+            }
+            return cloneDeep(this.formData.instances || []);
+        },
+
+        validateAndExport() {
+            return new Promise((resolve, reject) => {
+                if (!this.$refs.formData) {
+                    reject(new Error('invalid'));
+                    return;
+                }
+                this.$refs.formData.validate(valid => {
+                    if (!valid) {
+                        reject(new Error('invalid'));
+                        return;
+                    }
+                    resolve(this.getCurrentInstances().map(item => toFormInstance(item)));
+                });
+            });
+        },
+
         emitSubmitData(instances) {
             this.$emit('submitData', {
                 topic: 'instancePoolData',
@@ -560,7 +596,7 @@ export default {
                 }
                 if (this.formData.instanceMode === 'domain') {
                     const domain = String(this.formData.domainName || '').trim();
-                    this.emitSubmitData([buildDomainInstance(domain)]);
+                    this.emitSubmitData([buildDomainInstance(domain, this.endpointSchema)]);
                     return;
                 }
                 this.emitSubmitData(cloneDeep(this.formData.instances));

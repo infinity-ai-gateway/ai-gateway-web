@@ -53,22 +53,11 @@
             :submitName="submitName"
             @submitData="acceptDataHandler"
         />
-        <InstancePool
-            v-show="currentStepIndex === 3"
-            :key="instancePoolRenderKey"
-            :instancePoolData="instancePoolData"
-            :reportFlag="instancePoolFlag"
-            @submitData="acceptDataHandler"
-        />
         <GatewayConfig
-            v-show="currentStepIndex === 4"
+            v-show="currentStepIndex === 3"
             :llmConfigData="llmConfigData"
-            :originalLlmConfigKey="originalLlmConfigKey"
-            :originalLlmConfigHeaders="originalLlmConfigHeaders"
-            :originalLlmConfigKeys="originalLlmConfigKeys"
             :isAdd="isAdd"
             :stepsCurrentState="currentStepIndex"
-            :instancePoolData="instancePoolData"
             :reportFlag="llmConfigFlag"
             @submitData="acceptDataHandler"
         />
@@ -76,11 +65,8 @@
         <Review
             v-show="currentStepIndex === reviewStepIndex"
             :baseConfigData="baseConfigData"
-            :instancePoolData="instancePoolData"
             :passiveHealthData="passiveHealthData"
             :llmConfigData="llmConfigData"
-            :originalLlmConfigKey="originalLlmConfigKey"
-            :originalLlmConfigHeaders="originalLlmConfigHeaders"
             :isAdd="isAdd"
             :reportFlag="reviewSubmitFlag"
             v-on="$listeners"
@@ -124,11 +110,6 @@
 <script>
 import BaseConfig from './BaseConfig';
 import Timeout from './Timeout';
-import InstancePool, {
-    getClusterInstancePool,
-    formatInstancePoolForApi,
-    syncInstancePoolPortBySchema
-} from './InstancePool';
 import PassiveHealthCheck, {
     formatPassiveHealthCheckForApi
 } from './PassiveHealthCheck';
@@ -254,23 +235,31 @@ function formatStickySessionsForApi(stickySessions) {
 
 function formatLlmConfigForApi(llmConfig) {
     const src = llmConfig || {};
-    const result = { ...src };
-    if (!result.model_endpoint) {
-        result.model_endpoint = {};
+    const result = {
+        provider: src.provider,
+        models: Array.isArray(src.models) ? src.models : [],
+        model_mappings: Array.isArray(src.model_mappings)
+            ? src.model_mappings.filter(item => item && (item.source_model || item.target_model))
+            : [],
+        keys: Array.isArray(src.keys)
+            ? src.keys
+                .map(item => ({
+                    name: String(item.name || '').trim(),
+                    weight: Number(item.weight) || 0
+                }))
+                .filter(item => item.name)
+            : [],
+        key_policy: src.key_policy || {
+            strategy: 'weighted_random',
+            max_retries: 0,
+            retry_backoff_initial: 500,
+            retry_backoff_max: 5000
+        },
+        strip_prefix: !!src.strip_prefix
+    };
+    if (result.strip_prefix) {
+        result.match_prefix = src.match_prefix || '';
     }
-    if (!result.model_endpoint.schema) {
-        result.model_endpoint.schema = 'https';
-    }
-    if (!result.model_endpoint.uri) {
-        result.model_endpoint.uri = '/v1/models';
-    }
-    if (!result.provider_type) {
-        delete result.provider_type;
-    }
-    delete result.service_name;
-    delete result.group;
-    delete result.enable;
-    delete result.keyInput;
     return result;
 }
 
@@ -282,7 +271,6 @@ export default {
         Timeout,
         PassiveHealthCheck,
         GatewayConfig,
-        InstancePool,
         Review
     },
     props: {
@@ -326,18 +314,13 @@ export default {
             currentStepIndex: 0,
             baseConfigData: {},
             llmConfigData: {},
-            originalLlmConfigKey: '',
-            originalLlmConfigHeaders: {},
-            originalLlmConfigKeys: [],
             passiveHealthData: {},
             baseSubmitFlag: false,
             timeoutSubmitFlag: false,
             passiveHealthSubmitFlag: false,
-            instancePoolFlag: false,
             llmConfigFlag: false,
             reviewSubmitFlag: false,
-            disabled: false,
-            instancePoolData: []
+            disabled: false
         };
     },
 
@@ -347,7 +330,6 @@ export default {
                 { content: this.$t('cluster.basicConfig'), visible: true },
                 { content: this.$t('cluster.timeoutAndRetransmission'), visible: true },
                 { content: this.$t('cluster.passiveHealthCheck'), visible: true },
-                { content: this.$t('instancePool.config'), visible: true },
                 { content: this.$t('cluster.modelConfig'), visible: true },
                 { content: this.$t('cluster.review'), visible: true }
             ];
@@ -357,12 +339,6 @@ export default {
         },
         reviewStepIndex() {
             return this.visibleSteps.length - 1;
-        },
-        instancePoolRenderKey() {
-            if (this.isAdd) {
-                return 'cluster-instance-pool-new';
-            }
-            return `cluster-instance-pool-${this.baseConfigData.name || 'edit'}`;
         }
     },
 
@@ -396,25 +372,7 @@ export default {
             }
         },
         acceptDataHandler(data) {
-            if (data.topic === 'llmConfigData' && data.keepExistingKey && this.llmConfigData.key) {
-                this.llmConfigData = {
-                    ...data.data,
-                    key: this.llmConfigData.key
-                };
-            } else {
-                this[data.topic] = data.data;
-            }
-            if (data.topic === 'llmConfigData') {
-                const schema =
-                    (this.llmConfigData &&
-                        this.llmConfigData.model_endpoint &&
-                        this.llmConfigData.model_endpoint.schema) ||
-                    'https';
-                this.instancePoolData = syncInstancePoolPortBySchema(
-                    this.instancePoolData,
-                    schema
-                );
-            }
+            this[data.topic] = data.data;
             this.submitName = this.baseConfigData.name;
 
             if (this.currentStepIndex < this.reviewStepIndex) {
@@ -422,16 +380,10 @@ export default {
             }
         },
         handelData() {
-            const schema =
-                (this.llmConfigData &&
-                    this.llmConfigData.model_endpoint &&
-                    this.llmConfigData.model_endpoint.schema) ||
-                'https';
             let data = {
                 name: this.baseConfigData.name,
                 description: this.baseConfigData.description,
                 basic: formatBasicForApi(this.baseConfigData),
-                instance_pool: formatInstancePoolForApi(this.instancePoolData, schema),
                 sticky_sessions: formatStickySessionsForApi(this.baseConfigData.sticky_sessions),
                 passive_health_check: formatPassiveHealthCheckForApi(this.passiveHealthData),
                 llm_config: formatLlmConfigForApi(this.llmConfigData)
@@ -467,12 +419,9 @@ export default {
                     this.passiveHealthSubmitFlag = !this.passiveHealthSubmitFlag;
                     break;
                 case 3:
-                    this.instancePoolFlag = !this.instancePoolFlag;
-                    break;
-                case 4:
                     this.llmConfigFlag = !this.llmConfigFlag;
                     break;
-                case 5:
+                case 4:
                     this.reviewSubmitFlag = !this.reviewSubmitFlag;
             }
         },
@@ -499,17 +448,6 @@ export default {
             }
             this.passiveHealthData = tmpData.passive_health_check || {};
             this.llmConfigData = tmpData.llm_config || {};
-            this.originalLlmConfigKey = (tmpData.llm_config && tmpData.llm_config.key) || '';
-            this.originalLlmConfigHeaders = cloneDeep(
-                (tmpData.llm_config &&
-                    tmpData.llm_config.model_endpoint &&
-                    tmpData.llm_config.model_endpoint.headers) ||
-                    {}
-            );
-            this.originalLlmConfigKeys = cloneDeep(
-                (tmpData.llm_config && tmpData.llm_config.keys) || []
-            );
-            this.instancePoolData = getClusterInstancePool(tmpData);
         },
         back() {
             if (this.currentStepIndex > 0) {
