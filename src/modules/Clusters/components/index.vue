@@ -255,6 +255,12 @@ function formatLlmConfigForApi(llmConfig) {
             retry_backoff_initial: 500,
             retry_backoff_max: 5000
         },
+        key_affinity: src.key_affinity || {
+            enabled: false,
+            ttl: 600,
+            redis_prefix: 'bfe:ai:key_affinity',
+            penalty_enable: true
+        },
         strip_prefix: !!src.strip_prefix
     };
     if (result.strip_prefix) {
@@ -346,12 +352,13 @@ export default {
         submit() {
             let params = this.handelData();
             if (!this.isAdd) {
+                const { name, ...patchData } = params;
                 this.$request({
                     url: this.$urlFormat('clusters/{cluster_name}', {
-                        cluster_name: params.name
+                        cluster_name: name
                     }),
                     method: 'patch',
-                    data: params
+                    data: patchData
                 }).then(data => {
                     if (data.status === 200) {
                         this.$Message.success({ content: this.$t('com.tipSubmitSucc') });

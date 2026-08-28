@@ -50,7 +50,10 @@ window.ClusterUpsert = (function () {
         { source_model: 'gpt-4-turbo', target_model: 'gpt-4o' },
       ];
     }
-    if (!Array.isArray(data.llmConfigData.keys) || !data.llmConfigData.keys.length) {
+    if (
+      !Array.isArray(data.llmConfigData.keys) ||
+      !data.llmConfigData.keys.length
+    ) {
       data.llmConfigData.keys = [{ name: '', weight: 100 }];
     }
     if (!data.llmConfigData.key_policy) {
@@ -59,6 +62,14 @@ window.ClusterUpsert = (function () {
         max_retries: 0,
         retry_backoff_initial: 500,
         retry_backoff_max: 5000,
+      };
+    }
+    if (!data.llmConfigData.key_affinity) {
+      data.llmConfigData.key_affinity = {
+        enabled: false,
+        ttl: 600,
+        redis_prefix: 'bfe:ai:key_affinity',
+        penalty_enable: true,
       };
     }
   }
@@ -117,6 +128,12 @@ window.ClusterUpsert = (function () {
           max_retries: 0,
           retry_backoff_initial: 500,
           retry_backoff_max: 5000,
+        },
+        key_affinity: {
+          enabled: false,
+          ttl: 600,
+          redis_prefix: 'bfe:ai:key_affinity',
+          penalty_enable: true,
         },
       },
     };
@@ -586,6 +603,83 @@ window.ClusterUpsert = (function () {
       ) +
       '</div></div>';
 
+    var ka = llm.key_affinity || {};
+    function ivuSelectNative(field, value, options) {
+      return (
+        '<div class="ivu-select ivu-select-single" style="width:100%;">' +
+        '<div class="ivu-select-selection">' +
+        '<select class="proto-field proto-ivu-select-native" data-field="' +
+        field +
+        '" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
+        options
+          .map(function (opt) {
+            return (
+              '<option value="' +
+              IvuUI.escapeHtml(opt.value) +
+              '"' +
+              (opt.value === String(value) ? ' selected' : '') +
+              '>' +
+              IvuUI.escapeHtml(opt.label) +
+              '</option>'
+            );
+          })
+          .join('') +
+        '</select></div></div>'
+      );
+    }
+
+    var keyAffinityHtml =
+      '<div class="llm-card-title">Key 亲和性</div>' +
+      '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
+      '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+      IvuUI.formTopItem(
+        '是否启用' +
+          helpIcon(
+            '开启后，同一会话的请求将绑定到同一 Key，避免会话内切换时 Key 漂移',
+          ),
+        ivuSelectNative('llm.key_affinity.enabled', ka.enabled, [
+          { value: 'false', label: '停用' },
+          { value: 'true', label: '启用' },
+        ]),
+      ) +
+      '</div></div>' +
+      (ka.enabled
+        ? '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
+          '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+          IvuUI.formTopItem(
+            '空闲超时(秒)',
+            IvuUI.inputNumber(
+              ka.ttl,
+              'class="proto-field" data-field="llm.key_affinity.ttl" min="1"',
+            ),
+          ) +
+          '</div>' +
+          '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+          IvuUI.formTopItem(
+            'Key 惩罚' +
+              helpIcon('开启后，失败的 Key 会被临时惩罚，降低再次被选中概率'),
+            ivuSelectNative(
+              'llm.key_affinity.penalty_enable',
+              ka.penalty_enable,
+              [
+                { value: 'false', label: '关闭' },
+                { value: 'true', label: '开启' },
+              ],
+            ),
+          ) +
+          '</div></div>' +
+          '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
+          '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+          IvuUI.formTopItem(
+            'Redis Key 前缀',
+            '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="llm.key_affinity.redis_prefix" value="' +
+              IvuUI.escapeHtml(ka.redis_prefix || '') +
+              '" /></div>',
+            true,
+          ) +
+          '</div></div>'
+        : '');
+
     var instanceHint = '';
     // if (provider && provider.instance_pool && provider.instance_pool.length) {
     //   instanceHint =
@@ -609,7 +703,8 @@ window.ClusterUpsert = (function () {
           true,
         ) +
           IvuUI.formTopItem(
-            '转发模型' + helpIcon('多选；选择所属服务商后展示该服务商的模型列表'),
+            '转发模型' +
+              helpIcon('多选；选择所属服务商后展示该服务商的模型列表'),
             modelSelectHtml,
             true,
           ) +
@@ -635,6 +730,9 @@ window.ClusterUpsert = (function () {
       '</div></div>' +
       '<div class="llm-card"><div class="llm-card-body">' +
       keyPolicyHtml +
+      '</div></div>' +
+      '<div class="llm-card"><div class="llm-card-body">' +
+      keyAffinityHtml +
       '</div></div>' +
       '</div>'
     );
@@ -675,7 +773,9 @@ window.ClusterUpsert = (function () {
       reviewRow('协议', b.protocol) +
       reviewRow('单个后端最大空闲连接数', b.connection.max_idle_conn_per_rs) +
       reviewRow('会话保持启用', stickyEnabled ? '启用' : '停用') +
-      (stickyEnabled ? reviewRow('哈希策略', b.sticky_sessions.hash_strategy) : '') +
+      (stickyEnabled
+        ? reviewRow('哈希策略', b.sticky_sessions.hash_strategy)
+        : '') +
       (stickyEnabled && b.sticky_sessions.hash_strategy !== 'CLIENT_IP_ONLY'
         ? reviewRow('哈希头部', b.sticky_sessions.hash_header)
         : '') +
@@ -686,8 +786,14 @@ window.ClusterUpsert = (function () {
       );
 
     var timeoutRows =
-      reviewRow('客户端连接空闲超时(ms)', b.timeouts.timeout_read_client_again) +
-      reviewRow('读客户端请求Body超时(ms)', b.timeouts.timeout_readbody_client) +
+      reviewRow(
+        '客户端连接空闲超时(ms)',
+        b.timeouts.timeout_read_client_again,
+      ) +
+      reviewRow(
+        '读客户端请求Body超时(ms)',
+        b.timeouts.timeout_readbody_client,
+      ) +
       reviewRow('连接后端超时(ms)', b.timeouts.timeout_conn_serv) +
       reviewRow('读后端响应头部超时(ms)', b.timeouts.timeout_response_header) +
       reviewRow('写客户端响应Body超时(ms)', b.timeouts.timeout_write_client) +
@@ -703,7 +809,9 @@ window.ClusterUpsert = (function () {
     var modelsHtml =
       (llm.models || [])
         .map(function (model) {
-          return '<span class="model-tag">' + IvuUI.escapeHtml(model) + '</span>';
+          return (
+            '<span class="model-tag">' + IvuUI.escapeHtml(model) + '</span>'
+          );
         })
         .join('') || '<span class="empty-text">-</span>';
 
@@ -740,10 +848,35 @@ window.ClusterUpsert = (function () {
       IvuUI.escapeHtml(kp.max_retries != null ? kp.max_retries : 0) +
       '</div>' +
       '<div>初始退避时间(ms)：' +
-      IvuUI.escapeHtml(kp.retry_backoff_initial != null ? kp.retry_backoff_initial : 500) +
+      IvuUI.escapeHtml(
+        kp.retry_backoff_initial != null ? kp.retry_backoff_initial : 500,
+      ) +
       '</div>' +
       '<div>最大退避时间(ms)：' +
-      IvuUI.escapeHtml(kp.retry_backoff_max != null ? kp.retry_backoff_max : 5000) +
+      IvuUI.escapeHtml(
+        kp.retry_backoff_max != null ? kp.retry_backoff_max : 5000,
+      ) +
+      '</div></div></div></li></ul>';
+
+    var ka = llm.key_affinity || {};
+    var keyAffinityHtml =
+      '<ul class="clearFloat detail-row detail-row-block policy-row"><li class="title">Key 亲和性:</li><li class="value">' +
+      '<div class="policy-card" style="border:1px solid #e7e9f0;border-radius:4px;padding:12px;background:#fafafa;">' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px 24px;">' +
+      '<div>启用：' +
+      (ka.enabled ? '开启' : '关闭') +
+      '</div>' +
+      (ka.enabled
+        ? '<div>绑定空闲超时(秒)：' +
+          IvuUI.escapeHtml(ka.ttl != null ? ka.ttl : 600) +
+          '</div>' +
+          '<div>Redis Key 前缀：' +
+          IvuUI.escapeHtml(ka.redis_prefix || 'bfe:ai:key_affinity') +
+          '</div>' +
+          '<div>Key 惩罚：' +
+          (ka.penalty_enable ? '开启' : '关闭') +
+          '</div>'
+        : '') +
       '</div></div></div></li></ul>';
 
     var llmRows =
@@ -773,7 +906,8 @@ window.ClusterUpsert = (function () {
       '<ul class="clearFloat detail-row detail-row-block"><li class="title">服务鉴权 Keys:</li><li class="value">' +
       keysHtml +
       '</li></ul>' +
-      keyPolicyHtml;
+      keyPolicyHtml +
+      keyAffinityHtml;
 
     return (
       '<div class="Review">' +
@@ -814,8 +948,19 @@ window.ClusterUpsert = (function () {
       else if (path.indexOf('llm.') === 0) {
         var key = path.slice(4);
         if (key.indexOf('key_policy.') === 0) {
-          if (!data.llmConfigData.key_policy) data.llmConfigData.key_policy = {};
+          if (!data.llmConfigData.key_policy)
+            data.llmConfigData.key_policy = {};
           data.llmConfigData.key_policy[key.slice(11)] = value;
+        } else if (key.indexOf('key_affinity.') === 0) {
+          if (!data.llmConfigData.key_affinity)
+            data.llmConfigData.key_affinity = {};
+          var kaKey = key.slice(13);
+          if (kaKey === 'enabled' || kaKey === 'penalty_enable') {
+            data.llmConfigData.key_affinity[kaKey] =
+              value === 'true' || value === true;
+          } else {
+            data.llmConfigData.key_affinity[kaKey] = value;
+          }
         } else {
           data.llmConfigData[key] = value;
         }
@@ -825,8 +970,10 @@ window.ClusterUpsert = (function () {
     data.llmConfigData.model_mappings = [];
     root.querySelectorAll('[data-mapping-index]').forEach(function (row) {
       data.llmConfigData.model_mappings.push({
-        source_model: (row.querySelector('.proto-mapping-key') || {}).value || '',
-        target_model: (row.querySelector('.proto-mapping-value') || {}).value || '',
+        source_model:
+          (row.querySelector('.proto-mapping-key') || {}).value || '',
+        target_model:
+          (row.querySelector('.proto-mapping-value') || {}).value || '',
       });
     });
 
@@ -893,7 +1040,8 @@ window.ClusterUpsert = (function () {
       }
     }
     var retries = Number(
-      data.baseConfigData.retries && data.baseConfigData.retries.max_retry_in_cluster,
+      data.baseConfigData.retries &&
+        data.baseConfigData.retries.max_retry_in_cluster,
     );
     if (!Number.isFinite(retries) || retries < 0) {
       return '同集群重试次数须为 >=0 的整数';
@@ -986,10 +1134,28 @@ window.ClusterUpsert = (function () {
   function renderActionButtons(currentStep, reviewStepIndex) {
     return (
       (currentStep === reviewStepIndex
-        ? IvuUI.btn('提交', 'primary', 'small', '', 'id="cluster-upsert-submit"')
-        : IvuUI.btn('下一步', 'primary', 'small', '', 'id="cluster-upsert-next"')) +
+        ? IvuUI.btn(
+            '提交',
+            'primary',
+            'small',
+            '',
+            'id="cluster-upsert-submit"',
+          )
+        : IvuUI.btn(
+            '下一步',
+            'primary',
+            'small',
+            '',
+            'id="cluster-upsert-next"',
+          )) +
       (currentStep !== 0
-        ? IvuUI.btn('上一步', 'default', 'small', '', 'id="cluster-upsert-prev"')
+        ? IvuUI.btn(
+            '上一步',
+            'default',
+            'small',
+            '',
+            'id="cluster-upsert-prev"',
+          )
         : '')
     );
   }
@@ -1082,7 +1248,8 @@ window.ClusterUpsert = (function () {
       if (submitBtn)
         submitBtn.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
-          if (typeof options.onSubmit === 'function') options.onSubmit(state.data);
+          if (typeof options.onSubmit === 'function')
+            options.onSubmit(state.data);
         });
 
       var stickyEnabledSelect = bodyEl.querySelector(
@@ -1132,44 +1299,50 @@ window.ClusterUpsert = (function () {
             e.stopPropagation();
             if (e.target.closest('.proto-forward-model-remove')) return;
             if (!dropdown) return;
-            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            dropdown.style.display =
+              dropdown.style.display === 'none' ? 'block' : 'none';
           });
         }
 
-        wrap.querySelectorAll('.proto-forward-model-option').forEach(function (item) {
-          item.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var value = item.getAttribute('data-value');
-            if (!value) return;
-            syncFromDom(bodyEl, state.data);
-            if (value === '__SELECT_ALL__') {
-              var prov = getProviderByName(state.data.llmConfigData.provider);
-              state.data.llmConfigData.models = (prov && prov.models ? prov.models.slice() : []);
-            } else {
-              var list = state.data.llmConfigData.models || [];
-              var idx = list.indexOf(value);
-              if (idx === -1) list.push(value);
-              else list.splice(idx, 1);
-              state.data.llmConfigData.models = list;
-            }
-            state.keepForwardModelOpen = true;
-            render();
+        wrap
+          .querySelectorAll('.proto-forward-model-option')
+          .forEach(function (item) {
+            item.addEventListener('click', function (e) {
+              e.stopPropagation();
+              var value = item.getAttribute('data-value');
+              if (!value) return;
+              syncFromDom(bodyEl, state.data);
+              if (value === '__SELECT_ALL__') {
+                var prov = getProviderByName(state.data.llmConfigData.provider);
+                state.data.llmConfigData.models =
+                  prov && prov.models ? prov.models.slice() : [];
+              } else {
+                var list = state.data.llmConfigData.models || [];
+                var idx = list.indexOf(value);
+                if (idx === -1) list.push(value);
+                else list.splice(idx, 1);
+                state.data.llmConfigData.models = list;
+              }
+              state.keepForwardModelOpen = true;
+              render();
+            });
           });
-        });
 
-        wrap.querySelectorAll('.proto-forward-model-remove').forEach(function (icon) {
-          icon.addEventListener('click', function (e) {
-            e.stopPropagation();
-            var value = icon.getAttribute('data-value');
-            syncFromDom(bodyEl, state.data);
-            state.data.llmConfigData.models = (state.data.llmConfigData.models || []).filter(
-              function (item) {
+        wrap
+          .querySelectorAll('.proto-forward-model-remove')
+          .forEach(function (icon) {
+            icon.addEventListener('click', function (e) {
+              e.stopPropagation();
+              var value = icon.getAttribute('data-value');
+              syncFromDom(bodyEl, state.data);
+              state.data.llmConfigData.models = (
+                state.data.llmConfigData.models || []
+              ).filter(function (item) {
                 return item !== value;
-              },
-            );
-            render();
+              });
+              render();
+            });
           });
-        });
       }
 
       if (!bodyEl._fwdModelOutside) {
@@ -1197,24 +1370,47 @@ window.ClusterUpsert = (function () {
           render();
         });
 
-      bodyEl.querySelectorAll('[data-action="remove-mapping"]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          syncFromDom(bodyEl, state.data);
-          state.data.llmConfigData.model_mappings.splice(
-            parseInt(btn.getAttribute('data-index'), 10),
-            1,
-          );
-          render();
+      bodyEl
+        .querySelectorAll('[data-action="remove-mapping"]')
+        .forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            syncFromDom(bodyEl, state.data);
+            state.data.llmConfigData.model_mappings.splice(
+              parseInt(btn.getAttribute('data-index'), 10),
+              1,
+            );
+            render();
+          });
         });
-      });
 
-      var stripPrefixSwitch = bodyEl.querySelector('#proto-strip-prefix-switch');
+      var stripPrefixSwitch = bodyEl.querySelector(
+        '#proto-strip-prefix-switch',
+      );
       if (stripPrefixSwitch)
         stripPrefixSwitch.addEventListener('click', function () {
-          state.data.llmConfigData.strip_prefix = !state.data.llmConfigData.strip_prefix;
+          state.data.llmConfigData.strip_prefix =
+            !state.data.llmConfigData.strip_prefix;
           if (!state.data.llmConfigData.strip_prefix) {
             state.data.llmConfigData.match_prefix = '';
           }
+          render();
+        });
+
+      var keyAffinitySelect = bodyEl.querySelector(
+        '[data-field="llm.key_affinity.enabled"]',
+      );
+      if (keyAffinitySelect)
+        keyAffinitySelect.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          render();
+        });
+
+      var keyPenaltySelect = bodyEl.querySelector(
+        '[data-field="llm.key_affinity.penalty_enable"]',
+      );
+      if (keyPenaltySelect)
+        keyPenaltySelect.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
           render();
         });
 
@@ -1222,21 +1418,24 @@ window.ClusterUpsert = (function () {
       if (addKeyBtn)
         addKeyBtn.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
-          if (!state.data.llmConfigData.keys) state.data.llmConfigData.keys = [];
+          if (!state.data.llmConfigData.keys)
+            state.data.llmConfigData.keys = [];
           state.data.llmConfigData.keys.push({ name: '', weight: 0 });
           render();
         });
 
-      bodyEl.querySelectorAll('[data-action="remove-key"]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          syncFromDom(bodyEl, state.data);
-          state.data.llmConfigData.keys.splice(
-            parseInt(btn.getAttribute('data-index'), 10),
-            1,
-          );
-          render();
+      bodyEl
+        .querySelectorAll('[data-action="remove-key"]')
+        .forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            syncFromDom(bodyEl, state.data);
+            state.data.llmConfigData.keys.splice(
+              parseInt(btn.getAttribute('data-index'), 10),
+              1,
+            );
+            render();
+          });
         });
-      });
     }
 
     render();

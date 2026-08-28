@@ -1,194 +1,358 @@
-/**
-* Copyright(c) 2026 The rainway-ai-gateway Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The rainway-ai-gateway Authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 <template>
-    <div class="model-price-upsert">
-        <Form
-            ref="formData"
-            :model="formData"
-            :rules="ruleValidate"
-            label-position="top"
+  <div class="model-price-upsert">
+    <Form
+      ref="formData"
+      :model="formData"
+      :rules="ruleValidate"
+      label-position="top"
+    >
+      <Row :gutter="24">
+        <Col span="12">
+          <FormItem :label="$t('modelPrices.provider')" prop="provider">
+            <AutoComplete
+              v-model="formData.provider"
+              :data="displayProviderOptions"
+              clearable
+              icon="ios-arrow-down"
+              :placeholder="$t('modelPrices.providerPlaceholder')"
+              @on-focus="onProviderFocus"
+              @on-change="onProviderChange"
+            />
+          </FormItem>
+        </Col>
+        <Col span="12">
+          <FormItem :label="$t('modelPrices.model')" prop="model">
+            <Input v-model="formData.model" placeholder="DeepSeek V3" />
+          </FormItem>
+        </Col>
+      </Row>
+      <Row :gutter="24">
+        <Col span="12">
+          <FormItem :label="$t('modelPrices.baseModel')" prop="base_model">
+            <Input v-model="formData.base_model" placeholder="deepseek-v3" />
+          </FormItem>
+        </Col>
+        <Col span="12">
+          <FormItem :label="$t('modelPrices.mode')" prop="mode">
+            <el-select
+              v-model="formData.mode"
+              style="width: 100%;"
+              size="small"
+              filterable
+            >
+              <el-option
+                v-for="item in modeOptions"
+                :key="item"
+                :value="item"
+                :label="item"
+              />
+            </el-select>
+          </FormItem>
+        </Col>
+      </Row>
+
+      <FormItem :label="$t('modelPrices.capabilities')">
+        <el-select
+          v-model="formData.capabilities"
+          style="width: 100%;"
+          size="small"
+          multiple
+          filterable
+          clearable
         >
-            <Row :gutter="24">
-                <Col span="12">
-                    <FormItem :label="$t('modelPrices.provider')" prop="provider">
-                        <Input v-model="formData.provider" placeholder="deepseek" />
-                    </FormItem>
-                </Col>
-                <Col span="12">
-                    <FormItem :label="$t('modelPrices.model')" prop="model">
-                        <Input v-model="formData.model" placeholder="DeepSeek V3" />
-                    </FormItem>
-                </Col>
-            </Row>
-            <Row :gutter="24">
-                <Col span="12">
-                    <FormItem :label="$t('modelPrices.baseModel')" prop="base_model">
-                        <Input v-model="formData.base_model" placeholder="deepseek-v3" />
-                    </FormItem>
-                </Col>
-                <Col span="12">
-            <FormItem :label="$t('modelPrices.mode')" prop="mode">
-                <el-select v-model="formData.mode" style="width: 100%;" size="small" filterable>
-                    <el-option v-for="item in modeOptions" :key="item" :value="item" :label="item" />
-                </el-select>
-            </FormItem>
-                </Col>
-            </Row>
+          <el-option
+            v-for="item in capabilityOptions"
+            :key="item"
+            :value="item"
+            :label="item"
+          />
+        </el-select>
+      </FormItem>
 
-            <FormItem :label="$t('modelPrices.capabilities')">
-                <el-select v-model="formData.capabilities" style="width: 100%;" size="small" multiple filterable clearable>
-                    <el-option v-for="item in capabilityOptions" :key="item" :value="item" :label="item" />
-                </el-select>
-            </FormItem>
+      <FormItem :label="$t('modelPrices.supportedParameters')">
+        <el-select
+          v-model="formData.supported_parameters"
+          style="width: 100%;"
+          size="small"
+          multiple
+          filterable
+          clearable
+        >
+          <el-option
+            v-for="item in supportedParameterOptions"
+            :key="item"
+            :value="item"
+            :label="item"
+          />
+        </el-select>
+      </FormItem>
 
-            <FormItem :label="$t('modelPrices.supportedParameters')">
-                <el-select v-model="formData.supported_parameters" style="width: 100%;" size="small" multiple filterable clearable>
-                    <el-option v-for="item in supportedParameterOptions" :key="item" :value="item" :label="item" />
-                </el-select>
-            </FormItem>
+      <Card :title="$t('modelPrices.limits')" class="dynamic-card">
+        <div
+          v-for="(entry, index) in limitsList"
+          :key="`limit-${index}`"
+          class="dynamic-row"
+        >
+          <Row :gutter="8">
+            <Col span="10">
+              <el-select
+                v-model="entry.key"
+                style="width: 100%;"
+                size="small"
+                filterable
+                clearable
+                placeholder="键名"
+              >
+                <el-option
+                  v-for="item in limitKeyOptions"
+                  :key="item"
+                  :value="item"
+                  :label="item"
+                />
+              </el-select>
+            </Col>
+            <Col span="10">
+              <InputNumber
+                v-model="entry.value"
+                :min="0"
+                :precision="0"
+                style="width: 100%;"
+                placeholder="值"
+              />
+            </Col>
+            <Col span="4">
+              <Button
+                type="error"
+                size="small"
+                @click="removeLimit(index)"
+                >{{ $t('com.del') }}</Button
+              >
+            </Col>
+          </Row>
+        </div>
+        <Button size="small" type="primary" @click="addLimit"
+          >+ {{ $t('modelPrices.addLimit') }}</Button
+        >
+        <p v-if="limitsDuplicateError" class="error-text">
+          {{ $t('modelPrices.limitsDuplicateKey') }}
+        </p>
+        <p v-if="limitsValueError" class="error-text">
+          {{ $t('modelPrices.limitsValueInvalid') }}
+        </p>
+      </Card>
 
-            <Card :title="$t('modelPrices.limits')" class="dynamic-card">
-                <div
-                    v-for="(entry, index) in limitsList"
-                    :key="`limit-${index}`"
-                    class="dynamic-row"
+      <Card
+        :title="$t('modelPrices.priceSection')"
+        class="dynamic-card price-section-card"
+      >
+        <div class="price-config-group">
+          <div class="price-config-block">
+            <div class="price-config-header">
+              <span
+                class="price-config-title is-required"
+                >{{ $t('modelPrices.priceObject') }}</span
+              >
+            </div>
+            <div class="price-config-body">
+              <table v-if="pricesList.length" class="kv-table">
+                <thead>
+                  <tr>
+                    <th>{{ $t('modelPrices.priceItemKey') }}</th>
+                    <th>{{ $t('modelPrices.priceItemValue') }}</th>
+                    <th style="width: 80px;">{{ $t('com.operation') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(entry, index) in pricesList"
+                    :key="`price-${index}`"
+                  >
+                    <td>
+                      <el-select
+                        v-model="entry.key"
+                        style="width: 100%;"
+                        size="small"
+                        filterable
+                        clearable
+                        :placeholder="$t('modelPrices.priceItemKeyPlaceholder')"
+                      >
+                        <el-option
+                          v-for="item in priceKeyOptions"
+                          :key="item"
+                          :value="item"
+                          :label="item"
+                        />
+                      </el-select>
+                    </td>
+                    <td>
+                      <el-input-number
+                        v-model="entry.value"
+                        style="width: 100%;"
+                        size="small"
+                        :min="0"
+                        :precision="8"
+                        :controls="false"
+                        :placeholder="$t('modelPrices.priceItemValuePlaceholder')"
+                      />
+                    </td>
+                    <td>
+                      <Button
+                        type="error"
+                        size="small"
+                        @click="removePrice(index)"
+                        >{{ $t('com.del') }}</Button
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <Button
+                size="small"
+                type="primary"
+                class="add-row-btn"
+                @click="addPrice"
+                >+ {{ $t('modelPrices.addPrice') }}</Button
+              >
+              <p v-if="pricesError" class="error-text">
+                {{ $t('modelPrices.pricesRequired') }}
+              </p>
+              <p v-if="pricesDuplicateError" class="error-text">
+                {{ $t('modelPrices.pricesDuplicateKey') }}
+              </p>
+              <p v-if="pricesValueError" class="error-text">
+                {{ $t('modelPrices.pricesValueInvalid') }}
+              </p>
+            </div>
+          </div>
+
+          <div class="price-config-block">
+            <div class="price-config-header">
+              <span class="price-config-title">
+                {{ $t('modelPrices.tierPriceObject') }}
+                <Tooltip placement="top" transfer max-width="360">
+                  <div slot="content" class="price-config-tip">
+                    {{ $t('modelPrices.tierPriceTip') }}
+                  </div>
+                  <Icon
+                    type="ios-help-circle-outline"
+                    class="price-config-help-icon"
+                  />
+                </Tooltip>
+              </span>
+            </div>
+            <div class="price-config-body">
+              <div class="tier-meta-row">
+                <span
+                  class="tier-meta-label"
+                  >{{ $t('modelPrices.tierObject') }}</span
                 >
-                    <Row :gutter="8">
-                        <Col span="10">
-                            <el-select v-model="entry.key" style="width: 100%;" size="small" filterable clearable placeholder="键名">
-                                <el-option v-for="item in limitKeyOptions" :key="item" :value="item" :label="item" />
-                            </el-select>
-                        </Col>
-                        <Col span="10">
-                            <InputNumber v-model="entry.value" :min="0" :precision="0" style="width: 100%;" placeholder="值" />
-                        </Col>
-                        <Col span="4">
-                            <Button type="error" size="small" @click="removeLimit(index)">{{ $t('com.del') }}</Button>
-                        </Col>
-                    </Row>
-                </div>
-                <Button size="small" type="primary" @click="addLimit">+ {{ $t('modelPrices.addLimit') }}</Button>
-                <p v-if="limitsDuplicateError" class="error-text">{{ $t('modelPrices.limitsDuplicateKey') }}</p>
-                <p v-if="limitsValueError" class="error-text">{{ $t('modelPrices.limitsValueInvalid') }}</p>
-            </Card>
+                <span
+                  class="ivu-tag ivu-tag-warning ivu-tag-checked"
+                  >{{ $t('provider.pricingPeakTag') }}</span
+                >
+              </div>
+              <table v-if="tierPricesPeakList.length" class="kv-table">
+                <thead>
+                  <tr>
+                    <th>{{ $t('modelPrices.priceItemKey') }}</th>
+                    <th>{{ $t('modelPrices.priceItemValue') }}</th>
+                    <th style="width: 80px;">{{ $t('com.operation') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(entry, index) in tierPricesPeakList"
+                    :key="`tier-price-${index}`"
+                  >
+                    <td>
+                      <el-select
+                        v-model="entry.key"
+                        style="width: 100%;"
+                        size="small"
+                        filterable
+                        clearable
+                        :placeholder="$t('modelPrices.priceItemKeyPlaceholder')"
+                      >
+                        <el-option
+                          v-for="item in priceKeyOptions"
+                          :key="item"
+                          :value="item"
+                          :label="item"
+                        />
+                      </el-select>
+                    </td>
+                    <td>
+                      <el-input-number
+                        v-model="entry.value"
+                        style="width: 100%;"
+                        size="small"
+                        :min="0"
+                        :precision="8"
+                        :controls="false"
+                        :placeholder="$t('modelPrices.priceItemValuePlaceholder')"
+                      />
+                    </td>
+                    <td>
+                      <Button
+                        type="error"
+                        size="small"
+                        @click="removeTierPrice(index)"
+                        >{{ $t('com.del') }}</Button
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <Button
+                size="small"
+                type="primary"
+                class="add-row-btn"
+                @click="addTierPrice"
+                >+ {{ $t('modelPrices.addPrice') }}</Button
+              >
+              <p v-if="tierDuplicateError" class="error-text">
+                {{ $t('modelPrices.tierDuplicateKey', { tier: $t('modelPrices.tierPeakLabel') }) }}
+              </p>
+              <p v-if="tierValueError" class="error-text">
+                {{ $t('modelPrices.tierValueInvalid', { tier: $t('modelPrices.tierPeakLabel') }) }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
-            <Card :title="$t('modelPrices.priceSection')" class="dynamic-card price-section-card">
-                <div class="price-config-group">
-                    <div class="price-config-block">
-                        <div class="price-config-header">
-                            <span class="price-config-title is-required">{{ $t('modelPrices.priceObject') }}</span>
-                        </div>
-                        <div class="price-config-body">
-                            <table v-if="pricesList.length" class="kv-table">
-                                <thead>
-                                    <tr>
-                                        <th>{{ $t('modelPrices.priceItemKey') }}</th>
-                                        <th>{{ $t('modelPrices.priceItemValue') }}</th>
-                                        <th style="width: 80px;">{{ $t('com.operation') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(entry, index) in pricesList" :key="`price-${index}`">
-                                        <td>
-                                            <el-select v-model="entry.key" style="width: 100%;" size="small" filterable clearable :placeholder="$t('modelPrices.priceItemKeyPlaceholder')">
-                                                <el-option v-for="item in priceKeyOptions" :key="item" :value="item" :label="item" />
-                                            </el-select>
-                                        </td>
-                                        <td>
-                                            <InputNumber v-model="entry.value" :min="0" :precision="8" style="width: 100%;" :placeholder="$t('modelPrices.priceItemValuePlaceholder')" />
-                                        </td>
-                                        <td>
-                                            <Button type="error" size="small" @click="removePrice(index)">{{ $t('com.del') }}</Button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <Button size="small" type="primary" class="add-row-btn" @click="addPrice">+ {{ $t('modelPrices.addPrice') }}</Button>
-                            <p v-if="pricesError" class="error-text">{{ $t('modelPrices.pricesRequired') }}</p>
-                            <p v-if="pricesDuplicateError" class="error-text">{{ $t('modelPrices.pricesDuplicateKey') }}</p>
-                            <p v-if="pricesValueError" class="error-text">{{ $t('modelPrices.pricesValueInvalid') }}</p>
-                        </div>
-                    </div>
+      <Card :title="$t('modelPrices.metadata')" class="dynamic-card">
+        <FormItem :label="$t('modelPrices.source')" prop="metadata.source">
+          <Input v-model="formData.metadata.source" placeholder="https://..." />
+        </FormItem>
+        <FormItem :label="$t('modelPrices.notes')">
+          <Input v-model="formData.metadata.notes" type="textarea" :rows="3" />
+        </FormItem>
+      </Card>
 
-                    <div class="price-config-block">
-                        <div class="price-config-header">
-                            <span class="price-config-title">
-                                {{ $t('modelPrices.tierPriceObject') }}
-                                <Tooltip placement="top" transfer max-width="360">
-                                    <div slot="content" class="price-config-tip">{{ $t('modelPrices.tierPriceTip') }}</div>
-                                    <Icon type="ios-help-circle-outline" class="price-config-help-icon" />
-                                </Tooltip>
-                            </span>
-                        </div>
-                        <div class="price-config-body">
-                            <div class="tier-meta-row">
-                                <span class="tier-meta-label">{{ $t('modelPrices.tierObject') }}</span>
-                                <span class="ivu-tag ivu-tag-warning ivu-tag-checked">{{ $t('provider.pricingPeakTag') }}</span>
-                            </div>
-                            <table v-if="tierPricesPeakList.length" class="kv-table">
-                                <thead>
-                                    <tr>
-                                        <th>{{ $t('modelPrices.priceItemKey') }}</th>
-                                        <th>{{ $t('modelPrices.priceItemValue') }}</th>
-                                        <th style="width: 80px;">{{ $t('com.operation') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(entry, index) in tierPricesPeakList" :key="`tier-price-${index}`">
-                                        <td>
-                                            <el-select v-model="entry.key" style="width: 100%;" size="small" filterable clearable :placeholder="$t('modelPrices.priceItemKeyPlaceholder')">
-                                                <el-option v-for="item in priceKeyOptions" :key="item" :value="item" :label="item" />
-                                            </el-select>
-                                        </td>
-                                        <td>
-                                            <InputNumber v-model="entry.value" :min="0" :precision="8" style="width: 100%;" :placeholder="$t('modelPrices.priceItemValuePlaceholder')" />
-                                        </td>
-                                        <td>
-                                            <Button type="error" size="small" @click="removeTierPrice(index)">{{ $t('com.del') }}</Button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <Button size="small" type="primary" class="add-row-btn" @click="addTierPrice">+ {{ $t('modelPrices.addPrice') }}</Button>
-                            <p v-if="tierDuplicateError" class="error-text">{{ $t('modelPrices.tierDuplicateKey', { tier: $t('modelPrices.tierPeakLabel') }) }}</p>
-                            <p v-if="tierValueError" class="error-text">{{ $t('modelPrices.tierValueInvalid', { tier: $t('modelPrices.tierPeakLabel') }) }}</p>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-            <Card :title="$t('modelPrices.metadata')" class="dynamic-card">
-                <FormItem :label="$t('modelPrices.source')" prop="metadata.source">
-                    <Input v-model="formData.metadata.source" placeholder="https://..." />
-                </FormItem>
-                <FormItem :label="$t('modelPrices.notes')">
-                    <Input v-model="formData.metadata.notes" type="textarea" :rows="3" />
-                </FormItem>
-            </Card>
-
-            <FormItem class="drawer-footer">
-                <Button type="primary" size="small" :loading="submitting" @click="handleSubmit">
-                    {{ $t('com.submit') }}
-                </Button>
-                <Button size="small" style="margin-left: 8px;" @click="onCancel">
-                    {{ $t('com.cancel') }}
-                </Button>
-            </FormItem>
-        </Form>
-    </div>
+      <FormItem class="drawer-footer">
+        <Button
+          type="primary"
+          size="small"
+          :loading="submitting"
+          @click="handleSubmit"
+        >
+          {{ $t('com.submit') }}
+        </Button>
+        <Button size="small" style="margin-left: 8px;" @click="onCancel">
+          {{ $t('com.cancel') }}
+        </Button>
+      </FormItem>
+    </Form>
+  </div>
 </template>
 
 <script>
@@ -250,6 +414,8 @@ export default {
             supportedParameterOptions: SUPPORTED_PARAMETER_OPTIONS,
             limitKeyOptions: LIMIT_KEY_OPTIONS,
             priceKeyOptions: PRICE_KEY_OPTIONS,
+            providerOptions: [],
+            providerFilterText: '',
             pricesError: false,
             limitsDuplicateError: false,
             pricesDuplicateError: false,
@@ -277,8 +443,8 @@ export default {
             tierPricesPeakList: [],
             ruleValidate: {
                 provider: [
-                    { required: true, message: this.$t('modelPrices.providerRequired'), trigger: 'blur' },
-                    { type: 'string', min: 1, max: 255, message: '长度 1-255', trigger: 'blur' }
+                    { required: true, message: this.$t('modelPrices.providerRequired'), trigger: 'change' },
+                    { type: 'string', min: 1, max: 255, message: '长度 1-255', trigger: 'change' }
                 ],
                 model: [
                     { required: true, message: this.$t('modelPrices.modelRequired'), trigger: 'blur' },
@@ -312,6 +478,18 @@ export default {
         };
     },
 
+    computed: {
+        displayProviderOptions() {
+            const text = this.providerFilterText.trim().toLowerCase();
+            if (!text) {
+                return this.providerOptions;
+            }
+            return this.providerOptions.filter(item =>
+                String(item).toLowerCase().indexOf(text) > -1
+            );
+        }
+    },
+
     watch: {
         currentData: {
             handler(data) {
@@ -331,7 +509,34 @@ export default {
         }
     },
 
+    created() {
+        this.fetchProviderNames();
+    },
+
     methods: {
+        fetchProviderNames() {
+            this.$request({
+                url: 'providers/actions/get-provider-names',
+                method: 'get',
+                openapi: true
+            }).then(res => {
+                if (res.status !== 200) {
+                    return;
+                }
+                this.providerOptions = (res.data.Data && res.data.Data.names) || [];
+            }).catch(err => {
+                console.error('获取服务商名称列表失败:', err);
+            });
+        },
+
+        onProviderFocus() {
+            // 聚焦时展示全部候选，方便用户无需清空即可重新选择
+            this.providerFilterText = '';
+        },
+        onProviderChange(value) {
+            this.providerFilterText = value || '';
+        },
+
         resetForm() {
             this.formData = {
                 provider: '',

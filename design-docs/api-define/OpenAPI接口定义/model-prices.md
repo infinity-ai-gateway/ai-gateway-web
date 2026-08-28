@@ -50,8 +50,8 @@
 | `capabilities` | []string | 模型支持的能力列表 | 默认空数组；元素应为枚举值 |
 | `supported_parameters` | []string | 支持的请求参数列表 | 默认空数组；元素应为枚举值 |
 | `limits` | object | 限制对象 | 默认空对象；键名应为枚举值；所有限制字段必须为非负整数 |
-| `prices` | object | 价格对象 | 必填；至少包含一个价格字段；所有价格字段必须为非负数；键名应为枚举值；未命中 tier 时作为 fallback 价格 |
-| `tier_prices` | object | 分时段价格对象 | 非必填；键为 tier name（**初期只支持 `peak`**），值为价格对象；内部键名应为 `prices` 枚举；与 provider 的 `tiers` 不做强制引用校验 |
+| `prices` | object | 价格对象 | 必填；至少包含一个价格字段；所有价格字段必须为非负数；键名应为枚举值；未命中 tier 时作为 fallback 价格；支持 8 位及以上小数精度，JSON 序列化使用十进制表示法（如 `0.0000015`），不使用科学计数法 |
+| `tier_prices` | object | 分时段价格对象 | 非必填；键为 tier name（**初期只支持 `peak`**），值为价格对象；内部键名应为 `prices` 枚举；与 provider 的 `tiers` 不做强制引用校验；同样支持 8 位及以上小数精度与十进制表示法 |
 | `price_currency` | string | 价格货币 | 固定为 `RMB`，请求体中无需传入 |
 | `metadata` | object | 元数据 | 默认空对象；键名应为枚举值 |
 | `create_time` | int64 | 创建时间 | Unix 时间戳（秒） |
@@ -166,6 +166,37 @@
 
 > **说明**：`capabilities`、`supported_parameters`、`limits`、`prices`、`metadata` 若传入非枚举值，系统可接收但建议告警或记录，便于后续收敛。
 
+### 1.2 价格精度与 JSON 序列化
+
+`prices` 与 `tier_prices.<tier>` 中的价格字段为浮点数，业务上支持 8 位及更多小数精度（例如 `0.0000015`、`0.00000075`）。
+
+为避免默认 JSON encoder 将小数值输出为科学计数法（如 `1.5e-6`），系统在序列化时使用十进制表示法：
+
+- 请求体、响应体、InnerAPI 导出的 `cluster_conf.data` 中，价格均显示为 `"0.0000015"`、`"0.00000075"` 等形式；
+- 该表示方式仅影响 JSON 文本，不改变 `float64` 数值语义与 BFE 定点整数扣减逻辑；
+- YAML 导入（`model-list.yaml`）与 OpenAPI CRUD 均按原浮点数值解析，无需额外处理。
+
+示例：
+
+```json
+{
+  "prices": {
+    "input_cost_per_token": 0.0000015,
+    "output_cost_per_token": 0.0000045,
+    "cache_read_input_token_cost": 0.0000005
+  },
+  "tier_prices": {
+    "peak": {
+      "input_cost_per_token": 0.000003,
+      "output_cost_per_token": 0.000009,
+      "cache_read_input_token_cost": 0.000001
+    }
+  }
+}
+```
+
+序列化后文本保持十进制表示，不包含 `1.5e-6`、`4.5e-6` 等科学计数法。
+
 ---
 
 ## 2. `model-list.yaml` 源格式说明
@@ -220,8 +251,8 @@ models:
 | `capabilities` | N | 能力列表，枚举值同第 1 节 `capabilities` 枚举 |
 | `supported_parameters` | N | 支持的请求参数列表，枚举值同第 1 节 `supported_parameters` 枚举 |
 | `limits` | N | 限制对象，键名枚举值同第 1 节 `limits` 枚举；所有限制字段必须为非负整数 |
-| `prices` | Y | 价格对象，键名枚举值同第 1 节 `prices` 枚举；至少包含一个价格字段；未命中 tier 时作为 fallback 价格 |
-| `tier_prices` | N | 分时段价格对象，键为 tier name（**初期只支持 `peak`**），值为价格对象；内部键名枚举值同第 1 节 `prices` 枚举 |
+| `prices` | Y | 价格对象，键名枚举值同第 1 节 `prices` 枚举；至少包含一个价格字段；未命中 tier 时作为 fallback 价格；支持 8 位及以上小数精度 |
+| `tier_prices` | N | 分时段价格对象，键为 tier name（**初期只支持 `peak`**），值为价格对象；内部键名枚举值同第 1 节 `prices` 枚举；支持 8 位及以上小数精度 |
 | `metadata` | N | 元数据，键名枚举值同第 1 节 `metadata` 枚举 |
 
 > **唯一性约束**：`(provider, model, mode)` 三元组必须唯一。
@@ -624,7 +655,7 @@ Data 为 null。
 2. `provider` 仅作为价格归集标识，不强制引用 `/providers` 中已存在的 provider；
 3. `(provider, model, mode)` 组合不能重复；
 4. `prices` 必填，至少包含一个价格字段；
-5. 所有价格字段必须为非负数；
+5. 所有价格字段必须为非负数；支持 8 位及以上小数精度；
 6. `tier_prices` 非必填；若传入：
    - **初期 tier name 只支持 `peak`**；
    - 每个 tier 对应的价格对象中，键名须为 `prices` 枚举；

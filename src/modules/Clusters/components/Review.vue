@@ -1,33 +1,19 @@
-/**
-* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors. * *
+Licensed under the Apache License, Version 2.0 (the "License"); * you may not
+use this file except in compliance with the License. * You may obtain a copy of
+the License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless
+required by applicable law or agreed to in writing, software * distributed under
+the License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. * See the License for the
+specific language governing permissions and * limitations under the License. */
+/** * Copyright (c) 2021 The BFE Authors. * * Licensed under the Apache License,
+Version 2.0 (the "License"); * you may not use this file except in compliance
+with the License. * You may obtain a copy of the License at * *
+http://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable law
+or agreed to in writing, software * distributed under the License is distributed
+on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 <template>
   <div class="Review">
     <div class="panel">
@@ -299,6 +285,72 @@
           <li class="title">{{ $t('gatewayConfig.keyPolicy') }}:</li>
           <li class="value"><span class="empty-text">-</span></li>
         </ul>
+        <ul
+          v-if="displayKeyAffinity"
+          class="clearFloat detail-row-block policy-row"
+        >
+          <li class="title">{{ $t('gatewayConfig.keyAffinity') }}:</li>
+          <li class="value">
+            <Card class="policy-card">
+              <div class="review-item">
+                <div class="review-label">
+                  {{ $t('gatewayConfig.keyAffinityEnabled') }}:
+                </div>
+                <div class="review-value">
+                  {{
+                    displayKeyAffinity.enabled
+                      ? $t('com.enable')
+                      : $t('com.deactivate')
+                  }}
+                </div>
+              </div>
+              <template v-if="displayKeyAffinity.enabled">
+                <Row :gutter="24" class="review-row">
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.keyAffinityTtlReview') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayKeyAffinity.ttl }}
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.keyAffinityPenalty') }}:
+                      </div>
+                      <div class="review-value">
+                        {{
+                          displayKeyAffinity.penalty_enable
+                            ? $t('com.enable')
+                            : $t('com.deactivate')
+                        }}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+                <Row :gutter="24">
+                  <Col span="24">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.keyAffinityRedisPrefix') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayKeyAffinity.redis_prefix }}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </template>
+            </Card>
+          </li>
+        </ul>
+        <ul v-else class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.keyAffinity') }}:</li>
+          <li class="value"><span class="empty-text">-</span></li>
+        </ul>
       </div>
     </div>
   </div>
@@ -416,6 +468,29 @@ export default {
                 max_retries: getValue('max_retries'),
                 retry_backoff_initial: getValue('retry_backoff_initial'),
                 retry_backoff_max: getValue('retry_backoff_max')
+            };
+        },
+        displayKeyAffinity() {
+            const affinity = this.llmConfigData && this.llmConfigData.key_affinity;
+            if (!affinity) {
+                return null;
+            }
+            const defaults = {
+                enabled: false,
+                ttl: 600,
+                redis_prefix: 'bfe:ai:key_affinity',
+                penalty_enable: true
+            };
+            const getValue = key => {
+                const value = affinity[key];
+                return value !== undefined && value !== null && value !== '' ? value : defaults[key];
+            };
+            const isTrue = value => value === true || value === 'true';
+            return {
+                enabled: isTrue(getValue('enabled')),
+                ttl: getValue('ttl'),
+                redis_prefix: getValue('redis_prefix'),
+                penalty_enable: isTrue(getValue('penalty_enable'))
             };
         }
     },

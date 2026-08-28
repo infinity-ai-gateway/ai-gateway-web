@@ -1,8 +1,9 @@
 window.ProviderUpsert = (function () {
   var PROTOCOL_OPTIONS = ['openai', 'anthropic'];
   var MODEL_LIST_TIP =
-    '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。';
-  var MODEL_LIST_PLACEHOLDER = '点击「获取」从上游拉取模型列表';
+    '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。也可直接输入模型名称，按回车添加到列表。';
+  var MODEL_LIST_PLACEHOLDER =
+    '点击「获取」拉取上游模型列表，或输入模型名回车添加';
 
   function helpIcon(tip) {
     return (
@@ -59,7 +60,7 @@ window.ProviderUpsert = (function () {
 
   function buildDiscoverPayload(data) {
     var protocols = data.model_protocols || [];
-    var inst = ((data.instance_pool || [])[0] || {});
+    var inst = (data.instance_pool || [])[0] || {};
     var addr = (inst.addr || '').trim();
     var port = Number(inst.port);
     var keys = (data.keys || []).filter(function (k) {
@@ -82,7 +83,11 @@ window.ProviderUpsert = (function () {
     }
     if (!payload.schema) return '请选择请求协议 schema';
     if (!payload.addr) return '请填写实例地址后再获取模型';
-    if (!Number.isFinite(payload.port) || payload.port < 1 || payload.port > 65535) {
+    if (
+      !Number.isFinite(payload.port) ||
+      payload.port < 1 ||
+      payload.port > 65535
+    ) {
       return '实例端口须为 1–65535';
     }
     var uri = payload.uri || '/v1/models';
@@ -107,12 +112,12 @@ window.ProviderUpsert = (function () {
         uri: (row.model_endpoint && row.model_endpoint.uri) || '/v1/models',
       },
       models: (row.models || []).slice(),
-      keys: row.keys && row.keys.length
-        ? clone(row.keys)
-        : [{ name: '', key: '' }],
-      instance_pool: row.instance_pool && row.instance_pool.length
-        ? clone(row.instance_pool)
-        : [{ name: '', addr: '', weight: 100, port: 443 }],
+      keys:
+        row.keys && row.keys.length ? clone(row.keys) : [{ name: '', key: '' }],
+      instance_pool:
+        row.instance_pool && row.instance_pool.length
+          ? clone(row.instance_pool)
+          : [{ name: '', addr: '', weight: 100, port: 443 }],
       model_protocols: (row.model_protocols || ['openai']).slice(),
       time_zone: row.time_zone || 'Asia/Shanghai',
       tiers: clone(row.tiers || []),
@@ -180,7 +185,11 @@ window.ProviderUpsert = (function () {
     if (!pool || pool.length !== 1) return 'ip';
     var inst = pool[0] || {};
     if (!(inst.addr || '').trim()) return 'ip';
-    if (Number(inst.port) === 443 && Number(inst.weight) === 100 && !looksLikeIPv4(inst.addr)) {
+    if (
+      Number(inst.port) === 443 &&
+      Number(inst.weight) === 100 &&
+      !looksLikeIPv4(inst.addr)
+    ) {
       return 'domain';
     }
     return 'ip';
@@ -190,7 +199,9 @@ window.ProviderUpsert = (function () {
     var inst = ((data && data.instance_pool) || [])[0] || {};
     var addr = (inst.addr || '').trim();
     if (!addr) return '实例地址:端口';
-    return addr + ':' + (inst.port != null && inst.port !== '' ? inst.port : 443);
+    return (
+      addr + ':' + (inst.port != null && inst.port !== '' ? inst.port : 443)
+    );
   }
 
   function renderInstancePool(data, isView, instanceMode) {
@@ -280,7 +291,9 @@ window.ProviderUpsert = (function () {
 
     return (
       '<div class="llm-card"><div class="llm-card-title">实例池</div><div class="llm-card-body">' +
-      IvuUI.formTop(IvuUI.formTopItem('实例形态', modeSelect, true) + bodyHtml) +
+      IvuUI.formTop(
+        IvuUI.formTopItem('实例形态', modeSelect, true) + bodyHtml,
+      ) +
       '</div></div>'
     );
   }
@@ -340,7 +353,13 @@ window.ProviderUpsert = (function () {
       '<thead><tr>' +
       headers
         .map(function (h) {
-          return '<th' + (h.width ? ' style="width:' + h.width + ';"' : '') + '>' + h.title + '</th>';
+          return (
+            '<th' +
+            (h.width ? ' style="width:' + h.width + ';"' : '') +
+            '>' +
+            h.title +
+            '</th>'
+          );
         })
         .join('') +
       '</tr></thead><tbody>' +
@@ -353,15 +372,13 @@ window.ProviderUpsert = (function () {
     var timeZone = data.time_zone || 'Asia/Shanghai';
     var tiers = data.tiers || [];
     if (!tiers.length) {
-      return (
-        IvuUI.card(
-          '分段计价配置',
-          '<div class="info-row"><div class="info-label">时区</div><div class="info-value">' +
-            IvuUI.escapeHtml(timeZone) +
-            '</div></div>' +
-            '<div class="info-row"><div class="info-label">计价时段</div><div class="info-value">忙时（peak）</div></div>' +
-            '<div class="info-row"><div class="info-label">时间段</div><div class="info-value">未配置</div></div>',
-        )
+      return IvuUI.card(
+        '分段计价配置',
+        '<div class="info-row"><div class="info-label">时区</div><div class="info-value">' +
+          IvuUI.escapeHtml(timeZone) +
+          '</div></div>' +
+          '<div class="info-row"><div class="info-label">计价时段</div><div class="info-value">忙时（peak）</div></div>' +
+          '<div class="info-row"><div class="info-label">时间段</div><div class="info-value">未配置</div></div>',
       );
     }
 
@@ -378,13 +395,18 @@ window.ProviderUpsert = (function () {
                 { title: '开始时间' },
                 { title: '结束时间' },
               ],
-              ((ProviderPricingTiers && ProviderPricingTiers.getPeakTier
-                ? ProviderPricingTiers.getPeakTier(data)
-                : tiers[0] || {}).time_ranges || [])
+              (
+                (ProviderPricingTiers && ProviderPricingTiers.getPeakTier
+                  ? ProviderPricingTiers.getPeakTier(data)
+                  : tiers[0] || {}
+                ).time_ranges || []
+              )
                 .map(function (tr) {
                   var weekdaysText = ProviderPricingTiers
                     ? ProviderPricingTiers.formatWeekdays(tr.weekdays)
-                    : (tr.weekdays && tr.weekdays.length ? tr.weekdays.join(',') : '每天');
+                    : tr.weekdays && tr.weekdays.length
+                    ? tr.weekdays.join(',')
+                    : '每天';
                   return (
                     '<tr><td>' +
                     IvuUI.escapeHtml(weekdaysText) +
@@ -415,11 +437,10 @@ window.ProviderUpsert = (function () {
     var instanceBody = '';
     if (mode === 'domain') {
       var domain = ((data.instance_pool || [])[0] || {}).addr || '';
-      instanceBody =
-        IvuUI.formTop(
-          IvuUI.formTopItem('实例形态', '服务商域名') +
-            IvuUI.formTopItem('服务商域名', IvuUI.escapeHtml(domain || '-')),
-        );
+      instanceBody = IvuUI.formTop(
+        IvuUI.formTopItem('实例形态', '服务商域名') +
+          IvuUI.formTopItem('服务商域名', IvuUI.escapeHtml(domain || '-')),
+      );
     } else {
       var instanceRows = (data.instance_pool || [])
         .map(function (item) {
@@ -467,9 +488,15 @@ window.ProviderUpsert = (function () {
         '基本信息',
         IvuUI.formTop(
           IvuUI.formTopItem('名称', IvuUI.escapeHtml(data.name || '-')) +
-            IvuUI.formTopItem('描述', IvuUI.escapeHtml(data.description || '-')) +
+            IvuUI.formTopItem(
+              '描述',
+              IvuUI.escapeHtml(data.description || '-'),
+            ) +
             IvuUI.formTopItem('创建时间', formatTime(data.create_time)) +
-            IvuUI.formTopItem('更新时间', formatTime(data.update_time || data.create_time)),
+            IvuUI.formTopItem(
+              '更新时间',
+              formatTime(data.update_time || data.create_time),
+            ),
         ),
       ) +
       IvuUI.card('实例池', instanceBody) +
@@ -483,10 +510,7 @@ window.ProviderUpsert = (function () {
       IvuUI.card(
         '服务鉴权 Keys',
         renderDetailTable(
-          [
-            { title: 'Key 名称' },
-            { title: 'Key 值' },
-          ],
+          [{ title: 'Key 名称' }, { title: 'Key 值' }],
           keyRows,
         ),
       ) +
@@ -509,7 +533,9 @@ window.ProviderUpsert = (function () {
 
     var keyRows = (data.keys || [])
       .map(function (item, index) {
-        var keyDisplay = isView ? maskSecretKey(item.key || '') : item.key || '';
+        var keyDisplay = isView
+          ? maskSecretKey(item.key || '')
+          : item.key || '';
         return (
           '<tr data-key-index="' +
           index +
@@ -560,9 +586,26 @@ window.ProviderUpsert = (function () {
             );
           })
           .join('')
-      : '<span class="proto-placeholder">' + MODEL_LIST_PLACEHOLDER + '</span>';
+      : '';
 
     function renderModelListCard() {
+      var inputHtml = isView
+        ? ''
+        : '<input type="text" class="proto-model-input" placeholder="' +
+          MODEL_LIST_PLACEHOLDER +
+          '" />';
+      var placeholderHtml =
+        !isView && !selectedModels.length
+          ? ''
+          : '<span class="proto-placeholder" style="display:none;">' +
+            MODEL_LIST_PLACEHOLDER +
+            '</span>';
+      if (isView && !selectedModels.length) {
+        placeholderHtml =
+          '<span class="proto-placeholder">' +
+          MODEL_LIST_PLACEHOLDER +
+          '</span>';
+      }
       return (
         '<div class="llm-card"><div class="llm-card-title">' +
         '模型列表' +
@@ -572,6 +615,8 @@ window.ProviderUpsert = (function () {
         '<div class="proto-model-select" id="proto-provider-models" style="flex:1;min-height:32px;">' +
         '<div class="proto-model-select-tags">' +
         modelTags +
+        inputHtml +
+        placeholderHtml +
         '</div></div>' +
         (isView ? '' : renderDiscoverButton(data)) +
         '</div></div></div>'
@@ -604,11 +649,7 @@ window.ProviderUpsert = (function () {
       renderInstancePool(data, isView, instanceMode) +
       '<div class="llm-card"><div class="llm-card-title">模型服务配置</div><div class="llm-card-body">' +
       IvuUI.formTop(
-        IvuUI.formTopItem(
-          '模型协议',
-          protocolSelect,
-          true,
-        ) +
+        IvuUI.formTopItem('模型协议', protocolSelect, true) +
           IvuUI.formTopItem(
             '模型列表接口',
             renderEndpointUrlGroup(data, isView),
@@ -637,14 +678,18 @@ window.ProviderUpsert = (function () {
       if (!path) return;
       if (path === 'name') data.name = field.value;
       else if (path === 'description') data.description = field.value;
-      else if (path === 'model_endpoint.schema') data.model_endpoint.schema = field.value;
-      else if (path === 'model_endpoint.uri') data.model_endpoint.uri = field.value;
+      else if (path === 'model_endpoint.schema')
+        data.model_endpoint.schema = field.value;
+      else if (path === 'model_endpoint.uri')
+        data.model_endpoint.uri = field.value;
     });
 
     data.model_protocols = [];
-    root.querySelectorAll('.proto-protocol-option.ivu-select-item-selected').forEach(function (item) {
-      data.model_protocols.push(item.getAttribute('data-value'));
-    });
+    root
+      .querySelectorAll('.proto-protocol-option.ivu-select-item-selected')
+      .forEach(function (item) {
+        data.model_protocols.push(item.getAttribute('data-value'));
+      });
 
     data.instance_pool = [];
     var domainInput = root.querySelector('.proto-domain-addr');
@@ -658,13 +703,18 @@ window.ProviderUpsert = (function () {
       });
     } else {
       root.querySelectorAll('[data-instance-index]').forEach(function (row) {
-        var addr = (row.querySelector('.proto-instance-addr') || {}).value || '';
+        var addr =
+          (row.querySelector('.proto-instance-addr') || {}).value || '';
         var trimmedAddr = addr.trim();
         data.instance_pool.push({
           name: trimmedAddr,
           addr: trimmedAddr,
-          port: Number((row.querySelector('.proto-instance-port') || {}).value || 443),
-          weight: Number((row.querySelector('.proto-instance-weight') || {}).value || 0),
+          port: Number(
+            (row.querySelector('.proto-instance-port') || {}).value || 443,
+          ),
+          weight: Number(
+            (row.querySelector('.proto-instance-weight') || {}).value || 0,
+          ),
         });
       });
     }
@@ -762,7 +812,9 @@ window.ProviderUpsert = (function () {
       isView: !!options.isView,
       data: createDefaultData(options.row),
       existingNames: options.existingNames || [],
-      instanceMode: inferInstanceMode((options.row && options.row.instance_pool) || []),
+      instanceMode: inferInstanceMode(
+        (options.row && options.row.instance_pool) || [],
+      ),
     };
 
     function render() {
@@ -771,10 +823,28 @@ window.ProviderUpsert = (function () {
         : renderForm(state.data, state.isAdd, state.isView, state.instanceMode);
       if (footerEl) {
         footerEl.innerHTML = state.isView
-          ? IvuUI.btn('关闭', 'default', 'small', '', 'id="provider-upsert-cancel"')
-          : IvuUI.btn('提交', 'primary', 'small', '', 'id="provider-upsert-submit"') +
+          ? IvuUI.btn(
+              '关闭',
+              'default',
+              'small',
+              '',
+              'id="provider-upsert-cancel"',
+            )
+          : IvuUI.btn(
+              '提交',
+              'primary',
+              'small',
+              '',
+              'id="provider-upsert-submit"',
+            ) +
             ' ' +
-            IvuUI.btn('取消', 'default', 'small', '', 'id="provider-upsert-cancel"');
+            IvuUI.btn(
+              '取消',
+              'default',
+              'small',
+              '',
+              'id="provider-upsert-cancel"',
+            );
       }
       bindEvents();
     }
@@ -824,7 +894,8 @@ window.ProviderUpsert = (function () {
           e.stopPropagation();
           if (e.target.closest('.proto-protocol-remove')) return;
           if (!dropdown) return;
-          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+          dropdown.style.display =
+            dropdown.style.display === 'none' ? 'block' : 'none';
         });
       }
 
@@ -844,7 +915,8 @@ window.ProviderUpsert = (function () {
     }
 
     function bindEvents() {
-      var cancelBtn = footerEl && footerEl.querySelector('#provider-upsert-cancel');
+      var cancelBtn =
+        footerEl && footerEl.querySelector('#provider-upsert-cancel');
       if (cancelBtn && typeof options.onCancel === 'function') {
         cancelBtn.addEventListener('click', options.onCancel);
       }
@@ -856,13 +928,19 @@ window.ProviderUpsert = (function () {
         modeSelect.addEventListener('change', function () {
           syncFromDom(bodyEl, state.data);
           var nextMode = modeSelect.value === 'domain' ? 'domain' : 'ip';
-          var first = (state.data.instance_pool || [])[0] || { addr: '', port: 443, weight: 100 };
+          var first = (state.data.instance_pool || [])[0] || {
+            addr: '',
+            port: 443,
+            weight: 100,
+          };
           if (nextMode === 'domain') {
             state.data.instance_pool = [
               { name: '', addr: first.addr || '', port: 443, weight: 100 },
             ];
           } else if (!state.data.instance_pool.length) {
-            state.data.instance_pool = [{ name: '', addr: first.addr || '', port: 443, weight: 100 }];
+            state.data.instance_pool = [
+              { name: '', addr: first.addr || '', port: 443, weight: 100 },
+            ];
           }
           state.instanceMode = nextMode;
           render();
@@ -872,56 +950,75 @@ window.ProviderUpsert = (function () {
       if (addInst) {
         addInst.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
-          state.data.instance_pool.push({ name: '', addr: '', weight: 0, port: 443 });
+          state.data.instance_pool.push({
+            name: '',
+            addr: '',
+            weight: 0,
+            port: 443,
+          });
           render();
         });
       }
-      bodyEl.querySelectorAll('[data-action="remove-instance"]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          syncFromDom(bodyEl, state.data);
-          if (state.data.instance_pool.length <= 1) {
-            Prototype.toast('至少保留一个实例', 'error');
-            return;
-          }
-          state.data.instance_pool.splice(parseInt(btn.getAttribute('data-index'), 10), 1);
-          render();
+      bodyEl
+        .querySelectorAll('[data-action="remove-instance"]')
+        .forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            syncFromDom(bodyEl, state.data);
+            if (state.data.instance_pool.length <= 1) {
+              Prototype.toast('至少保留一个实例', 'error');
+              return;
+            }
+            state.data.instance_pool.splice(
+              parseInt(btn.getAttribute('data-index'), 10),
+              1,
+            );
+            render();
+          });
         });
-      });
       function isInstanceError(msg) {
-      if (!msg) return false;
-      return (
-        msg.indexOf('实例') !== -1 ||
-        msg.indexOf('IP') !== -1 ||
-        msg.indexOf('端口') !== -1 ||
-        msg.indexOf('权重') !== -1 ||
-        msg.indexOf('域名') !== -1
-      );
-    }
-
-    function syncInstanceError() {
-      var errEl = bodyEl.querySelector('#proto-instance-error');
-      if (!errEl || state.isView || state.instanceMode === 'domain') return;
-      syncFromDom(bodyEl, state.data);
-      var err = validate(state.data, state.isAdd, state.existingNames, state.instanceMode);
-      if (isInstanceError(err)) {
-        errEl.textContent = err;
-        errEl.style.display = 'block';
-      } else {
-        errEl.style.display = 'none';
+        if (!msg) return false;
+        return (
+          msg.indexOf('实例') !== -1 ||
+          msg.indexOf('IP') !== -1 ||
+          msg.indexOf('端口') !== -1 ||
+          msg.indexOf('权重') !== -1 ||
+          msg.indexOf('域名') !== -1
+        );
       }
-    }
 
-    function refreshEndpointHost() {
-      syncFromDom(bodyEl, state.data);
-      var hostEl = bodyEl.querySelector('.endpoint-host');
-      if (hostEl) hostEl.textContent = firstInstanceHost(state.data);
-      refreshDiscoverButton();
-      syncInstanceError();
-    }
-      bodyEl.querySelectorAll('.proto-instance-addr, .proto-instance-port, .proto-instance-weight, .proto-domain-addr').forEach(function (input) {
-        input.addEventListener('input', refreshEndpointHost);
-        input.addEventListener('change', refreshEndpointHost);
-      });
+      function syncInstanceError() {
+        var errEl = bodyEl.querySelector('#proto-instance-error');
+        if (!errEl || state.isView || state.instanceMode === 'domain') return;
+        syncFromDom(bodyEl, state.data);
+        var err = validate(
+          state.data,
+          state.isAdd,
+          state.existingNames,
+          state.instanceMode,
+        );
+        if (isInstanceError(err)) {
+          errEl.textContent = err;
+          errEl.style.display = 'block';
+        } else {
+          errEl.style.display = 'none';
+        }
+      }
+
+      function refreshEndpointHost() {
+        syncFromDom(bodyEl, state.data);
+        var hostEl = bodyEl.querySelector('.endpoint-host');
+        if (hostEl) hostEl.textContent = firstInstanceHost(state.data);
+        refreshDiscoverButton();
+        syncInstanceError();
+      }
+      bodyEl
+        .querySelectorAll(
+          '.proto-instance-addr, .proto-instance-port, .proto-instance-weight, .proto-domain-addr',
+        )
+        .forEach(function (input) {
+          input.addEventListener('input', refreshEndpointHost);
+          input.addEventListener('change', refreshEndpointHost);
+        });
 
       var addKey = bodyEl.querySelector('#provider-add-key');
       if (addKey) {
@@ -931,13 +1028,18 @@ window.ProviderUpsert = (function () {
           render();
         });
       }
-      bodyEl.querySelectorAll('[data-action="remove-key"]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          syncFromDom(bodyEl, state.data);
-          state.data.keys.splice(parseInt(btn.getAttribute('data-index'), 10), 1);
-          render();
+      bodyEl
+        .querySelectorAll('[data-action="remove-key"]')
+        .forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            syncFromDom(bodyEl, state.data);
+            state.data.keys.splice(
+              parseInt(btn.getAttribute('data-index'), 10),
+              1,
+            );
+            render();
+          });
         });
-      });
 
       var discoverBtn = bodyEl.querySelector('#provider-discover-models');
       if (discoverBtn) {
@@ -971,11 +1073,44 @@ window.ProviderUpsert = (function () {
         });
       });
 
-      var submitBtn = footerEl && footerEl.querySelector('#provider-upsert-submit');
+      var modelInput = bodyEl.querySelector('.proto-model-input');
+      if (modelInput) {
+        modelInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            var value = String(modelInput.value || '').trim();
+            if (!value) return;
+            var list = state.data.models || [];
+            if (list.indexOf(value) === -1) {
+              list.push(value);
+              state.data.models = list;
+            }
+            render();
+          }
+        });
+        modelInput.addEventListener('blur', function () {
+          var value = String(modelInput.value || '').trim();
+          if (!value) return;
+          var list = state.data.models || [];
+          if (list.indexOf(value) === -1) {
+            list.push(value);
+            state.data.models = list;
+            render();
+          }
+        });
+      }
+
+      var submitBtn =
+        footerEl && footerEl.querySelector('#provider-upsert-submit');
       if (submitBtn) {
         submitBtn.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
-          var err = validate(state.data, state.isAdd, state.existingNames, state.instanceMode);
+          var err = validate(
+            state.data,
+            state.isAdd,
+            state.existingNames,
+            state.instanceMode,
+          );
           if (err) {
             syncInstanceError();
             if (!isInstanceError(err)) {
@@ -983,7 +1118,8 @@ window.ProviderUpsert = (function () {
             }
             return;
           }
-          if (typeof options.onSubmit === 'function') options.onSubmit(state.data);
+          if (typeof options.onSubmit === 'function')
+            options.onSubmit(state.data);
         });
       }
     }

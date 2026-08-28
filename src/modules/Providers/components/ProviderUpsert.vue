@@ -39,17 +39,27 @@
         />
       </Card>
 
-      <Card :title="$t('gatewayConfig.modelServiceConfig')" class="llm-section-card">
-        <FormItem :label="$t('gatewayConfig.modelProtocol')" prop="model_protocols">
+      <Card
+        :title="$t('gatewayConfig.modelServiceConfig')"
+        class="llm-section-card"
+      >
+        <FormItem
+          :label="$t('gatewayConfig.modelProtocol')"
+          prop="model_protocols"
+        >
           <Select v-model="formData.model_protocols" multiple>
             <Option
               v-for="item in protocolOptions"
               :key="item"
               :value="item"
-            >{{ item }}</Option>
+              >{{ item }}</Option
+            >
           </Select>
         </FormItem>
-        <FormItem :label="$t('gatewayConfig.modelListEndpoint')" prop="model_endpoint">
+        <FormItem
+          :label="$t('gatewayConfig.modelListEndpoint')"
+          prop="model_endpoint"
+        >
           <div class="endpoint-url-group">
             <Select
               class="endpoint-protocol"
@@ -70,7 +80,10 @@
         </FormItem>
       </Card>
 
-      <Card :title="$t('gatewayConfig.serviceAuthKeys')" class="llm-section-card">
+      <Card
+        :title="$t('gatewayConfig.serviceAuthKeys')"
+        class="llm-section-card"
+      >
         <FormItem prop="keys">
           <table class="keys-table">
             <thead>
@@ -81,7 +94,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(keyItem, index) in formData.keys" :key="`key-${index}`">
+              <tr
+                v-for="(keyItem, index) in formData.keys"
+                :key="`key-${index}`"
+              >
                 <td>
                   <FormItem
                     :prop="`keys.${index}.name`"
@@ -143,6 +159,9 @@
               style="flex: 1;"
               size="small"
               multiple
+              filterable
+              allow-create
+              default-first-option
               :placeholder="modelsSelectPlaceholder"
             >
               <el-option
@@ -158,7 +177,8 @@
                 :loading="discoverLoading"
                 :disabled="!canDiscoverModels"
                 @click="discoverModels"
-              >{{ $t('provider.syncModels') }}</Button>
+                >{{ $t('provider.syncModels') }}</Button
+              >
             </span>
           </div>
         </FormItem>
@@ -166,7 +186,12 @@
     </Form>
 
     <div class="com-btn-box drawer-footer">
-      <Button type="primary" size="small" @click="handleSubmit">{{ $t('com.submit') }}</Button>
+      <Button
+        type="primary"
+        size="small"
+        @click="handleSubmit"
+        >{{ $t('com.submit') }}</Button
+      >
     </div>
   </div>
 </template>
@@ -345,7 +370,7 @@ export default {
             return this.$t('provider.discoverNeedInstance');
         },
         modelsSelectPlaceholder() {
-            return this.$t('provider.modelsHintDiscoverOnly');
+            return this.$t('provider.modelsPlaceholder');
         },
         hasExistingKey() {
             return (this.formData.keys || []).some(item => String(item.originalKey || '').trim());
@@ -544,8 +569,7 @@ export default {
                 .filter(item => item.name || item.key);
             const models = Array.from(new Set((this.formData.models || []).filter(Boolean)));
             const schema = this.formData.model_endpoint.schema || 'https';
-            return {
-                name: String(this.formData.name || '').trim(),
+            const payload = {
                 description: this.formData.description || '',
                 model_protocols: (this.formData.model_protocols || []).slice(),
                 model_endpoint: {
@@ -556,6 +580,11 @@ export default {
                 keys,
                 instance_pool: formatInstancePoolForApi(instances, schema)
             };
+            // 创建模式需要传 name，编辑模式 name 通过 URL 路径传递，请求体不传 name
+            if (this.isAdd) {
+                payload.name = String(this.formData.name || '').trim();
+            }
+            return payload;
         },
         handleSubmit() {
             this.$refs.formData.validate(valid => {

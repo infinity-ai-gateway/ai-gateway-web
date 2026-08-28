@@ -320,10 +320,20 @@ body {
 }
 
 /* 侧栏选中项：对齐 sidebarNav.vue scoped 样式 */
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active,
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active:hover,
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu),
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu):hover {
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-submenu
+  .ivu-menu-item-active,
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-submenu
+  .ivu-menu-item-active:hover,
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-item-active:not(.ivu-menu-submenu),
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-item-active:not(.ivu-menu-submenu):hover {
   border-right: none;
   color: #fff;
   background: linear-gradient(
@@ -971,9 +981,10 @@ body {
 
 /* i-switch 开关样式（模拟 Element UI el-switch） */
 .ivu-switch {
-  display: inline-block;
-  width: 40px;
-  height: 20px;
+  display: inline-block !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 20px !important;
   line-height: 18px;
   border-radius: 10px;
   vertical-align: middle;
@@ -984,6 +995,7 @@ body {
   user-select: none;
   transition: background-color 0.2s ease;
   box-sizing: content-box;
+  overflow: visible !important;
 }
 .ivu-switch-checked {
   background-color: #409eff;
@@ -1000,7 +1012,23 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .ivu-switch-checked .ivu-switch-inner {
-  left: 22px;
+  left: 22px !important;
+}
+
+/* 修复原型中 switch 所在表单项 content 宽度被挤压导致截断的问题 */
+.ivu-form-label-top .ivu-form-item {
+  display: block !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ivu-form-label-top .ivu-form-item-content {
+  display: block !important;
+  width: 100% !important;
+  min-width: 44px;
+  box-sizing: border-box;
+}
+.ivu-form-label-top .ivu-form-item-content .ivu-switch {
+  flex-shrink: 0;
 }
 
 /* 模型多选下拉样式（模拟 el-select multiple） */
@@ -1043,6 +1071,98 @@ body {
   line-height: 22px;
   padding: 0 6px;
   font-size: 12px;
+}
+.proto-model-select .proto-model-input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 24px;
+  min-width: 120px;
+  flex: 1;
+  color: #1f2d3d;
+  padding: 0;
+}
+/* 提供商 AutoComplete：下拉可选 + 可手动输入 */
+.proto-autocomplete {
+  position: relative;
+  width: 100%;
+}
+.proto-autocomplete .ivu-input-wrapper {
+  width: 100%;
+}
+.proto-autocomplete-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #808695;
+  font-size: 12px;
+  font-style: normal;
+  pointer-events: none;
+}
+.proto-autocomplete-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+}
+.proto-autocomplete-option {
+  padding: 0 12px;
+  height: 34px;
+  line-height: 34px;
+  font-size: 14px;
+  color: #606266;
+  cursor: pointer;
+}
+.proto-autocomplete-option:hover {
+  background: #f5f7fa;
+  color: #409eff;
+}
+.proto-autocomplete-empty {
+  padding: 10px 12px;
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
+}
+
+.proto-model-select-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+}
+.proto-model-select-option {
+  padding: 0 12px;
+  height: 34px;
+  line-height: 34px;
+  font-size: 14px;
+  color: #606266;
+  cursor: pointer;
+}
+.proto-model-select-option:hover {
+  background: #f5f7fa;
+  color: #409eff;
+}
+.proto-model-select-empty {
+  padding: 10px 12px;
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
 }
 
 /* 模型列表接口：协议 + 实例地址:端口 + URI 拼接输入 */
@@ -1159,7 +1279,9 @@ body {
   margin-top: -7px;
   color: #808695;
 }
-.gateway-config .proto-protocol-select.ivu-select-disabled .ivu-select-selection {
+.gateway-config
+  .proto-protocol-select.ivu-select-disabled
+  .ivu-select-selection {
   cursor: not-allowed;
   background: #f3f3f3;
   color: #c5c8ce;
@@ -1847,7 +1969,11 @@ body {
   white-space: nowrap;
   color: #515a6e;
 }
-#model-price-drawer .proto-multi-dropdown-trigger:not(:has(.proto-multi-dropdown-text:not(:empty))) .proto-multi-dropdown-text,
+#model-price-drawer
+  .proto-multi-dropdown-trigger:not(
+    :has(.proto-multi-dropdown-text:not(:empty))
+  )
+  .proto-multi-dropdown-text,
 #model-price-drawer .proto-multi-dropdown-text:empty {
   color: #808695;
 }
@@ -2110,7 +2236,8 @@ body {
   padding: 0 8px;
   cursor: pointer;
 }
-.provider-pricing-tiers-form .proto-time-input::-webkit-calendar-picker-indicator {
+.provider-pricing-tiers-form
+  .proto-time-input::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.75;
 }

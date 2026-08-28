@@ -1,18 +1,11 @@
-/**
-* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors. * *
+Licensed under the Apache License, Version 2.0 (the "License"); * you may not
+use this file except in compliance with the License. * You may obtain a copy of
+the License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless
+required by applicable law or agreed to in writing, software * distributed under
+the License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. * See the License for the
+specific language governing permissions and * limitations under the License. */
 <template>
   <div class="providers">
     <Button type="primary" size="small" @click="onAdd">
@@ -37,7 +30,10 @@
         :isAdd="isAdd"
         @submit="onUpsertSubmit"
       />
-      <ProviderView v-if="upsertVisible && isView" :currentData="currentProvider" />
+      <ProviderView
+        v-if="upsertVisible && isView"
+        :currentData="currentProvider"
+      />
     </Drawer>
 
     <Drawer
@@ -130,7 +126,6 @@ export default {
                     title: this.$t('provider.models'),
                     key: 'models',
                     sortable: 'custom',
-                    minWidth: 220,
                     searchable: true,
                     render(h, params) {
                         return that.renderModelTags(h, params.row.models);
@@ -139,7 +134,7 @@ export default {
                 {
                     title: this.$t('com.operation'),
                     key: 'action',
-                    minWidth: 460,
+                    width: 430,
                     render(h, params) {
                         return h('div', [
                             h(

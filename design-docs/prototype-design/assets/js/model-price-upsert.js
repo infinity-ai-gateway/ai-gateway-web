@@ -64,7 +64,9 @@ window.ModelPriceUpsert = {
       this.data.tier_prices_map = {};
       var tierPricesObj = this.data.tier_prices || {};
       Object.keys(tierPricesObj).forEach(function (name) {
-        self.data.tier_prices_map[name] = self.objectToList(tierPricesObj[name]);
+        self.data.tier_prices_map[name] = self.objectToList(
+          tierPricesObj[name],
+        );
       });
     }
     if (!this.data.tier_prices_map.peak) {
@@ -73,7 +75,8 @@ window.ModelPriceUpsert = {
     if (!this.data.tier_prices_map[this.data.active_tier]) {
       this.data.tier_prices_map[this.data.active_tier] = [];
     }
-    this.data.tier_prices_active = this.data.tier_prices_map[this.data.active_tier];
+    this.data.tier_prices_active =
+      this.data.tier_prices_map[this.data.active_tier];
   },
 
   getTierLabel: function (tierName) {
@@ -163,7 +166,14 @@ window.ModelPriceUpsert = {
       : this.renderDynamicList('limits', limitKeys, d.limits, '键名', '值', 0);
     var pricesHtml = isView
       ? this.renderViewPriceTable(d.prices)
-      : this.renderDynamicList('prices', priceKeys, d.prices, '价格项', '价格', 8);
+      : this.renderDynamicList(
+          'prices',
+          priceKeys,
+          d.prices,
+          '价格项',
+          '价格',
+          8,
+        );
     var tierPricesHtml = isView
       ? this.renderViewTierPricesAll(d.tier_prices_map)
       : this.renderDynamicList(
@@ -183,9 +193,14 @@ window.ModelPriceUpsert = {
         '提供商',
         isView
           ? d.provider || '-'
-          : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-provider" value="' +
+          : '<div class="proto-autocomplete" id="proto-provider-autocomplete">' +
+              '<div class="ivu-input-wrapper ivu-input-type-text">' +
+              '<input type="text" class="ivu-input" id="field-provider" value="' +
               IvuUI.escapeHtml(d.provider || '') +
-              '" placeholder="deepseek" /></div>',
+              '" placeholder="输入或选择提供商名称" autocomplete="off" style="padding-right:28px;" /></div>' +
+              '<i class="proto-autocomplete-arrow" aria-hidden="true">▾</i>' +
+              '<div class="proto-autocomplete-dropdown" style="display:none;"></div>' +
+              '</div>',
         !isView,
       ) +
       '</div>' +
@@ -196,7 +211,7 @@ window.ModelPriceUpsert = {
           ? d.model || '-'
           : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-model" value="' +
               IvuUI.escapeHtml(d.model || '') +
-              '" placeholder="DeepSeek V3" /></div>',
+              '" placeholder="输入模型名" /></div>',
         !isView,
       ) +
       '</div>' +
@@ -239,6 +254,16 @@ window.ModelPriceUpsert = {
         : IvuUI.formTopItem('模型能力', capsHtml) +
           IvuUI.formTopItem('支持参数', paramsHtml));
 
+    if (isView) {
+      basicInfoHtml +=
+        '<div class="info-row"><div class="info-label">创建时间</div><div class="info-value">' +
+        this.formatTime(d.create_time) +
+        '</div></div>' +
+        '<div class="info-row"><div class="info-label">更新时间</div><div class="info-value">' +
+        this.formatTime(d.update_time || d.create_time) +
+        '</div></div>';
+    }
+
     var metadataHtml = '';
     if (isView) {
       metadataHtml =
@@ -278,19 +303,6 @@ window.ModelPriceUpsert = {
         );
     }
 
-    var timestampsHtml = '';
-    if (isView) {
-      timestampsHtml = IvuUI.card(
-        '时间戳',
-        '<div class="info-row"><div class="info-label">创建时间</div><div class="info-value">' +
-          this.formatTime(d.create_time) +
-          '</div></div>' +
-          '<div class="info-row"><div class="info-label">更新时间</div><div class="info-value">' +
-          this.formatTime(d.update_time || d.create_time) +
-          '</div></div>',
-      );
-    }
-
     var limitsError =
       !isView && self.errors.limits
         ? '<p class="error-text" style="color:#ed4014;margin-top:8px;">' +
@@ -323,8 +335,7 @@ window.ModelPriceUpsert = {
       IvuUI.card('基础信息', basicInfoHtml) +
       IvuUI.card('限制对象', limitsHtml + limitsError) +
       IvuUI.card('价格', pricingHtml) +
-      IvuUI.card('元数据', metadataHtml) +
-      timestampsHtml
+      IvuUI.card('元数据', metadataHtml)
     );
   },
 
@@ -555,16 +566,17 @@ window.ModelPriceUpsert = {
       field === 'limits'
         ? '+ 添加限制'
         : field === 'tier_prices_active'
-          ? '+ 添加价格'
-          : field === 'prices'
-            ? '+ 添加价格'
-            : '+ 添加价格';
+        ? '+ 添加价格'
+        : field === 'prices'
+        ? '+ 添加价格'
+        : '+ 添加价格';
     return (
       rowsHtml +
       '<button type="button" class="ivu-btn ivu-btn-primary proto-dynamic-add" data-field="' +
       field +
       '" style="margin-top:4px;">' +
-      addLabel + '</button>'
+      addLabel +
+      '</button>'
     );
   },
 
@@ -727,6 +739,75 @@ window.ModelPriceUpsert = {
     var drawer = document.getElementById(this.drawerId);
     if (!drawer) return;
 
+    // 提供商：下拉可选 + 可手动输入（AutoComplete）
+    var providerWrap = document.getElementById('proto-provider-autocomplete');
+    var providerEl = document.getElementById('field-provider');
+    if (providerWrap && providerEl) {
+      var providerDropdown = providerWrap.querySelector(
+        '.proto-autocomplete-dropdown',
+      );
+
+      function renderProviderDropdown(filter) {
+        var names = MockData.getProviderNames() || [];
+        var kw = (filter || '').toLowerCase();
+        var filtered = kw
+          ? names.filter(function (n) {
+              return n.toLowerCase().indexOf(kw) !== -1;
+            })
+          : names;
+        if (!filtered.length) {
+          providerDropdown.innerHTML =
+            '<div class="proto-autocomplete-empty">无匹配项</div>';
+        } else {
+          providerDropdown.innerHTML = filtered
+            .map(function (n) {
+              return (
+                '<div class="proto-autocomplete-option" data-value="' +
+                IvuUI.escapeHtml(n) +
+                '">' +
+                IvuUI.escapeHtml(n) +
+                '</div>'
+              );
+            })
+            .join('');
+        }
+        providerDropdown.style.display = 'block';
+      }
+
+      function applyProvider(value) {
+        var newProvider = (value || '').trim();
+        if (self.data.provider !== newProvider) {
+          self.data.provider = newProvider;
+          self.refreshBody();
+        } else {
+          providerDropdown.style.display = 'none';
+        }
+      }
+
+      providerEl.addEventListener('focus', function () {
+        renderProviderDropdown(providerEl.value);
+      });
+      providerEl.addEventListener('input', function () {
+        renderProviderDropdown(providerEl.value);
+      });
+      providerEl.addEventListener('blur', function () {
+        setTimeout(function () {
+          providerDropdown.style.display = 'none';
+          applyProvider(providerEl.value);
+        }, 150);
+      });
+      providerEl.addEventListener('change', function () {
+        applyProvider(providerEl.value);
+      });
+      providerDropdown.addEventListener('mousedown', function (e) {
+        var opt = e.target.closest('.proto-autocomplete-option');
+        if (!opt) return;
+        e.preventDefault();
+        providerEl.value = opt.getAttribute('data-value');
+        applyProvider(providerEl.value);
+      });
+    }
+
     // 动态列表添加
     drawer.querySelectorAll('.proto-dynamic-add').forEach(function (btn) {
       btn.onclick = function () {
@@ -766,21 +847,25 @@ window.ModelPriceUpsert = {
     });
 
     // 多选下拉展开/收起
-    drawer.querySelectorAll('.proto-multi-dropdown-trigger').forEach(function (trigger) {
-      trigger.onclick = function (e) {
-        e.stopPropagation();
-        var dropdown = trigger.closest('.proto-multi-dropdown');
-        if (dropdown) {
-          dropdown.classList.toggle('open');
-        }
-      };
-    });
-    document.addEventListener('click', function (e) {
-      drawer.querySelectorAll('.proto-multi-dropdown.open').forEach(function (dropdown) {
-        if (!dropdown.contains(e.target)) {
-          dropdown.classList.remove('open');
-        }
+    drawer
+      .querySelectorAll('.proto-multi-dropdown-trigger')
+      .forEach(function (trigger) {
+        trigger.onclick = function (e) {
+          e.stopPropagation();
+          var dropdown = trigger.closest('.proto-multi-dropdown');
+          if (dropdown) {
+            dropdown.classList.toggle('open');
+          }
+        };
       });
+    document.addEventListener('click', function (e) {
+      drawer
+        .querySelectorAll('.proto-multi-dropdown.open')
+        .forEach(function (dropdown) {
+          if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+          }
+        });
     });
 
     // 多选
@@ -798,10 +883,15 @@ window.ModelPriceUpsert = {
         self.data[field] = checked;
         var dropdown = cb.closest('.proto-multi-dropdown');
         if (dropdown) {
-          var triggerText = dropdown.querySelector('.proto-multi-dropdown-text');
-          var placeholder = dropdown.getAttribute('data-placeholder') || '请选择';
+          var triggerText = dropdown.querySelector(
+            '.proto-multi-dropdown-text',
+          );
+          var placeholder =
+            dropdown.getAttribute('data-placeholder') || '请选择';
           if (triggerText) {
-            triggerText.textContent = checked.length ? checked.join(', ') : placeholder;
+            triggerText.textContent = checked.length
+              ? checked.join(', ')
+              : placeholder;
           }
         }
       };
@@ -922,7 +1012,10 @@ window.ModelPriceUpsert = {
         );
       });
       if (duplicate) {
-        Prototype.toast('已存在相同提供商、模型名、模型模式的价格配置', 'error');
+        Prototype.toast(
+          '已存在相同提供商、模型名、模型模式的价格配置',
+          'error',
+        );
         return;
       }
     }

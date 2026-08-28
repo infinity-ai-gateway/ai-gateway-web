@@ -1,161 +1,148 @@
-/**
-* Copyright(c) 2026 The rainway-ai-gateway Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The rainway-ai-gateway Authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */ /** * Copyright (c) 2021 The
+BFE Authors. * * Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License. * You may
+obtain a copy of the License at * * http://www.apache.org/licenses/LICENSE-2.0 *
+* Unless required by applicable law or agreed to in writing, software *
+distributed under the License is distributed on an "AS IS" BASIS, * WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. * See the
+License for the specific language governing permissions and * limitations under
+the License. */
 <template>
-    <div>
-        <Form
-            ref="formData"
-            :model="formData"
-            :rules="formRules"
-            label-position="top"
+  <div>
+    <Form
+      ref="formData"
+      :model="formData"
+      :rules="formRules"
+      label-position="top"
+    >
+      <FormItem
+        :label="$t('instancePool.instanceMode')"
+        prop="instanceMode"
+        style="width: 100%;"
+      >
+        <Select v-model="formData.instanceMode" style="width: 240px;">
+          <Option value="ip">{{ $t('instancePool.modeIp') }}</Option>
+          <Option value="domain">{{ $t('instancePool.modeDomain') }}</Option>
+        </Select>
+      </FormItem>
+
+      <FormItem
+        v-if="formData.instanceMode === 'domain'"
+        :label="$t('instancePool.domain')"
+        prop="domainName"
+        style="width: 100%;"
+      >
+        <Input
+          v-model="formData.domainName"
+          type="text"
+          :placeholder="$t('instancePool.domainPlaceholder')"
+          style="max-width: 480px;"
+        />
+      </FormItem>
+
+      <template v-else>
+        <FormItem
+          :label="$t('instancePool.list')"
+          prop="instances"
+          class="instance-list-form-item"
+          :show-message="false"
+          style="width: 100%;"
         >
-            <FormItem
-                :label="$t('instancePool.instanceMode')"
-                prop="instanceMode"
-                style="width: 100%;"
-            >
-                <Select v-model="formData.instanceMode" style="width: 240px;">
-                    <Option value="ip">{{ $t('instancePool.modeIp') }}</Option>
-                    <Option value="domain">{{ $t('instancePool.modeDomain') }}</Option>
-                </Select>
-            </FormItem>
-
-            <FormItem
-                v-if="formData.instanceMode === 'domain'"
-                :label="$t('instancePool.domain')"
-                prop="domainName"
-                style="width: 100%;"
-            >
-                <Input
-                    v-model="formData.domainName"
-                    type="text"
-                    :placeholder="$t('instancePool.domainPlaceholder')"
-                    style="max-width: 480px;"
-                />
-            </FormItem>
-
-            <template v-else>
-                <FormItem
-                    :label="$t('instancePool.list')"
-                    prop="instances"
-                    class="instance-list-form-item"
+          <div class="formBox">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <th>{{ $t('instancePool.ipAddress') }}</th>
+                <th>{{ $t('instancePool.port') }}</th>
+                <th>{{ $t('instancePool.weight') }}</th>
+                <th>{{ $t('com.operation') }}</th>
+              </tr>
+              <tr
+                v-for="(item, ind) in formData.instances"
+                :key="ind"
+                :class="{ 'is-duplicate-row': isDuplicateInstance(item) }"
+              >
+                <td>
+                  <FormItem
+                    :prop="'instances.' + ind + '.addr'"
+                    :rules="instanceAddrRules"
                     :show-message="false"
-                    style="width: 100%;"
-                >
-                    <div class="formBox">
-                        <table border="0" cellspacing="0" cellpadding="0">
-                            <tr>
-                                <th>{{ $t('instancePool.ipAddress') }}</th>
-                                <th>{{ $t('instancePool.port') }}</th>
-                                <th>{{ $t('instancePool.weight') }}</th>
-                                <th>{{ $t('com.operation') }}</th>
-                            </tr>
-                            <tr
-                                v-for="(item, ind) in formData.instances"
-                                :key="ind"
-                                :class="{ 'is-duplicate-row': isDuplicateInstance(item) }"
-                            >
-                                <td>
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.addr'"
-                                        :rules="instanceAddrRules"
-                                        :show-message="false"
-                                        class="table-cell-form-item"
-                                    >
-                                        <Input
-                                            v-model="item.addr"
-                                            type="text"
-                                            :placeholder="
+                    class="table-cell-form-item"
+                  >
+                    <Input
+                      v-model="item.addr"
+                      type="text"
+                      :placeholder="
                                                 $t('com.tipEnterX', { obj: $t('instancePool.ipAddress') })
                                             "
-                                            @on-blur="scheduleInstanceErrorSync"
-                                            @on-change="scheduleInstanceErrorSync"
-                                        />
-                                    </FormItem>
-                                </td>
-                                <td>
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.port'"
-                                        :rules="instancePortRules"
-                                        :show-message="false"
-                                        class="table-cell-form-item table-cell-form-item-port"
-                                    >
-                                        <InputNumber
-                                            v-model="item.port"
-                                            :max="65535"
-                                            :min="1"
-                                            class="poolInput"
-                                            :placeholder="$t('instancePool.portValue')"
-                                            style="width: 80px;"
-                                            @on-change="scheduleInstanceErrorSync"
-                                        ></InputNumber>
-                                    </FormItem>
-                                </td>
-                                <td>
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.weight'"
-                                        :rules="instanceWeightRules"
-                                        :show-message="false"
-                                        class="table-cell-form-item"
-                                    >
-                                        <InputNumber
-                                            v-model="item.weight"
-                                            :max="100"
-                                            :min="0"
-                                            class="poolInput"
-                                            style="width: 80px;"
-                                            @on-change="scheduleInstanceErrorSync"
-                                        ></InputNumber>
-                                    </FormItem>
-                                </td>
-                                <td>
-                                    <Button
-                                        size="small"
-                                        type="error"
-                                        :disabled="!deleteAble"
-                                        @click="handleRemove(ind)"
-                                    >{{ $t('com.del') }}</Button>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <Button plain size="small" type="primary" @click="handleAdd">
-                        + {{ $t('com.create') }}
-                    </Button>
-                    <p v-if="instanceListError" class="instance-list-error">
-                        {{ instanceListError }}
-                    </p>
-                </FormItem>
-            </template>
-        </Form>
-    </div>
+                      @on-blur="scheduleInstanceErrorSync"
+                      @on-change="scheduleInstanceErrorSync"
+                    />
+                  </FormItem>
+                </td>
+                <td>
+                  <FormItem
+                    :prop="'instances.' + ind + '.port'"
+                    :rules="instancePortRules"
+                    :show-message="false"
+                    class="table-cell-form-item table-cell-form-item-port"
+                  >
+                    <InputNumber
+                      v-model="item.port"
+                      :max="65535"
+                      :min="1"
+                      class="poolInput"
+                      :placeholder="$t('instancePool.portValue')"
+                      style="width: 80px;"
+                      @on-change="scheduleInstanceErrorSync"
+                    ></InputNumber>
+                  </FormItem>
+                </td>
+                <td>
+                  <FormItem
+                    :prop="'instances.' + ind + '.weight'"
+                    :rules="instanceWeightRules"
+                    :show-message="false"
+                    class="table-cell-form-item"
+                  >
+                    <InputNumber
+                      v-model="item.weight"
+                      :max="100"
+                      :min="0"
+                      class="poolInput"
+                      style="width: 80px;"
+                      @on-change="scheduleInstanceErrorSync"
+                    ></InputNumber>
+                  </FormItem>
+                </td>
+                <td>
+                  <Button
+                    size="small"
+                    type="error"
+                    :disabled="!deleteAble"
+                    @click="handleRemove(ind)"
+                    >{{ $t('com.del') }}</Button
+                  >
+                </td>
+              </tr>
+            </table>
+          </div>
+          <Button plain size="small" type="primary" @click="handleAdd">
+            + {{ $t('com.create') }}
+          </Button>
+          <p v-if="instanceListError" class="instance-list-error">
+            {{ instanceListError }}
+          </p>
+        </FormItem>
+      </template>
+    </Form>
+  </div>
 </template>
 
 <script>
@@ -262,7 +249,6 @@ export function formatInstanceForApi(instance) {
     const item = toFormInstance(instance);
     const addr = String(item.addr || '').trim();
     return {
-        name: addr,
         addr,
         port: parseInt(item.port, 10),
         weight: parseInt(item.weight, 10)

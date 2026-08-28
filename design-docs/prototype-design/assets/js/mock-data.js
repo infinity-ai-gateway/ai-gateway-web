@@ -321,9 +321,7 @@ window.MockData = {
       description: 'Claude 模型路由',
     },
   ],
-  gatewayInstances: [
-    { hostname: '127.0.0.1', ip: '127.0.0.1', port: 8080 },
-  ],
+  gatewayInstances: [{ hostname: '127.0.0.1', ip: '127.0.0.1', port: 8080 }],
   users: [
     { user_name: 'admin', is_admin: true },
     { user_name: 'operator', is_admin: true },

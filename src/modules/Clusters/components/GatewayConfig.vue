@@ -1,18 +1,11 @@
-/**
-* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors. * *
+Licensed under the Apache License, Version 2.0 (the "License"); * you may not
+use this file except in compliance with the License. * You may obtain a copy of
+the License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless
+required by applicable law or agreed to in writing, software * distributed under
+the License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. * See the License for the
+specific language governing permissions and * limitations under the License. */
 <template>
   <div>
     <Form
@@ -147,35 +140,53 @@
                       v-for="(item, idx) in formData.models"
                       :value="item"
                       :key="idx"
-                    >{{ item }}</Option>
+                      >{{ item }}</Option
+                    >
                   </Select>
                 </td>
                 <td>
-                  <Button type="error" size="small" @click="removeModelMapping(index)">
+                  <Button
+                    type="error"
+                    size="small"
+                    @click="removeModelMapping(index)"
+                  >
                     {{ $t('com.del') }}
                   </Button>
                 </td>
               </tr>
             </tbody>
           </table>
-          <Button class="mt20" size="small" type="primary" @click="addModelRedirect">
+          <Button
+            class="mt20"
+            size="small"
+            type="primary"
+            @click="addModelRedirect"
+          >
             {{ $t('gatewayConfig.add') }}
           </Button>
         </FormItem>
       </Card>
 
-      <Card :title="$t('gatewayConfig.serviceAuthKeys')" class="llm-section-card">
+      <Card
+        :title="$t('gatewayConfig.serviceAuthKeys')"
+        class="llm-section-card"
+      >
         <FormItem prop="keys">
           <table class="keys-table">
             <thead>
               <tr>
                 <th>{{ $t('gatewayConfig.providerKey') }}</th>
-                <th style="width: 120px;">{{ $t('gatewayConfig.keyWeight') }}</th>
+                <th style="width: 120px;">
+                  {{ $t('gatewayConfig.keyWeight') }}
+                </th>
                 <th style="width: 80px;">{{ $t('com.operation') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(keyItem, index) in formData.keys" :key="`key-${index}`">
+              <tr
+                v-for="(keyItem, index) in formData.keys"
+                :key="`key-${index}`"
+              >
                 <td>
                   <FormItem
                     :prop="`keys.${index}.name`"
@@ -192,7 +203,8 @@
                         v-for="item in providerKeys"
                         :key="item.name"
                         :value="item.name"
-                      >{{ item.name }}</Option>
+                        >{{ item.name }}</Option
+                      >
                     </Select>
                   </FormItem>
                 </td>
@@ -281,6 +293,84 @@
           </Col>
         </Row>
       </Card>
+
+      <Card :title="$t('gatewayConfig.keyAffinity')" class="llm-section-card">
+        <Row :gutter="24">
+          <Col span="12">
+            <FormItem prop="key_affinity.enabled">
+              <span slot="label" class="provider-label">
+                {{ $t('gatewayConfig.keyAffinityEnabled') }}
+                <Tooltip placement="top" transfer max-width="320">
+                  <div slot="content" class="provider-tip-content">
+                    {{ $t('gatewayConfig.keyAffinityEnabledTip') }}
+                  </div>
+                  <Icon
+                    type="ios-help-circle-outline"
+                    class="provider-help-icon"
+                  />
+                </Tooltip>
+              </span>
+              <el-select v-model="formData.key_affinity.enabled" size="small">
+                <el-option :value="false" :label="$t('com.deactivate')" />
+                <el-option :value="true" :label="$t('com.enable')" />
+              </el-select>
+            </FormItem>
+          </Col>
+        </Row>
+        <template v-if="formData.key_affinity.enabled">
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.keyAffinityTtl')"
+                prop="key_affinity.ttl"
+              >
+                <InputNumber
+                  v-model="formData.key_affinity.ttl"
+                  :min="1"
+                  :precision="0"
+                  style="width: 100%;"
+                />
+              </FormItem>
+            </Col>
+            <Col span="12">
+              <FormItem prop="key_affinity.penalty_enable">
+                <span slot="label" class="provider-label">
+                  {{ $t('gatewayConfig.keyAffinityPenalty') }}
+                  <Tooltip placement="top" transfer max-width="320">
+                    <div slot="content" class="provider-tip-content">
+                      {{ $t('gatewayConfig.keyAffinityPenaltyTip') }}
+                    </div>
+                    <Icon
+                      type="ios-help-circle-outline"
+                      class="provider-help-icon"
+                    />
+                  </Tooltip>
+                </span>
+                <el-select
+                  v-model="formData.key_affinity.penalty_enable"
+                  size="small"
+                >
+                  <el-option :value="false" :label="$t('com.deactivate')" />
+                  <el-option :value="true" :label="$t('com.enable')" />
+                </el-select>
+              </FormItem>
+            </Col>
+          </Row>
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.keyAffinityRedisPrefix')"
+                prop="key_affinity.redis_prefix"
+              >
+                <Input
+                  v-model="formData.key_affinity.redis_prefix"
+                  :placeholder="$t('gatewayConfig.keyAffinityRedisPrefixPlaceholder')"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+        </template>
+      </Card>
     </Form>
   </div>
 </template>
@@ -297,6 +387,25 @@ function defaultKeyPolicy() {
         retry_backoff_initial: 500,
         retry_backoff_max: 5000
     };
+}
+
+function defaultKeyAffinity() {
+    return {
+        enabled: false,
+        ttl: 600,
+        redis_prefix: 'bfe:ai:key_affinity',
+        penalty_enable: true
+    };
+}
+
+function toBoolean(value, defaultValue) {
+    if (value === true || value === 'true' || value === 1 || value === '1') {
+        return true;
+    }
+    if (value === false || value === 'false' || value === 0 || value === '0') {
+        return false;
+    }
+    return defaultValue;
 }
 
 export default {
@@ -418,11 +527,42 @@ export default {
             }
             callback();
         };
+        const validateKeyPolicyMaxRetries = (rule, value, callback) => {
+            const retries = Number(value);
+            if (!Number.isFinite(retries) || retries < 0 || !Number.isInteger(retries)) {
+                callback(new Error(that.$t('gatewayConfig.keyPolicyMaxRetriesInvalid')));
+                return;
+            }
+            callback();
+        };
         const validateBackoffMax = (rule, value, callback) => {
             const initial = Number(that.formData.key_policy.retry_backoff_initial);
             const max = Number(value);
             if (Number.isFinite(initial) && Number.isFinite(max) && max < initial) {
                 callback(new Error(that.$t('gatewayConfig.keyPolicyBackoffMaxInvalid')));
+                return;
+            }
+            callback();
+        };
+        const validateKeyAffinityTtl = (rule, value, callback) => {
+            if (!that.formData.key_affinity.enabled) {
+                callback();
+                return;
+            }
+            const ttl = Number(value);
+            if (!Number.isFinite(ttl) || ttl <= 0 || !Number.isInteger(ttl)) {
+                callback(new Error(that.$t('gatewayConfig.keyAffinityTtlInvalid')));
+                return;
+            }
+            callback();
+        };
+        const validateKeyAffinityRedisPrefix = (rule, value, callback) => {
+            if (!that.formData.key_affinity.enabled) {
+                callback();
+                return;
+            }
+            if (!value || !String(value).trim()) {
+                callback(new Error(that.$t('gatewayConfig.keyAffinityRedisPrefixRequired')));
                 return;
             }
             callback();
@@ -441,7 +581,8 @@ export default {
                 models: [],
                 model_mappings: [{ source_model: '', target_model: '' }],
                 keys: [{ name: '', weight: 0 }],
-                key_policy: defaultKeyPolicy()
+                key_policy: defaultKeyPolicy(),
+                key_affinity: defaultKeyAffinity()
             },
             ruleValidate: {
                 provider: [{ validator: validateProvider, trigger: 'change', required: true }],
@@ -449,7 +590,10 @@ export default {
                 match_prefix: [{ validator: validateMatchPrefix, trigger: 'blur' }],
                 model_mappings: [{ validator: validateMappings, trigger: 'change' }],
                 keys: [{ validator: validateKeys, trigger: 'change' }],
-                'key_policy.retry_backoff_max': [{ validator: validateBackoffMax, trigger: 'change' }]
+                'key_policy.max_retries': [{ validator: validateKeyPolicyMaxRetries, trigger: 'change' }],
+                'key_policy.retry_backoff_max': [{ validator: validateBackoffMax, trigger: 'change' }],
+                'key_affinity.ttl': [{ validator: validateKeyAffinityTtl, trigger: 'change' }],
+                'key_affinity.redis_prefix': [{ validator: validateKeyAffinityRedisPrefix, trigger: 'blur' }]
             }
         };
     },
@@ -578,6 +722,13 @@ export default {
                 ...defaultKeyPolicy(),
                 ...(src.key_policy || {})
             };
+            const affinitySrc = src.key_affinity || {};
+            this.formData.key_affinity = {
+                enabled: toBoolean(affinitySrc.enabled, false),
+                ttl: affinitySrc.ttl != null ? Number(affinitySrc.ttl) : 600,
+                redis_prefix: affinitySrc.redis_prefix || 'bfe:ai:key_affinity',
+                penalty_enable: toBoolean(affinitySrc.penalty_enable, true)
+            };
             if (this.formData.provider) {
                 this.loadProviderDetail(this.formData.provider);
             } else {
@@ -691,6 +842,13 @@ export default {
                     delete tmpData.match_prefix;
                     delete tmpData.strip_prefix;
                 }
+                const affinity = tmpData.key_affinity || {};
+                tmpData.key_affinity = {
+                    enabled: !!affinity.enabled,
+                    ttl: Number(affinity.ttl) || 600,
+                    redis_prefix: String(affinity.redis_prefix || 'bfe:ai:key_affinity'),
+                    penalty_enable: toBoolean(affinity.penalty_enable, true)
+                };
                 this.$emit('submitData', {
                     topic: 'llmConfigData',
                     data: tmpData

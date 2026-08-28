@@ -59,6 +59,12 @@
             "retry_backoff_initial": 500,
             "retry_backoff_max": 5000
         },
+        "key_affinity": {
+            "enabled": true,
+            "ttl": 600,
+            "redis_prefix": "bfe:ai:key_affinity",
+            "penalty_enable": true
+        },
         "provider": "deepseek",
         "match_prefix": "deepseek/",
         "strip_prefix": true
@@ -126,6 +132,7 @@
 | model_mappings| []object |  模型名称映射 | N | 用于将用户请求的模型名映射为后端实际使用的模型名，具体字段见下方 表：模型映射 | 非必填；元素须满足 模型映射 结构约束 |
 | keys| []ClusterKeyRef |  Key 引用与权重列表 | N | 一个 cluster 支持配置多个 Key，按权重做路由；通过 `name` 引用 provider 中定义的 key；为空数组表示不配置 API-Key | 非必填；默认值为空数组 `[]`；元素须满足 表：ClusterKeyRef 结构 |
 | key_policy| object |  Key 路由策略 | N | 多 Key 时的选择策略、重试与退避配置 | 非必填；默认见下方 表：Key 路由策略；`strategy` 本版仅支持 `weighted_random` |
+| key_affinity| object |  Key 亲和性配置 | N | 基于 Redis + `ClientKeyId` 的会话级 Key 亲和性 | 非必填；默认见下方 表：Key 亲和性配置 |
 | provider| string |  所属 provider | Y | 用于关联 provider、解析后端实例池/key 明文/生成 `ModelTable` | 必填；非空；必须引用 `/providers` 中已存在的 provider |
 | match_prefix| string |  需要匹配的 provider/model 前缀 | N | 例如 `openrouter/`；用于 OpenRouter 等聚合 provider 场景；必须以 `/` 结尾 | 非必填；`strip_prefix=true` 时必填 |
 | strip_prefix| bool |  是否裁剪 `match_prefix` 指定前缀 | N | `true` 时转发给下游前会从请求 `model` 字段中去掉该前缀；`false` 时仅用于路由标识，不裁剪 | 非必填；默认 `false` |
@@ -152,6 +159,15 @@
 | retry_backoff_initial | int (ms) | 初始退避时间 | N | 首次重试的退避时间，单位毫秒 | 非必填；默认 `500`；须为 `>=0` 的整数 |
 | retry_backoff_max | int (ms) | 最大退避时间 | N | 退避时间上限，单位毫秒 | 非必填；默认 `5000`；须为 `>=0` 的整数，且须 `>= retry_backoff_initial` |
 
+**表：Key 亲和性配置（`llm_config.key_affinity`）**
+
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | - | - | - | - | - |
+| enabled | bool | 是否开启会话级 Key 亲和性 | N | 默认 `false`；为 `true` 时开启基于 Redis + `ClientKeyId` 的 Key 绑定 | 非必填；必须为 bool |
+| ttl | int | 绑定空闲超时时间 | N | 单位秒，默认 `600`；命中绑定后 BFE 会刷新 TTL，持续请求则绑定保持 | 非必填；若传入，须为 `>0` 的整数 |
+| redis_prefix | string | Redis key 前缀 | N | 默认 `"bfe:ai:key_affinity"` | 非必填；若传入，必须非空 |
+| penalty_enable | bool | 是否开启 Key 惩罚 | N | 默认 `true`；为 `true` 时，近期返回 429/401/403 的 Key 会被跳过 | 非必填；必须为 bool |
+
 **表：模型映射**
 
 | 参数名 | 类型 |参数含义 | 必填 | 补充描述 | 合法性条件 |
@@ -175,6 +191,11 @@
   - `strategy` 仅允许 `weighted_random`；
   - `max_retries` 须为 `>=0` 的整数；
   - `retry_backoff_initial`、`retry_backoff_max` 须为 `>=0` 的整数，且 `retry_backoff_max >= retry_backoff_initial`。
+- `llm_config.key_affinity` 若传入：
+  - `enabled` 必须为 bool；
+  - `ttl` 须为 `>0` 的整数；
+  - `redis_prefix` 若传入须非空；
+  - `penalty_enable` 必须为 bool。
 - `llm_config.match_prefix` / `strip_prefix`：
   - `strip_prefix=true` 时，`match_prefix` 必填且非空；
   - `match_prefix` 若传入，必须以 `/` 结尾。
@@ -406,7 +427,8 @@
 | cluster_name | string | 集群名字 | Y | - | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername)；必须引用已存在的集群 |
 
 **输入参数（Body）**
-可修改字段含义同创建接口。不支持直接修改 `instance_pool`；如需调整后端实例，请更新对应 provider 的 `instance_pool`。
+
+可修改字段含义同创建接口，但**输入参数不包括 `name`，即不能修改 cluster 的 name**（名称由 URI 中的 `cluster_name` 指定）。若请求体中仍包含 `name`，返回 422。不支持直接修改 `instance_pool`；如需调整后端实例，请更新对应 provider 的 `instance_pool`。
 
 > **注意：**
 > - `sub_clusters` 与 `scheduler` 为系统内部自动生成，更新时不支持手动修改。
@@ -416,7 +438,6 @@
 
 ```json
 {
-    "name": "my-cluster",
     "description": "更新后的集群描述",
     "basic": {
         "protocol": "http",
@@ -495,7 +516,10 @@
 | cluster_name | string | 集群名字 | Y | - | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername)；必须引用已存在的集群 |
 
 **执行逻辑**
-删除集群时，系统自动执行以下级联清理：
+
+删除集群时，系统先检查该集群是否被 **AI 路由规则**（global / entity / api-key 级别）引用；若被引用，删除失败。
+
+通过引用检查后，系统自动执行以下级联清理：
 1. 解绑集群关联的子集群
 2. 删除子集群
 3. 删除子集群关联的实例池

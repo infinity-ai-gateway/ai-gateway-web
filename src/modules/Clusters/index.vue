@@ -122,7 +122,8 @@ export default {
                 },
                 {
                     title: this.$t('com.desc'),
-                    key: 'description'
+                    key: 'description',
+                    searchable: true
                 },
                 {
                     title: this.$t('com.operation'),
@@ -381,7 +382,7 @@ export default {
                             this.fetchTableRules(row).then(rules => {
                                 const matched = (rules || []).filter(rule => {
                                     const inTargets = (rule.targets || []).some(
-                                        t => t.ClusterName === clusterName
+                                        t => t.cluster_name === clusterName
                                     );
                                     return inTargets;
                                 });

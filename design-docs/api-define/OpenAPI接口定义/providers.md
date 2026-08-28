@@ -275,7 +275,42 @@
 
 **返回数据（Data内容）**
 
-同创建接口。
+同创建接口，包含完整的 Provider 数据模型，其中包括：
+
+- `time_zone`：计算时段所使用的时区（创建时未传则默认 `Asia/Shanghai`）。
+- `tiers`：该 provider 的高峰/闲时 tier 定义列表（若未设置则为空数组 `[]`）。
+
+**成功返回示例**
+
+```json
+{
+    "ErrNum": 200,
+    "ErrMsg": "success",
+    "Data": {
+        "name": "deepseek",
+        "description": "DeepSeek 官方 API",
+        "model_endpoint": { "schema": "https", "uri": "/v1/models" },
+        "models": ["deepseek-v4-pro", "deepseek-v4-flash"],
+        "keys": [...],
+        "instance_pool": [...],
+        "model_protocols": ["openai"],
+        "time_zone": "Asia/Shanghai",
+        "tiers": [
+            {
+                "name": "peak",
+                "time_ranges": [
+                    { "weekdays": [1, 2, 3, 4, 5], "start": "09:00", "end": "12:00" },
+                    { "weekdays": [1, 2, 3, 4, 5], "start": "14:00", "end": "18:00" }
+                ]
+            }
+        ],
+        "create_time": 1716883200,
+        "update_time": 1716883200
+    }
+}
+```
+
+> 说明：若 provider 未通过 `PUT /providers/{provider_name}/pricing-tiers` 设置过高峰/闲时模板，则 `tiers` 返回空数组，`time_zone` 返回默认值 `Asia/Shanghai`。
 
 ### 2.4 更新 Provider
 
@@ -296,9 +331,11 @@
 
 **输入参数（Body）**
 
-可修改字段含义同创建接口。若传入 `instance_pool` 字段，系统会自动同步更新被引用该 provider 的所有 cluster 所生成的实例池。
+可修改字段含义同创建接口，但**输入参数不包括 `name`，即不能修改 provider 的 name**（名称由 URI 中的 `provider_name` 指定）。若请求体中仍包含 `name`，返回 422。若传入 `instance_pool` 字段，系统会自动同步更新被引用该 provider 的所有 cluster 所生成的实例池。
 
-> **注意**：`keys` 作为数组，按**全量替换**处理，即调用方需传入完整的最新 Key 列表。Key 的 `name` 变更会影响所有引用该 provider 的 cluster。
+> **注意**：
+> - `keys` 作为数组，按**全量替换**处理，即调用方需传入完整的最新 Key 列表。Key 的 `name` 删除/重命名会校验无 cluster 仍引用旧 name；若被引用，返回 `409 Conflict`。
+> - `models` 作为数组，按**全量替换**处理。删除 model 会校验无 cluster 仍引用该 model；若被引用，返回 `409 Conflict`。
 
 **HTTP BODY 参数示例**
 

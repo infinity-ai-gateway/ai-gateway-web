@@ -1,11 +1,11 @@
-/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.* * Licensed under the
-Apache License, Version 2.0 (the "License"); * you may not use this file except
-in compliance with the License. * You may obtain a copy of the License at * *
-http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
-law or agreed to in writing, software * distributed under the License is
-distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. * See the License for the specific language governing
-permissions and * limitations under the License. */
+/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.* * Licensed
+under the Apache License, Version 2.0 (the "License"); * you may not use this
+file except in compliance with the License. * You may obtain a copy of the
+License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required
+by applicable law or agreed to in writing, software * distributed under the
+License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS
+OF ANY KIND, either express or implied. * See the License for the specific
+language governing permissions and * limitations under the License. */
 <template>
   <div class="model-price-view">
     <Card :title="$t('modelPrices.basicInfo')" class="info-card">
@@ -34,11 +34,18 @@ permissions and * limitations under the License. */
           >
             {{ item }}
           </Tag>
-          <span v-if="!(currentData.capabilities || []).length" class="empty-text">-</span>
+          <span
+            v-if="!(currentData.capabilities || []).length"
+            class="empty-text"
+            >-</span
+          >
         </span>
       </div>
       <div class="info-row">
-        <span class="info-label">{{ $t('modelPrices.supportedParameters') }}</span>
+        <span
+          class="info-label"
+          >{{ $t('modelPrices.supportedParameters') }}</span
+        >
         <span class="info-value">
           <Tag
             v-for="(item, index) in currentData.supported_parameters || []"
@@ -52,6 +59,20 @@ permissions and * limitations under the License. */
             >-</span
           >
         </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">{{ $t('modelPrices.createdAt') }}</span>
+        <span
+          class="info-value"
+          >{{ formatTime(currentData.create_time) }}</span
+        >
+      </div>
+      <div class="info-row">
+        <span class="info-label">{{ $t('modelPrices.updatedAt') }}</span>
+        <span
+          class="info-value"
+          >{{ formatTime(currentData.update_time) }}</span
+        >
       </div>
     </Card>
 
@@ -73,7 +94,10 @@ permissions and * limitations under the License. */
         <span class="info-value">
           <table v-if="pricesEntries.length" class="kv-table">
             <tbody>
-              <tr v-for="(entry, index) in pricesEntries" :key="`price-${index}`">
+              <tr
+                v-for="(entry, index) in pricesEntries"
+                :key="`price-${index}`"
+              >
                 <td>{{ entry.key }}</td>
                 <td>¥{{ formatPrice(entry.value) }}</td>
               </tr>
@@ -125,23 +149,6 @@ permissions and * limitations under the License. */
         <span
           class="info-value"
           >{{ (currentData.metadata && currentData.metadata.notes) || '-' }}</span
-        >
-      </div>
-    </Card>
-
-    <Card :title="$t('modelPrices.timestamps')" class="info-card">
-      <div class="info-row">
-        <span class="info-label">{{ $t('modelPrices.createdAt') }}</span>
-        <span
-          class="info-value"
-          >{{ formatTime(currentData.create_time) }}</span
-        >
-      </div>
-      <div class="info-row">
-        <span class="info-label">{{ $t('modelPrices.updatedAt') }}</span>
-        <span
-          class="info-value"
-          >{{ formatTime(currentData.update_time) }}</span
         >
       </div>
     </Card>

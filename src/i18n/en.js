@@ -375,8 +375,10 @@ export default {
     fallbackDuplicate:
       'Backup (ClusterName, Model) combination cannot be duplicated',
     clusterModelDuplicate: 'Cluster and Model combination cannot be duplicated',
-    clusterModelUsedInTarget: 'This combination is already used in target cluster: {cluster} / {model}',
-    clusterModelUsedInFallback: 'This combination is already used in fallback cluster: {cluster} / {model}',
+    clusterModelUsedInTarget:
+      'This combination is already used in target cluster: {cluster} / {model}',
+    clusterModelUsedInFallback:
+      'This combination is already used in fallback cluster: {cluster} / {model}',
     noBackup: 'No backup clusters yet',
   },
   cluster: {
@@ -551,7 +553,8 @@ export default {
     ruleNameRequired: 'Rule name at index {index} cannot be empty',
     ruleNameDuplicate: 'Rule name "{name}" is duplicated',
     ruleNameLengthError: 'Rule name cannot exceed 128 characters',
-    ruleNameFormatError: 'Rule name must match [a-zA-Z0-9_-] and be 1–128 chars',
+    ruleNameFormatError:
+      'Rule name must match [a-zA-Z0-9_-] and be 1–128 chars',
     ruleNameFormatTip: 'Charset [a-zA-Z0-9_-], 1–128 characters',
     ruleNameReadonlyTip: 'Cannot be changed after creation',
     windowMinutesInvalid:
@@ -863,23 +866,42 @@ export default {
     keyPolicyBackoffInvalid: 'Backoff must be >= 0',
     keyPolicyBackoffMaxInvalid:
       'retry_backoff_max must be >= retry_backoff_initial',
+    keyAffinity: 'Key Affinity',
+    keyAffinityEnabled: 'Enable Key Affinity',
+    keyAffinityEnabledTip:
+      'When enabled, requests in the same session bind to the same Key, avoiding Key drift on session switching',
+    keyAffinityTtl: 'Idle Timeout (s)',
+    keyAffinityTtlReview: 'Binding Idle Timeout (s)',
+    keyAffinityTtlInvalid: 'Must be an integer greater than 0',
+    keyAffinityRedisPrefix: 'Redis Key Prefix',
+    keyAffinityRedisPrefixPlaceholder: 'e.g. bfe:ai:key_affinity',
+    keyAffinityRedisPrefixRequired: 'Redis Key Prefix is required',
+    keyAffinityPenalty: 'Key Penalty',
+    keyAffinityPenaltyTip:
+      'When enabled, recently failing Keys are temporarily penalized and less likely to be selected',
     matchPrefix: 'Match Prefix',
-    matchPrefixTip: 'Provider/model prefix to match, e.g. openrouter/; must end with /',
+    matchPrefixTip:
+      'Provider/model prefix to match, e.g. openrouter/; must end with /',
     matchPrefixPlaceholder: 'e.g. openrouter/',
-    matchPrefixRequiredWhenStrip: 'Match prefix is required when strip prefix is enabled',
+    matchPrefixRequiredWhenStrip:
+      'Match prefix is required when strip prefix is enabled',
     matchPrefixMustEndWithSlash: 'Match prefix must end with /',
     stripPrefix: 'Strip Prefix',
-    stripPrefixTip: 'When enabled, the prefix will be stripped from the request model before forwarding',
+    stripPrefixTip:
+      'When enabled, the prefix will be stripped from the request model before forwarding',
     ownedProvider: 'Provider',
-    ownedProviderTip: 'Select an existing model provider. The cluster reuses its instance pool, protocols, and keys',
+    ownedProviderTip:
+      'Select an existing model provider. The cluster reuses its instance pool, protocols, and keys',
     ownedProviderRequired: 'Please select a provider',
     forwardModels: 'Forward Models',
-    forwardModelsTip: 'Only models configured on the selected provider can be chosen',
+    forwardModelsTip:
+      'Only models configured on the selected provider can be chosen',
     selectAll: 'Select All',
     modelProtocol: 'Model Protocol',
     providerKey: 'Key',
     providerKeyPlaceholder: 'Select a provider key',
-    modelNotInProvider: 'Model {model} is not in the selected provider model list',
+    modelNotInProvider:
+      'Model {model} is not in the selected provider model list',
     keyNotInProvider: 'Key {name} is not in the selected provider keys',
   },
   provider: {
@@ -889,20 +911,26 @@ export default {
     models: 'Models',
     modelList: 'Model List',
     syncModels: 'Fetch',
-    modelsHintDiscoverOnly: 'Click Fetch to pull models from upstream',
+    modelsPlaceholder:
+      'Click Fetch to pull upstream models, or type a model name and press Enter to add',
     modelsListTip:
-      'Fill in the model protocol, instance pool, endpoint, and keys (if needed) above first. Fetch pulls models from upstream into the list; the button stays disabled until required fields are set.',
-    discoverNeedInstance: 'Configure at least one instance before fetching models',
-    discoverNeedProtocol: 'Select at least one model protocol before fetching models',
-    syncModelsConfirm: 'This will replace the current model list with upstream results. You still need to submit to save.',
-    syncModelsSucc: 'Fetched {count} models. Submit to save them to the provider',
+      'Fill in the model protocol, instance pool, endpoint, and keys (if needed) above first. Fetch pulls models from upstream into the list; the button stays disabled until required fields are set. You can also type a model name and press Enter to add it manually.',
+    discoverNeedInstance:
+      'Configure at least one instance before fetching models',
+    discoverNeedProtocol:
+      'Select at least one model protocol before fetching models',
+    syncModelsConfirm:
+      'This will replace the current model list with upstream results. You still need to submit to save.',
+    syncModelsSucc:
+      'Fetched {count} models. Submit to save them to the provider',
     instancePool: 'Provider Instance Pool',
     instanceHostPlaceholder: 'Shown after instances are filled',
     tipNameRule:
       'Length 1-64 characters; only letters, digits, underscore, hyphen, and dot; cannot start or end with a dot, hyphen, or underscore; cannot contain whitespace',
     protocolRequired: 'Please select at least one model protocol',
     protocolInvalid: 'Model protocol only supports openai and anthropic',
-    deleteFailed: 'Delete failed. The provider may still be referenced by a cluster',
+    deleteFailed:
+      'Delete failed. The provider may still be referenced by a cluster',
     viewModelPrices: 'View Model Pricing',
     pricingTiers: 'Time-of-Use Pricing',
     pricingProviderName: 'Provider Name',
@@ -925,7 +953,8 @@ export default {
     pricingWeekdaysInvalid: 'Invalid applicable period in time range {index}',
     pricingTimeFormatInvalid: 'Time range {index} {field} must be HH:MM',
     pricingTimeInvalid: 'Time range {index} {field} is invalid',
-    pricingEndAfterStart: 'Time range {index} end time must be later than start time',
+    pricingEndAfterStart:
+      'Time range {index} end time must be later than start time',
     pricingRangesOverlap: 'Time ranges {a} and {b} overlap',
     weekdaysEveryDay: 'Every day',
     weekdaysQuick: 'Quick',
@@ -979,6 +1008,7 @@ export default {
   modelPrices: {
     basicInfo: 'Basic Info',
     provider: 'Provider',
+    providerPlaceholder: 'Type or select a provider name',
     model: 'Model Name',
     baseModel: 'Base Model',
     mode: 'Mode',
@@ -994,14 +1024,14 @@ export default {
     priceItemValuePlaceholder: 'Enter price',
     tierPriceObject: 'Tier Price',
     tierObject: 'Period Object',
-    tierPriceTip: 'Tier prices configure period-specific rates. Outside those periods, the default price applies. Optional.',
+    tierPriceTip:
+      'Tier prices configure period-specific rates. Outside those periods, the default price applies. Optional.',
     tierDuplicateKey: 'Duplicate keys in {tier} tier price',
     tierValueInvalid: '{tier} tier price values must be non-negative',
     tierPeakLabel: 'Peak',
     metadata: 'Metadata',
     source: 'Source',
     notes: 'Notes',
-    timestamps: 'Timestamps',
     createdAt: 'Created At',
     updatedAt: 'Updated At',
     create: 'Create Pricing',
@@ -1033,7 +1063,8 @@ export default {
     duplicateCombo: '(provider, model, mode) combination already exists',
     currencyMustBeRMB: 'default_currency must be RMB',
     parseYamlFailed: 'Failed to parse YAML',
-    yamlTopLevelMustBeObject: 'Top level must be an object (containing version, default_currency, etc.)',
+    yamlTopLevelMustBeObject:
+      'Top level must be an object (containing version, default_currency, etc.)',
     yamlVersionRequired: 'version field is required',
     limitsDuplicateKey: 'Duplicate key exists in limits',
     limitsValueInvalid: 'limits values must be non-negative integers',
