@@ -30,5 +30,37 @@
 | code | int | 错误码，固定500 |
 | message | string | 错误信息 |
 
+**示例**
+
+- 校验 `default_t()`：
+
+```json
+{
+    "expression": "default_t()"
+}
+```
+
+- 校验基于请求体大小的路由条件：
+
+```json
+{
+    "expression": "req_body_larger_than(8192)"
+}
+```
+
+```json
+{
+    "expression": "req_body_less_than(2048)"
+}
+```
+
+```json
+{
+    "expression": "req_host_in(\"api.example.com\") && req_body_larger_than(8192)"
+}
+```
+
+> 说明：`req_body_larger_than` / `req_body_less_than` 基于 HTTP `Content-Length` 头判断请求体字节数，单位：字节；无 `Content-Length` 时该条件不匹配。
+
 ---
 

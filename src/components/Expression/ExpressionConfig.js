@@ -318,6 +318,20 @@ export const controller = (conditionVars) => [
         example:
           '<p>req_body_json_prefix_in("model", "openrouter/", false)</p>',
       },
+      {
+        name: 'req_body_larger_than',
+        description: 'req_body_larger_than(bytes)',
+        expression: 'req_body_larger_than(8192)',
+        example:
+          '<p>req_body_larger_than(8192)</p><p>基于 Content-Length，单位字节；无 Content-Length 时不匹配</p>',
+      },
+      {
+        name: 'req_body_less_than',
+        description: 'req_body_less_than(bytes)',
+        expression: 'req_body_less_than(2048)',
+        example:
+          '<p>req_body_less_than(2048)</p><p>基于 Content-Length，单位字节；无 Content-Length 时不匹配</p>',
+      },
     ],
   },
   {

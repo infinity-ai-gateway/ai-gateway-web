@@ -29,6 +29,7 @@
           :placeholder="$t('entity.namePlaceholder')"
           show-word-limit
         ></Input>
+        <p v-if="isAdd" class="form-tip">{{ $t('entity.nameRule') }}</p>
       </FormItem>
 
       <Row :gutter="24">
@@ -507,6 +508,7 @@
 <script>
 import { cloneDeep } from 'lodash';
 import { getModelGroupsFromServices } from '@/utils/model';
+import { EntityNameRegCheck } from '@/utils/const';
 
 const INT64_MAX = 9223372036854775807;
 const RMB_QUOTA_MAX = 90000000;
@@ -549,6 +551,10 @@ export default {
             }
             if (/[\x00-\x1F\x7F]/.test(trimmed)) {
                 callback(new Error(this.$t('entity.nameControlCharsError')));
+                return;
+            }
+            if (!EntityNameRegCheck(trimmed)) {
+                callback(new Error(this.$t('entity.nameFormatError')));
                 return;
             }
             callback();

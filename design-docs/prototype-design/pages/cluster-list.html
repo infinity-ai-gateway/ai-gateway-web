@@ -30,16 +30,20 @@ document.addEventListener('DOMContentLoaded', function () {
   var state = {
     allRows: cloneRows(MockData.clusters),
     filteredRows: cloneRows(MockData.clusters),
-    searchName: '',
+    search: { name: '', description: '' },
     pageSize: 20,
     currentPage: 1,
     sortKey: '',
-    sortOrder: '' // 'asc' | 'desc' | ''
+    sortOrder: ''
   };
 
   function cloneRows(list) {
     return (list || []).map(function (item) {
-      return { name: item.name || '', description: item.description || '' };
+      return {
+        name: item.name || '',
+        description: item.description || '',
+        provider: item.provider || ''
+      };
     });
   }
 
@@ -47,29 +51,15 @@ document.addEventListener('DOMContentLoaded', function () {
     return IvuUI.escapeHtml(value);
   }
 
-  function sortRows(rows) {
-    if (!state.sortKey || !state.sortOrder) return rows.slice();
-    var key = state.sortKey;
-    var order = state.sortOrder;
-    return rows.slice().sort(function (a, b) {
-      var av = String(a[key] || '');
-      var bv = String(b[key] || '');
-      if (av < bv) return order === 'asc' ? -1 : 1;
-      if (av > bv) return order === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }
-
   function filterRows() {
-    var keyword = state.searchName.trim().toUpperCase();
-    if (!keyword) {
-      state.filteredRows = cloneRows(state.allRows);
-    } else {
-      state.filteredRows = state.allRows.filter(function (row) {
-        return String(row.name || '').toUpperCase().indexOf(keyword) !== -1;
-      });
-    }
-    state.filteredRows = sortRows(state.filteredRows);
+    state.filteredRows = state.allRows.filter(function (row) {
+      var nameKw = (state.search.name || '').trim().toUpperCase();
+      var descKw = (state.search.description || '').trim().toUpperCase();
+      if (nameKw && String(row.name || '').toUpperCase().indexOf(nameKw) === -1) return false;
+      if (descKw && String(row.description || '').toUpperCase().indexOf(descKw) === -1) return false;
+      return true;
+    });
+    state.filteredRows = Prototype.sortRows(state.filteredRows, state.sortKey, state.sortOrder);
   }
 
   function getPageRows() {
@@ -92,7 +82,13 @@ document.addEventListener('DOMContentLoaded', function () {
           searchable: true,
           searchPlaceholder: '请输入名称查询'
         },
-        { title: '描述', key: 'description', sortable: true },
+        {
+          title: '描述',
+          key: 'description',
+          sortable: true,
+          searchable: true,
+          searchPlaceholder: '请输入描述查询'
+        },
         {
           title: '操作',
           key: 'action',
@@ -107,31 +103,20 @@ document.addEventListener('DOMContentLoaded', function () {
       total: state.filteredRows.length,
       pageSize: state.pageSize,
       currentPage: state.currentPage,
-      searchValues: { name: state.searchName },
+      searchValues: state.search,
       tableId: 'cluster-page-table'
     });
-
-    // 添加排序样式
-    if (state.sortKey && state.sortOrder) {
-      var sortIcons = container.querySelectorAll('.ivu-table-sort');
-      var cols = container.querySelectorAll('th');
-      var colKeys = ['name', 'description', 'action'];
-      colKeys.forEach(function (key, idx) {
-        if (key === state.sortKey && sortIcons[idx]) {
-          sortIcons[idx].classList.add('sort-' + state.sortOrder);
-        }
-      });
-    }
 
     bindTableEvents(container);
   }
 
   function bindTableEvents(container) {
     Prototype.bindPageTableSearch(container, function (key, value) {
-      state.searchName = value;
+      state.search[key] = value;
       state.currentPage = 1;
       renderTable();
     });
+    Prototype.bindPageTableSort(container, state, renderTable);
 
     var sizeSelect = container.querySelector('.proto-page-size');
     if (sizeSelect) {
@@ -166,33 +151,6 @@ document.addEventListener('DOMContentLoaded', function () {
     container.querySelectorAll('.el-pager .number').forEach(function (item) {
       item.addEventListener('click', function () {
         state.currentPage = parseInt(item.getAttribute('data-page'), 10) || 1;
-        renderTable();
-      });
-    });
-
-    // 排序点击事件
-    container.querySelectorAll('th').forEach(function (th, idx) {
-      var colKeys = ['name', 'description', 'action'];
-      var key = colKeys[idx];
-      if (key === 'action') return;
-      var sortIcon = th.querySelector('.ivu-table-sort');
-      if (!sortIcon) return;
-      th.style.cursor = 'pointer';
-      th.addEventListener('click', function () {
-        if (state.sortKey === key) {
-          if (state.sortOrder === 'asc') {
-            state.sortOrder = 'desc';
-          } else if (state.sortOrder === 'desc') {
-            state.sortKey = '';
-            state.sortOrder = '';
-          } else {
-            state.sortOrder = 'asc';
-          }
-        } else {
-          state.sortKey = key;
-          state.sortOrder = 'asc';
-        }
-        state.currentPage = 1;
         renderTable();
       });
     });
@@ -339,17 +297,19 @@ document.addEventListener('DOMContentLoaded', function () {
       onSubmit: function (data) {
         var name = data.baseConfigData.name.trim();
         var desc = data.baseConfigData.description || '';
+        var provider = (data.llmConfigData && data.llmConfigData.provider) || '';
         if (!name) {
           Prototype.toast('请输入集群名称', 'error');
           return;
         }
         if (isAdd) {
-          state.allRows.push({ name: name, description: desc });
+          state.allRows.push({ name: name, description: desc, provider: provider });
         } else {
           var target = state.allRows.find(function (item) { return item.name === row.name; });
           if (target) {
             target.name = name;
             target.description = desc;
+            target.provider = provider;
           }
         }
         Prototype.closeDrawer('drawer-cluster-upsert');

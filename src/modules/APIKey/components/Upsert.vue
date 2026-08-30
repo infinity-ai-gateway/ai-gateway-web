@@ -248,7 +248,14 @@
                       { required: true, validator: validateTpmRuleName },
                     ]"
                   >
-                    <Input v-model="rule.name"></Input>
+                    <Input
+                      v-model="rule.name"
+                      :disabled="isRuleNameLocked(rule)"
+                    ></Input>
+                    <p v-if="!isRuleNameLocked(rule)" class="form-tip">
+                      {{ $t('apiKey.ruleNameFormatTip') }}
+                    </p>
+                    <p v-else class="form-tip">{{ $t('apiKey.ruleNameReadonlyTip') }}</p>
                   </FormItem>
                 </Col>
                 <Col span="4">
@@ -373,7 +380,14 @@
                       { required: true, validator: validateRpmRuleName },
                     ]"
                   >
-                    <Input v-model="rule.name"></Input>
+                    <Input
+                      v-model="rule.name"
+                      :disabled="isRuleNameLocked(rule)"
+                    ></Input>
+                    <p v-if="!isRuleNameLocked(rule)" class="form-tip">
+                      {{ $t('apiKey.ruleNameFormatTip') }}
+                    </p>
+                    <p v-else class="form-tip">{{ $t('apiKey.ruleNameReadonlyTip') }}</p>
                   </FormItem>
                 </Col>
                 <Col span="5">
@@ -518,7 +532,7 @@
 <script>
 import { cloneDeep } from "lodash";
 import moment from "moment";
-import { isCidr, isCidrEqual, isCidrContained } from "@/utils/const";
+import { isCidr, isCidrEqual, isCidrContained, RateLimitRuleNameRegCheck } from "@/utils/const";
 import { getModelGroupsFromServices } from "@/utils/model";
 
 const INT64_MAX = 9223372036854775807;
@@ -944,6 +958,14 @@ export default {
           max_concurrency: -1,
         };
       }
+      this.formData.rate_limit_policy.rules.tpm = this.normalizeRateLimitRules(
+        this.formData.rate_limit_policy.rules.tpm,
+        "tpm"
+      );
+      this.formData.rate_limit_policy.rules.rpm = this.normalizeRateLimitRules(
+        this.formData.rate_limit_policy.rules.rpm,
+        "rpm"
+      );
 
       this.syncMaxConcurrencyMode();
 
@@ -1032,6 +1054,7 @@ export default {
         window_minutes: 1,
         max_tokens: 10000,
         step_minutes: 1,
+        _nameLocked: false,
       });
       this.validateRateLimitEnabledField();
     },
@@ -1051,6 +1074,7 @@ export default {
         model: "*",
         window_minutes: 1,
         max_requests: 100,
+        _nameLocked: false,
       });
       this.validateRateLimitEnabledField();
     },
@@ -1307,6 +1331,38 @@ export default {
       callback();
     },
 
+    normalizeRateLimitRules(rules, type) {
+      return (rules || []).map((rule) => {
+        const normalized = {
+          name: rule.name || "",
+          model: rule.model || "*",
+          window_minutes:
+            rule.window_minutes != null ? Number(rule.window_minutes) : 1,
+          _nameLocked:
+            !this.isAdd && !!(rule.name && String(rule.name).trim()),
+        };
+        if (type === "tpm") {
+          normalized.max_tokens =
+            rule.max_tokens != null ? Number(rule.max_tokens) : 10000;
+          normalized.step_minutes =
+            rule.step_minutes != null ? Number(rule.step_minutes) : 1;
+        } else {
+          normalized.max_requests =
+            rule.max_requests != null ? Number(rule.max_requests) : 100;
+        }
+        return normalized;
+      });
+    },
+    isRuleNameLocked(rule) {
+      return !!(rule && rule._nameLocked);
+    },
+    stripRateLimitRuleMeta(rules) {
+      return (rules || []).map((rule) => {
+        const next = { ...rule };
+        delete next._nameLocked;
+        return next;
+      });
+    },
     validateTpmRuleName(rule, value, callback) {
       if (this.formData.rate_limit_policy.enabled === "false") {
         callback();
@@ -1321,6 +1377,10 @@ export default {
       }
       if (trimmed.length < 1 || trimmed.length > 128) {
         callback(new Error(this.$t("apiKey.ruleNameLengthError")));
+        return;
+      }
+      if (!RateLimitRuleNameRegCheck(trimmed)) {
+        callback(new Error(this.$t("apiKey.ruleNameFormatError")));
         return;
       }
       const tpm = this.formData.rate_limit_policy.rules.tpm || [];
@@ -1348,6 +1408,10 @@ export default {
       }
       if (trimmed.length < 1 || trimmed.length > 128) {
         callback(new Error(this.$t("apiKey.ruleNameLengthError")));
+        return;
+      }
+      if (!RateLimitRuleNameRegCheck(trimmed)) {
+        callback(new Error(this.$t("apiKey.ruleNameFormatError")));
         return;
       }
       const rpm = this.formData.rate_limit_policy.rules.rpm || [];
@@ -1417,6 +1481,13 @@ export default {
                 rpm: [],
                 max_concurrency: -1,
               };
+            } else {
+              submitData.rate_limit_policy.rules.tpm = this.stripRateLimitRuleMeta(
+                submitData.rate_limit_policy.rules.tpm
+              );
+              submitData.rate_limit_policy.rules.rpm = this.stripRateLimitRuleMeta(
+                submitData.rate_limit_policy.rules.rpm
+              );
             }
 
             this.$emit("submit", submitData);

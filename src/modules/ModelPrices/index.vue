@@ -121,6 +121,8 @@ export default {
             importVisible: false,
             importLoading: false,
             searchParams: {},
+            filterProvider: null,
+            autoViewAfterFetch: false,
             providerOptions: [],
             modeOptions: MODE_OPTIONS.map(m => ({ label: m, value: m }))
         };
@@ -135,6 +137,7 @@ export default {
                     searchable: true,
                     searchType: 'select',
                     searchFilters: this.providerOptions,
+                    searchValue: this.filterProvider,
                     sortable: 'custom'
                 },
                 {
@@ -186,8 +189,26 @@ export default {
     },
 
     mounted() {
-        this.fetchProviderOptions();
-        this.fetchData();
+        this.fetchProviderOptions().finally(() => {
+            if (this.$route.query.provider) {
+                this.applyQueryFromRoute();
+            } else {
+                this.fetchData();
+            }
+        });
+    },
+
+    watch: {
+        '$route.query': {
+            handler() {
+                if (this.$route.name !== 'ModelPrice.list') {
+                    return;
+                }
+                if (this.$route.query.provider) {
+                    this.applyQueryFromRoute();
+                }
+            }
+        }
     },
 
     methods: {
@@ -200,7 +221,7 @@ export default {
 
         fetchData() {
             this.loading = true;
-            this.$request({
+            return this.$request({
                 url: 'model-prices',
                 method: 'get',
                 params: {
@@ -214,6 +235,7 @@ export default {
                     const data = res.data.Data || {};
                     this.tableData = data.list || [];
                     this.total = (data.pagination && data.pagination.total) || 0;
+                    this.handleAutoViewAfterFetch();
                 } else {
                     this.$Message.error(this.$t('modelPrices.loadFailed'));
                 }
@@ -225,8 +247,40 @@ export default {
             });
         },
 
+        applyQueryFromRoute() {
+            const provider = String(this.$route.query.provider || '').trim();
+            if (!provider) {
+                return;
+            }
+            this.filterProvider = provider;
+            this.searchParams = { provider };
+            this.page = 1;
+            this.autoViewAfterFetch = this.$route.query.autoView === '1';
+            this.fetchData();
+        },
+
+        handleAutoViewAfterFetch() {
+            if (!this.autoViewAfterFetch) {
+                return;
+            }
+            this.autoViewAfterFetch = false;
+            const provider = this.filterProvider || this.$route.query.provider;
+            if (this.tableData.length) {
+                this.onView(this.tableData[0]);
+            } else if (provider) {
+                this.$Message.warning(
+                    this.$t('modelPrices.noPricingForProvider', { provider })
+                );
+            }
+            if (this.$route.query.autoView) {
+                const query = { ...this.$route.query };
+                delete query.autoView;
+                this.$router.replace({ name: 'ModelPrice.list', query });
+            }
+        },
+
         fetchProviderOptions() {
-            this.$request({
+            return this.$request({
                 url: 'model-prices',
                 method: 'get',
                 params: { page: 1, page_size: 1000 },
@@ -250,6 +304,7 @@ export default {
 
         onSearchChange(filters) {
             this.searchParams = filters || {};
+            this.filterProvider = filters.provider || null;
             this.page = 1;
             this.fetchData();
         },

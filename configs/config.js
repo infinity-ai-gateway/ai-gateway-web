@@ -57,7 +57,7 @@ module.exports = {
     env: {
       NODE_ENV: '"development"',
     },
-    port: 8085,
+    port: 8180,
     assetsSubDirectory: 'static',
     assetsPublicPath: '/',
     proxyTable: proxyTable,

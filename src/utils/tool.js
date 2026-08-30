@@ -79,3 +79,17 @@ export function fields(obj, keys) {
     }
     return obj;
 }
+
+/** 校验 IANA 时区名（与后端 time.LoadLocation 语义一致，依赖浏览器 Intl 时区库） */
+export function isValidIanaTimeZone(tz) {
+    const value = String(tz || '').trim();
+    if (!value) {
+        return false;
+    }
+    try {
+        Intl.DateTimeFormat(undefined, { timeZone: value });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}

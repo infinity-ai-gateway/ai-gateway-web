@@ -46,17 +46,23 @@ document.addEventListener('DOMContentLoaded', function () {
   var userState = {
     rows: cloneRows(MockData.users),
     filteredRows: [],
-    search: { user_name: '' },
+    search: { user_name: '', is_admin: '' },
     pageSize: 20,
     currentPage: 1,
+    sortKey: '',
+    sortOrder: '',
     drawerMode: 'create',
     currentRow: null
   };
 
   var tokenState = {
     rows: cloneRows(MockData.tokens),
+    filteredRows: [],
+    search: { name: '', scope: '' },
     pageSize: 20,
-    currentPage: 1
+    currentPage: 1,
+    sortKey: '',
+    sortOrder: ''
   };
 
   function cloneRows(list) {
@@ -65,9 +71,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function filterUserRows() {
     userState.filteredRows = userState.rows.filter(function (row) {
-      var keyword = String(userState.search.user_name || '').trim().toUpperCase();
-      if (!keyword) return true;
-      return String(row.user_name || '').toUpperCase().indexOf(keyword) !== -1;
+      var nameKw = String(userState.search.user_name || '').trim().toUpperCase();
+      var roleKw = String(userState.search.is_admin || '').trim();
+      if (nameKw && String(row.user_name || '').toUpperCase().indexOf(nameKw) === -1) return false;
+      if (roleKw && String(!!row.is_admin) !== roleKw) return false;
+      return true;
+    });
+    userState.filteredRows = Prototype.sortRows(userState.filteredRows, userState.sortKey, userState.sortOrder, function (row, key) {
+      if (key === 'is_admin') return UserUpsert.roleLabel(!!row.is_admin);
+      return Prototype.cellText(row, key);
+    });
+  }
+
+  function filterTokenRows() {
+    tokenState.filteredRows = tokenState.rows.filter(function (row) {
+      var nameKw = String(tokenState.search.name || '').trim().toUpperCase();
+      var scopeKw = String(tokenState.search.scope || '').trim();
+      if (nameKw && String(row.name || '').toUpperCase().indexOf(nameKw) === -1) return false;
+      if (scopeKw && String(row.scope || '') !== scopeKw) return false;
+      return true;
+    });
+    tokenState.filteredRows = Prototype.sortRows(tokenState.filteredRows, tokenState.sortKey, tokenState.sortOrder, function (row, key) {
+      if (key === 'scope') return UserUpsert.scopeLabel(row.scope);
+      return Prototype.cellText(row, key);
     });
   }
 
@@ -78,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function getTokenPageRows() {
     var start = (tokenState.currentPage - 1) * tokenState.pageSize;
-    return tokenState.rows.slice(start, start + tokenState.pageSize);
+    return tokenState.filteredRows.slice(start, start + tokenState.pageSize);
   }
 
   function findUserRowIndex(row) {
@@ -145,7 +171,13 @@ document.addEventListener('DOMContentLoaded', function () {
       columns: [
         { title: '用户', key: 'user_name', minWidth: 160, searchable: true, sortable: true, searchPlaceholder: '请输入用户查询' },
         {
-          title: '角色', key: 'is_admin', minWidth: 120,
+          title: '角色', key: 'is_admin', minWidth: 120, searchable: true, sortable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择角色',
+          searchFilters: [
+            { label: '管理员', value: 'true' },
+            { label: '普通用户', value: 'false' }
+          ],
           render: function (row) { return UserUpsert.roleLabel(!!row.is_admin); }
         },
         {
@@ -176,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
       userState.currentPage = 1;
       renderUserTable();
     });
+    Prototype.bindPageTableSort(tableRoot, userState, renderUserTable);
 
     tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
       item.onclick = function () {
@@ -243,15 +276,22 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function renderTokenTable() {
-    var totalPages = Math.max(1, Math.ceil(tokenState.rows.length / tokenState.pageSize));
+    filterTokenRows();
+    var totalPages = Math.max(1, Math.ceil(tokenState.filteredRows.length / tokenState.pageSize));
     if (tokenState.currentPage > totalPages) tokenState.currentPage = totalPages;
 
     document.getElementById('token-table').innerHTML = IvuUI.pageTable({
       tableId: 'token-page-table',
       columns: [
-        { title: '名称', key: 'name', minWidth: 180 },
+        { title: '名称', key: 'name', minWidth: 180, searchable: true, sortable: true, searchPlaceholder: '请输入名称查询' },
         {
-          title: 'scope', key: 'scope', minWidth: 140,
+          title: 'scope', key: 'scope', minWidth: 140, searchable: true, sortable: true,
+          searchType: 'select',
+          searchPlaceholder: '请选择 scope',
+          searchFilters: [
+            { label: 'System', value: 'System' },
+            { label: 'Support', value: 'Support' }
+          ],
           render: function (row) { return UserUpsert.scopeLabel(row.scope); }
         },
         {
@@ -264,9 +304,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       ],
       rows: getTokenPageRows(),
-      total: tokenState.rows.length,
+      total: tokenState.filteredRows.length,
       pageSize: tokenState.pageSize,
-      currentPage: tokenState.currentPage
+      currentPage: tokenState.currentPage,
+      searchValues: tokenState.search
     });
 
     bindTokenTableEvents();
@@ -275,6 +316,13 @@ document.addEventListener('DOMContentLoaded', function () {
   function bindTokenTableEvents() {
     var tableRoot = document.getElementById('token-page-table');
     if (!tableRoot) return;
+
+    Prototype.bindPageTableSearch(tableRoot, function (key, value) {
+      tokenState.search[key] = value;
+      tokenState.currentPage = 1;
+      renderTokenTable();
+    });
+    Prototype.bindPageTableSort(tableRoot, tokenState, renderTokenTable);
 
     tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
       item.onclick = function () {
@@ -305,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var nextBtn = tableRoot.querySelector('.proto-page-next');
     if (nextBtn) {
       nextBtn.onclick = function () {
-        var totalPages = Math.max(1, Math.ceil(tokenState.rows.length / tokenState.pageSize));
+        var totalPages = Math.max(1, Math.ceil(tokenState.filteredRows.length / tokenState.pageSize));
         if (tokenState.currentPage < totalPages) {
           tokenState.currentPage += 1;
           renderTokenTable();

@@ -38,6 +38,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [v0.0.8] - 2026-08-30
+
+### Added
+
+- Model Provider module: new `/providers` resource with list, create/edit/view drawers, instance pool, model protocols, model discovery endpoint, auth keys, and model list; clusters reference providers via `llm_config.provider` instead of maintaining instance pools locally
+- Provider model discovery: stateless `POST /providers/tools/discover-models` replaces legacy `tools/get-models-from-provider`; models are fetched from the current form and persisted only on submit
+- Provider pricing tiers: independent drawer for peak busy-hour schedules (`time_zone` + weekday/time ranges) via `PUT /providers/{name}/pricing-tiers`, with IANA timezone validation
+- Provider list shortcuts: **Query model prices** navigates to Model Prices filtered by `provider` and auto-opens the first matching record
+- Model pricing tier prices: create/edit/detail views now support required default `prices` plus optional `tier_prices.peak` for time-based rates aligned with provider pricing tiers
+- Cluster Key affinity: `key_affinity` (enable, idle TTL, penalty, Redis prefix) in LLM config for session-bound key routing
+- Route expression primitives: `req_body_json_prefix_in` for JSON body field prefix matching; `req_body_larger_than` / `req_body_less_than` for Content-Length based matching
+- User manual v0.0.8: new Model Provider chapter, updated AI Business Cluster (5-step wizard), model pricing tier docs, and refreshed screenshots for chapters 04–11
+
+### Changed
+
+- Cluster wizard simplified from 6 steps to 5: removed the instance-pool step; instance pools are owned by Model Provider; cluster create/update payloads no longer include `instance_pool`
+- Cluster LLM config refactor: select **provider** to load forward models and key names; keys table stores `name` + `weight` only (no key plaintext); removed `provider_type` and embedded `model_endpoint`
+- `InstancePool.vue` reused by Model Provider; duplicate `addr:port` rows are highlighted and blocked on submit
+- API Key rate-limit rules: TPM/RPM rule names follow `RateLimitRuleNameRegCheck`; persisted rule names are read-only in the form
+- Model Prices list accepts `provider` and `autoView` query params for deep-linking from the provider list
+- Expanded i18n coverage for providers, pricing tiers, tier prices, key affinity, and route body expressions (en/zh)
+
+### Fixed
+
+- Instance pool duplicate address/port validation and visual feedback (#85)
+
+### Removed
+
+- Legacy model-provider-types module and `tools/get-models-from-provider` consumption path
+
 ## [v0.0.7] - 2026-08-19
 
 ### Added
@@ -196,6 +226,7 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
+[v0.0.8]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.8
 [v0.0.7]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.7
 [v0.0.6]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.6
 [v0.0.5]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.5

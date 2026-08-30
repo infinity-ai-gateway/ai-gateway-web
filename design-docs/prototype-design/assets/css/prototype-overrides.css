@@ -320,10 +320,20 @@ body {
 }
 
 /* 侧栏选中项：对齐 sidebarNav.vue scoped 样式 */
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active,
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-submenu .ivu-menu-item-active:hover,
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu),
-.bfe-sidebar .ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu):hover {
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-submenu
+  .ivu-menu-item-active,
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-submenu
+  .ivu-menu-item-active:hover,
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-item-active:not(.ivu-menu-submenu),
+.bfe-sidebar
+  .ivu-menu-dark.ivu-menu-vertical
+  .ivu-menu-item-active:not(.ivu-menu-submenu):hover {
   border-right: none;
   color: #fff;
   background: linear-gradient(
@@ -336,12 +346,28 @@ body {
   border-left-color: #a0cfff !important;
 }
 
-/* 侧边栏分组：子项缩进 */
-.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu {
+/* 侧边栏分组：子项缩进，确保子菜单项全部可见（含 Entity 管理） */
+.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu > .ivu-menu,
+.bfe-sidebar .Menu .ivu-menu-submenu.ivu-menu-opened > .ivu-menu {
   display: block !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
-.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu .ivu-menu-item {
+.bfe-sidebar .Menu > .ivu-menu > .ivu-menu-submenu .ivu-menu-item,
+.bfe-sidebar .Menu .ivu-menu-submenu .ivu-menu-item {
   padding-left: 48px !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 48px;
+  overflow: visible !important;
+  visibility: visible !important;
+}
+.bfe-sidebar .Menu .ivu-menu-item .menu-link {
+  position: relative;
+  z-index: 1;
 }
 /* 侧边栏分组标题：右侧显示折叠箭头（向上表示已展开） */
 .bfe-sidebar
@@ -855,6 +881,21 @@ body {
 }
 
 /* Entity 管理（对齐 Entity 模块） */
+.entity-page .ivu-tabs-bar {
+  display: block !important;
+  visibility: visible !important;
+  margin-bottom: 16px;
+}
+.entity-page .ivu-tabs-content {
+  display: block !important;
+  min-height: 200px;
+}
+.entity-page .ivu-tabs-content > .ivu-tabs-tabpane.ivu-tabs-tabpane-active {
+  display: block !important;
+  height: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 .entity-page .title {
   margin-bottom: 0;
 }
@@ -940,9 +981,10 @@ body {
 
 /* i-switch 开关样式（模拟 Element UI el-switch） */
 .ivu-switch {
-  display: inline-block;
-  width: 40px;
-  height: 20px;
+  display: inline-block !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 20px !important;
   line-height: 18px;
   border-radius: 10px;
   vertical-align: middle;
@@ -953,6 +995,7 @@ body {
   user-select: none;
   transition: background-color 0.2s ease;
   box-sizing: content-box;
+  overflow: visible !important;
 }
 .ivu-switch-checked {
   background-color: #409eff;
@@ -969,7 +1012,23 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .ivu-switch-checked .ivu-switch-inner {
-  left: 22px;
+  left: 22px !important;
+}
+
+/* 修复原型中 switch 所在表单项 content 宽度被挤压导致截断的问题 */
+.ivu-form-label-top .ivu-form-item {
+  display: block !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ivu-form-label-top .ivu-form-item-content {
+  display: block !important;
+  width: 100% !important;
+  min-width: 44px;
+  box-sizing: border-box;
+}
+.ivu-form-label-top .ivu-form-item-content .ivu-switch {
+  flex-shrink: 0;
 }
 
 /* 模型多选下拉样式（模拟 el-select multiple） */
@@ -1013,34 +1072,152 @@ body {
   padding: 0 6px;
   font-size: 12px;
 }
+.proto-model-select .proto-model-input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 24px;
+  min-width: 120px;
+  flex: 1;
+  color: #1f2d3d;
+  padding: 0;
+}
+/* 提供商 AutoComplete：下拉可选 + 可手动输入 */
+.proto-autocomplete {
+  position: relative;
+  width: 100%;
+}
+.proto-autocomplete .ivu-input-wrapper {
+  width: 100%;
+}
+.proto-autocomplete-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #808695;
+  font-size: 12px;
+  font-style: normal;
+  pointer-events: none;
+}
+.proto-autocomplete-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+}
+.proto-autocomplete-option {
+  padding: 0 12px;
+  height: 34px;
+  line-height: 34px;
+  font-size: 14px;
+  color: #606266;
+  cursor: pointer;
+}
+.proto-autocomplete-option:hover {
+  background: #f5f7fa;
+  color: #409eff;
+}
+.proto-autocomplete-empty {
+  padding: 10px 12px;
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
+}
 
-/* 模型列表接口 - endpoint host 灰底样式 */
+.proto-model-select-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 30;
+}
+.proto-model-select-option {
+  padding: 0 12px;
+  height: 34px;
+  line-height: 34px;
+  font-size: 14px;
+  color: #606266;
+  cursor: pointer;
+}
+.proto-model-select-option:hover {
+  background: #f5f7fa;
+  color: #409eff;
+}
+.proto-model-select-empty {
+  padding: 10px 12px;
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* 模型列表接口：协议 + 实例地址:端口 + URI 拼接输入 */
 .gateway-config .endpoint-url-group {
   display: flex;
   align-items: stretch;
-  gap: 0;
+  height: 32px;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
 }
 .gateway-config .endpoint-url-group .endpoint-protocol {
-  width: 90px;
+  width: 108px;
   flex-shrink: 0;
+  height: 32px;
+  border: 0;
+  border-right: 1px solid #dcdee2;
+  padding: 0 24px 0 10px;
+  background: #f0faff;
+  color: #2d8cf0;
+  font-size: 13px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%232d8cf0'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
 }
 .gateway-config .endpoint-url-group .endpoint-host {
-  flex: 1;
-  border: 1px solid #dcdee2;
-  border-left: 0;
-  border-right: 0;
+  flex: 0 1 200px;
+  min-width: 140px;
+  max-width: 260px;
+  border: 0;
+  border-right: 1px solid #dcdee2;
   padding: 0 10px;
   background: #f8f8f9;
   font-size: 13px;
   color: #515a6e;
-  line-height: 30px;
+  line-height: 32px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.gateway-config .endpoint-url-group .endpoint-uri {
+  flex: 1;
+  min-width: 120px;
+  height: 32px;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
 .gateway-config .endpoint-url-group .ivu-input-wrapper {
-  width: 180px;
-  flex-shrink: 0;
+  display: none;
 }
 
 /* GatewayConfig Card 间距 */
@@ -1068,8 +1245,75 @@ body {
   font-weight: 500;
   color: #1f2d3d;
 }
+.gateway-config .llm-card-title .form-help-icon {
+  margin-left: 4px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: #808695;
+  cursor: help;
+}
 .gateway-config .llm-card-body {
   padding: 16px;
+}
+.gateway-config .proto-protocol-select {
+  position: relative;
+  width: 100%;
+}
+.gateway-config .proto-protocol-select .ivu-select-selection {
+  min-height: 32px;
+  padding: 2px 24px 2px 4px;
+  cursor: pointer;
+}
+.gateway-config .proto-protocol-select .ivu-select-placeholder {
+  color: #c5c8ce;
+  line-height: 26px;
+  padding-left: 4px;
+}
+.gateway-config .proto-protocol-select .ivu-tag {
+  margin: 2px 4px 2px 0;
+}
+.gateway-config .proto-protocol-select .ivu-select-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  margin-top: -7px;
+  color: #808695;
+}
+.gateway-config
+  .proto-protocol-select.ivu-select-disabled
+  .ivu-select-selection {
+  cursor: not-allowed;
+  background: #f3f3f3;
+  color: #c5c8ce;
+}
+.gateway-config .proto-protocol-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 900;
+  width: 100%;
+  margin-top: 2px;
+  background: #fff;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  max-height: 180px;
+  overflow: auto;
+  white-space: normal;
+}
+.gateway-config .proto-protocol-dropdown .ivu-select-item {
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.gateway-config .proto-protocol-dropdown .ivu-select-item:hover,
+.gateway-config .proto-protocol-dropdown .ivu-select-item-selected {
+  background: #f3f3f3;
+  color: #2d8cf0;
+}
+.gateway-config .proto-protocol-remove {
+  margin-left: 4px;
+  cursor: pointer;
 }
 
 /* 表单帮助图标 (?) */
@@ -1234,6 +1478,24 @@ body {
 .clusters .info-label {
   width: 140px;
   color: #808695;
+}
+
+/* 表格操作列：单行横排按钮（对齐 Vue pageTable 操作列） */
+.proto-table-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+.proto-table-actions .ivu-btn {
+  flex: 0 0 auto;
+  margin-right: 5px;
+}
+.proto-table-actions .ivu-btn:last-child {
+  margin-right: 0;
+}
+.page-table .ivu-table-cell .proto-table-actions {
+  overflow: visible;
 }
 
 /* 集群向导 newClusters */
@@ -1652,6 +1914,32 @@ body {
 #model-price-drawer .proto-kv-table .info-value {
   padding: 8px 12px;
 }
+
+/* 服务商详情：只读展示，对齐模型定价详情 */
+.provider-detail .info-row {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.provider-detail .info-row:last-child {
+  border-bottom: none;
+}
+.provider-detail .info-label {
+  width: 120px;
+  flex-shrink: 0;
+  color: #666;
+}
+.provider-detail .info-value {
+  flex: 1;
+  color: #333;
+  word-break: break-all;
+}
+.provider-detail .ivu-tag {
+  margin: 2px 4px 2px 0;
+}
+.provider-detail .mapping-table {
+  margin-top: 4px;
+}
 #model-price-drawer .ivu-drawer-footer {
   flex-shrink: 0;
   display: flex;
@@ -1681,7 +1969,11 @@ body {
   white-space: nowrap;
   color: #515a6e;
 }
-#model-price-drawer .proto-multi-dropdown-trigger:not(:has(.proto-multi-dropdown-text:not(:empty))) .proto-multi-dropdown-text,
+#model-price-drawer
+  .proto-multi-dropdown-trigger:not(
+    :has(.proto-multi-dropdown-text:not(:empty))
+  )
+  .proto-multi-dropdown-text,
 #model-price-drawer .proto-multi-dropdown-text:empty {
   color: #808695;
 }
@@ -1881,4 +2173,220 @@ body {
   font-size: 14px;
   line-height: 22px;
   word-break: break-all;
+}
+
+/* 服务商列表 · 模型列 Tag */
+.proto-provider-models-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
+}
+.proto-model-more-tag {
+  cursor: help;
+  font-size: 12px;
+  color: #515a6e;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 0 6px;
+  line-height: 20px;
+}
+
+/* 实例 IP 列表 · 底部校验提示 */
+.proto-instance-error {
+  color: #ed4014;
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* 转发模型 · 全选 */
+.proto-forward-select-all {
+  color: #2d8cf0;
+  font-weight: 500;
+}
+
+/* Provider 分段计价配置 */
+.provider-pricing-tiers-form .proto-pricing-tiers-provider-name {
+  color: #17233d;
+  font-size: 14px;
+  font-weight: 500;
+}
+.provider-pricing-tiers-form .proto-pricing-tier-type {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.provider-pricing-tiers-form .proto-pricing-tier-code {
+  color: #808695;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.provider-pricing-tiers-form .proto-time-picker {
+  min-width: 128px;
+}
+.provider-pricing-tiers-form .proto-time-input-wrap {
+  width: 100%;
+}
+.provider-pricing-tiers-form .proto-time-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+.provider-pricing-tiers-form
+  .proto-time-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+}
+.provider-pricing-tiers-form .proto-time-col {
+  width: 140px;
+}
+.provider-pricing-tiers-form .proto-time-cell {
+  vertical-align: top;
+}
+.provider-pricing-tiers-form .proto-pricing-tier-note {
+  color: #c5c8ce;
+  font-size: 12px;
+}
+.provider-pricing-tiers-form .proto-weekday-picker {
+  min-width: 280px;
+}
+.provider-pricing-tiers-form .proto-weekday-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+.provider-pricing-tiers-form .proto-weekday-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  flex: 1 1 220px;
+}
+.provider-pricing-tiers-form .proto-weekday-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #515a6e;
+  cursor: pointer;
+  user-select: none;
+}
+.provider-pricing-tiers-form .proto-weekday-check {
+  margin: 0;
+}
+.provider-pricing-tiers-form .proto-weekday-quick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  color: #808695;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-label {
+  margin-right: 2px;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-link {
+  border: 0;
+  background: transparent;
+  color: #2d8cf0;
+  padding: 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-link:hover {
+  color: #57a3f3;
+}
+.provider-pricing-tiers-form .proto-weekday-quick-sep {
+  color: #dcdee2;
+}
+.proto-price-config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.proto-price-config-block {
+  border: 1px solid #e8eaec;
+  border-radius: 4px;
+  background: #fff;
+}
+.proto-price-config-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e8eaec;
+  background: #f8f8f9;
+}
+.proto-price-config-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #515a6e;
+}
+.proto-price-config-title.is-required::before {
+  content: '*';
+  display: inline-block;
+  margin-right: 4px;
+  color: #ed4014;
+  font-family: SimSun, sans-serif;
+}
+.proto-price-config-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  border-radius: 50%;
+  border: 1px solid #c5c8ce;
+  color: #808695;
+  font-size: 12px;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+.proto-price-config-body {
+  padding: 16px;
+}
+.proto-tier-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.proto-tier-meta-label {
+  font-size: 13px;
+  color: #808695;
+}
+.proto-pricing-tiers-table td {
+  vertical-align: top;
+}
+.proto-table-actions .ivu-btn-warning {
+  color: #fff;
+  background-color: #ff9900;
+  border-color: #ff9900;
+}
+.proto-table-actions .ivu-btn-warning:hover {
+  background-color: #ffad33;
+  border-color: #ffad33;
+}
+.proto-tier-price-view + .proto-tier-price-view {
+  margin-top: 12px;
+}
+.proto-tier-price-view-label {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #515a6e;
+}
+.proto-pricing-tiers-tip {
+  margin: 0 0 12px;
+  color: #808695;
+  font-size: 12px;
+}
+.proto-tier-readonly {
+  display: inline-block;
+  font-size: 14px;
+  color: #515a6e;
+  line-height: 32px;
 }
