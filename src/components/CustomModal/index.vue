@@ -22,7 +22,7 @@
                     title ? title : $t('com.informationTips')
                 }}</span>
             </p>
-            <p style="white-space: pre-line;">{{ content }}</p>
+            <p class="modal-content">{{ content }}</p>
             <slot />
             <div slot="footer" v-if="oneButton" class="df justify-center">
                 <Button type="primary" @click="confirm">{{
@@ -109,11 +109,18 @@ export default {
 </script>
 
 <style lang="less" scoped>
+.modal-content {
+    max-width: 100%;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
 /deep/ .ivu-modal-header {
     height: 50px;
 }
 /deep/ .ivu-modal-content .ivu-modal-body {
-    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 /deep/ .ivu-modal-footer {
     border: none;

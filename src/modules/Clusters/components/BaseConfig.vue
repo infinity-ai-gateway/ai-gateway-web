@@ -365,7 +365,7 @@ export default {
                 },
                 sticky_sessions: {
                     enabled: 'false',
-                    hash_strategy: 'CLIENT_ID_ONLY',
+                    hash_strategy: 'CLIENT_IP_ONLY',
                     hash_header: ''
                 },
                 timeouts: {
@@ -381,10 +381,10 @@ export default {
             },
             hashStrategyOptions: [
                 {
-                    name: 'CLIENT_ID_ONLY'
+                    name: 'CLIENT_IP_ONLY'
                 },
                 {
-                    name: 'CLIENT_IP_ONLY'
+                    name: 'CLIENT_ID_ONLY'
                 },
                 {
                     name: 'CLIENT_ID_PREFERED'

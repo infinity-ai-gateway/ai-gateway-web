@@ -55,7 +55,6 @@
             :disabled="readonly"
             @on-change="changeExpression"
         />
-        <div class="error" v-if="errmsg">{{ errmsg }}</div>
     </div>
 </template>
 <script>
@@ -111,7 +110,6 @@ export default {
     },
     data() {
         return {
-            errmsg: '',
             localExpression: ''
         };
     },
@@ -147,7 +145,6 @@ export default {
                     vars: that.vars,
                     errmsg
                 });
-                this.errmsg = errmsg;
             });
         },
         onBtnClick(data) {
@@ -161,9 +158,6 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-.error {
-    color: red;
-}
 .expression-item {
     background: #ffffff;
     .expression-item-box {

@@ -37,6 +37,8 @@
             search: { id: '', key: '', description: '', enabled: '', unlimited_quota: '', quota_plan: '', rate_limit_policy_enabled: '', entity: '' },
             pageSize: 20,
             currentPage: 1,
+            sortKey: '',
+            sortOrder: '',
             drawerMode: 'add',
             currentRow: null,
             currentId: ''
@@ -65,6 +67,17 @@
                 return true;
               });
             });
+            state.filteredRows = Prototype.sortRows(
+              state.filteredRows,
+              state.sortKey,
+              state.sortOrder,
+              function (row, key) {
+                if (key === 'quota_plan') return ApiKeyUpsert.formatQuota(row);
+                if (key === 'entity') return (row.entity && row.entity.name) || '';
+                if (key === 'rate_limit_policy_enabled') return String(!!(row.rate_limit_policy && row.rate_limit_policy.enabled));
+                return Prototype.cellText(row, key);
+              }
+            );
           }
 
           function getPageRows() {
@@ -82,7 +95,7 @@
               columns: [
                 { title: 'Key标识', key: 'id', minWidth: 120, sortable: true, searchable: true, searchPlaceholder: '请输入Key标识查询' },
                 {
-                  title: 'Key值', key: 'key', minWidth: 160, searchable: true, searchPlaceholder: '请输入Key值查询',
+                  title: 'Key值', key: 'key', minWidth: 160, searchable: true, sortable: true, searchPlaceholder: '请输入Key值查询',
                   render: function (row) {
                     return '<a href="#" class="proto-api-key-link" data-key="' + IvuUI.escapeHtml(row.key || '') + '" onclick="return false;">' +
                       ApiKeyUpsert.maskKey(row.key) + '</a>';
@@ -161,6 +174,7 @@
               state.currentPage = 1;
               renderTable();
             });
+            Prototype.bindPageTableSort(tableRoot, state, renderTable);
 
             tableRoot.querySelectorAll('[data-page]').forEach(function (item) {
               item.onclick = function () {

@@ -22,7 +22,7 @@ window.ModelPriceUpsert = {
         };
     this.isView = isView;
     this.onSuccess = onSuccess || null;
-    this.errors = { source: '', limits: '', prices: '' };
+    this.errors = { source: '', limits: '', prices: '', tier_prices: '' };
 
     // 转换对象为数组用于表单渲染
     if (!Array.isArray(this.data.limits)) {
@@ -31,6 +31,7 @@ window.ModelPriceUpsert = {
     if (!Array.isArray(this.data.prices)) {
       this.data.prices = this.objectToList(this.data.prices || {});
     }
+    this.initTierPricesData();
 
     var title = isView ? '查看' : data ? '编辑' : '创建';
     var body = this.renderBody();
@@ -54,6 +55,42 @@ window.ModelPriceUpsert = {
     return list;
   },
 
+  initTierPricesData: function () {
+    var self = this;
+    if (!this.data.active_tier) {
+      this.data.active_tier = 'peak';
+    }
+    if (!this.data.tier_prices_map) {
+      this.data.tier_prices_map = {};
+      var tierPricesObj = this.data.tier_prices || {};
+      Object.keys(tierPricesObj).forEach(function (name) {
+        self.data.tier_prices_map[name] = self.objectToList(
+          tierPricesObj[name],
+        );
+      });
+    }
+    if (!this.data.tier_prices_map.peak) {
+      this.data.tier_prices_map.peak = [];
+    }
+    if (!this.data.tier_prices_map[this.data.active_tier]) {
+      this.data.tier_prices_map[this.data.active_tier] = [];
+    }
+    this.data.tier_prices_active =
+      this.data.tier_prices_map[this.data.active_tier];
+  },
+
+  getTierLabel: function (tierName) {
+    var options = MockData.modelTierOptions || [];
+    var matched = options.find(function (item) {
+      return item.value === tierName;
+    });
+    return matched ? matched.label : tierName;
+  },
+
+  renderTierSelector: function () {
+    return '<span class="ivu-tag ivu-tag-warning ivu-tag-checked">忙时</span>';
+  },
+
   listToObject: function (list) {
     var obj = {};
     (list || []).forEach(function (item) {
@@ -70,6 +107,7 @@ window.ModelPriceUpsert = {
   },
 
   renderBody: function () {
+    this.initTierPricesData();
     var d = this.data;
     var isView = this.isView;
     var self = this;
@@ -105,7 +143,7 @@ window.ModelPriceUpsert = {
           'capabilities',
           capOptions,
           d.capabilities || [],
-          '请选择模型能力',
+          '请选择',
         );
 
     var paramsHtml = isView
@@ -120,7 +158,7 @@ window.ModelPriceUpsert = {
           'supported_parameters',
           paramOptions,
           d.supported_parameters || [],
-          '请选择支持参数',
+          '请选择',
         );
 
     var limitsHtml = isView
@@ -132,10 +170,21 @@ window.ModelPriceUpsert = {
           'prices',
           priceKeys,
           d.prices,
-          '价格对象',
+          '价格项',
           '价格',
           8,
         );
+    var tierPricesHtml = isView
+      ? this.renderViewTierPricesAll(d.tier_prices_map)
+      : this.renderDynamicList(
+          'tier_prices_active',
+          priceKeys,
+          d.tier_prices_active || [],
+          '价格项',
+          '价格',
+          8,
+        );
+    var tierSelectorHtml = this.renderTierSelector(d.active_tier || 'peak');
 
     var basicInfoHtml =
       '<div class="ivu-row" style="margin:0 -12px;">' +
@@ -144,10 +193,15 @@ window.ModelPriceUpsert = {
         '提供商',
         isView
           ? d.provider || '-'
-          : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-provider" value="' +
+          : '<div class="proto-autocomplete" id="proto-provider-autocomplete">' +
+              '<div class="ivu-input-wrapper ivu-input-type-text">' +
+              '<input type="text" class="ivu-input" id="field-provider" value="' +
               IvuUI.escapeHtml(d.provider || '') +
-              '" placeholder="deepseek" /></div>',
-        true,
+              '" placeholder="输入或选择提供商名称" autocomplete="off" style="padding-right:28px;" /></div>' +
+              '<i class="proto-autocomplete-arrow" aria-hidden="true">▾</i>' +
+              '<div class="proto-autocomplete-dropdown" style="display:none;"></div>' +
+              '</div>',
+        !isView,
       ) +
       '</div>' +
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
@@ -157,8 +211,8 @@ window.ModelPriceUpsert = {
           ? d.model || '-'
           : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-model" value="' +
               IvuUI.escapeHtml(d.model || '') +
-              '" placeholder="DeepSeek V3" /></div>',
-        true,
+              '" placeholder="输入模型名" /></div>',
+        !isView,
       ) +
       '</div>' +
       '</div>' +
@@ -171,7 +225,7 @@ window.ModelPriceUpsert = {
           : '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input" id="field-base_model" value="' +
               IvuUI.escapeHtml(d.base_model || '') +
               '" placeholder="deepseek-v3" /></div>',
-        true,
+        !isView,
       ) +
       '</div>' +
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
@@ -186,10 +240,29 @@ window.ModelPriceUpsert = {
               '</select>' +
               '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
               '</div></div>',
-        true,
+        !isView,
       ) +
       '</div>' +
-      '</div>';
+      '</div>' +
+      (isView
+        ? '<div class="info-row"><div class="info-label">模型能力</div><div class="info-value">' +
+          capsHtml +
+          '</div></div>' +
+          '<div class="info-row"><div class="info-label">支持参数</div><div class="info-value">' +
+          paramsHtml +
+          '</div></div>'
+        : IvuUI.formTopItem('模型能力', capsHtml) +
+          IvuUI.formTopItem('支持参数', paramsHtml));
+
+    if (isView) {
+      basicInfoHtml +=
+        '<div class="info-row"><div class="info-label">创建时间</div><div class="info-value">' +
+        this.formatTime(d.create_time) +
+        '</div></div>' +
+        '<div class="info-row"><div class="info-label">更新时间</div><div class="info-value">' +
+        this.formatTime(d.update_time || d.create_time) +
+        '</div></div>';
+    }
 
     var metadataHtml = '';
     if (isView) {
@@ -230,19 +303,6 @@ window.ModelPriceUpsert = {
         );
     }
 
-    var timestampsHtml = '';
-    if (isView) {
-      timestampsHtml = IvuUI.card(
-        '时间戳',
-        '<div class="info-row"><div class="info-label">创建时间</div><div class="info-value">' +
-          this.formatTime(d.create_time) +
-          '</div></div>' +
-          '<div class="info-row"><div class="info-label">更新时间</div><div class="info-value">' +
-          this.formatTime(d.update_time || d.create_time) +
-          '</div></div>',
-      );
-    }
-
     var limitsError =
       !isView && self.errors.limits
         ? '<p class="error-text" style="color:#ed4014;margin-top:8px;">' +
@@ -255,16 +315,96 @@ window.ModelPriceUpsert = {
           self.errors.prices +
           '</p>'
         : '';
+    var tierPricesError =
+      !isView && self.errors.tier_prices
+        ? '<p class="error-text" style="color:#ed4014;margin-top:8px;">' +
+          self.errors.tier_prices +
+          '</p>'
+        : '';
+    var pricingHtml = this.renderPricingSection(
+      isView,
+      d,
+      pricesHtml,
+      tierSelectorHtml,
+      tierPricesHtml,
+      pricesError,
+      tierPricesError,
+    );
 
     return (
       IvuUI.card('基础信息', basicInfoHtml) +
-      IvuUI.card('模型能力', capsHtml) +
-      IvuUI.card('支持参数', paramsHtml) +
       IvuUI.card('限制对象', limitsHtml + limitsError) +
-      IvuUI.card('价格对象', pricesHtml + pricesError) +
-      IvuUI.card('元数据', metadataHtml) +
-      timestampsHtml
+      IvuUI.card('价格', pricingHtml) +
+      IvuUI.card('元数据', metadataHtml)
     );
+  },
+
+  renderPricingSection: function (
+    isView,
+    d,
+    pricesHtml,
+    tierSelectorHtml,
+    tierPricesHtml,
+    pricesError,
+    tierPricesError,
+  ) {
+    if (isView) {
+      return (
+        '<div class="info-row"><div class="info-label">默认价格</div><div class="info-value">' +
+        pricesHtml +
+        '</div></div>' +
+        '<div class="info-row"><div class="info-label">分时段价格</div><div class="info-value">' +
+        tierPricesHtml +
+        '</div></div>'
+      );
+    }
+    return (
+      '<div class="proto-price-config-group">' +
+      '<div class="proto-price-config-block">' +
+      '<div class="proto-price-config-header">' +
+      '<span class="proto-price-config-title is-required">默认价格</span>' +
+      '</div>' +
+      '<div class="proto-price-config-body">' +
+      pricesHtml +
+      pricesError +
+      '</div></div>' +
+      '<div class="proto-price-config-block">' +
+      '<div class="proto-price-config-header">' +
+      '<span class="proto-price-config-title">分时段价格' +
+      '<span class="proto-price-config-help" title="分时段价格配置专属的价格；不在这些时段内时将使用默认价格，可选填。">?</span>' +
+      '</span></div>' +
+      '<div class="proto-price-config-body">' +
+      '<div class="proto-tier-meta-row">' +
+      '<span class="proto-tier-meta-label">时段对象</span>' +
+      tierSelectorHtml +
+      '</div>' +
+      tierPricesHtml +
+      tierPricesError +
+      '</div></div></div>'
+    );
+  },
+
+  renderViewTierPricesAll: function (tierPricesMap) {
+    var self = this;
+    var tierNames = Object.keys(tierPricesMap || {}).filter(function (name) {
+      var list = tierPricesMap[name];
+      return list && list.length;
+    });
+    if (!tierNames.length) {
+      return '-';
+    }
+    return tierNames
+      .map(function (name) {
+        return (
+          '<div class="proto-tier-price-view">' +
+          '<div class="proto-tier-price-view-label">时段对象：' +
+          self.getTierLabel(name) +
+          '</div>' +
+          self.renderViewPriceTable(tierPricesMap[name]) +
+          '</div>'
+        );
+      })
+      .join('');
   },
 
   renderMultiSelect: function (field, options, selected, label) {
@@ -422,13 +562,21 @@ window.ModelPriceUpsert = {
       })
       .join('');
 
-    var addLabel = field === 'limits' ? '+ 添加限制' : '+ 添加价格';
+    var addLabel =
+      field === 'limits'
+        ? '+ 添加限制'
+        : field === 'tier_prices_active'
+        ? '+ 添加价格'
+        : field === 'prices'
+        ? '+ 添加价格'
+        : '+ 添加价格';
     return (
       rowsHtml +
       '<button type="button" class="ivu-btn ivu-btn-primary proto-dynamic-add" data-field="' +
       field +
       '" style="margin-top:4px;">' +
-      addLabel + '</button>'
+      addLabel +
+      '</button>'
     );
   },
 
@@ -518,17 +666,41 @@ window.ModelPriceUpsert = {
     return duplicates;
   },
 
+  validateTierPrices: function () {
+    var self = this;
+    var tierMsg = '';
+    Object.keys(this.data.tier_prices_map || {}).forEach(function (tierName) {
+      if (tierMsg) return;
+      var list = self.data.tier_prices_map[tierName] || [];
+      var tierLabel = self.getTierLabel(tierName);
+      if (self.getDuplicateKeys(list).length > 0) {
+        tierMsg = tierLabel + ' 的分时段价格存在重复的键';
+        return;
+      }
+      var valueInvalid = list.some(function (item) {
+        if (!item.key) return false;
+        var value = Number(item.value);
+        return isNaN(value) || value < 0;
+      });
+      if (valueInvalid) {
+        tierMsg = tierLabel + ' 的分时段价格的值必须为非负数';
+      }
+    });
+    return tierMsg;
+  },
+
   validateDynamicKeys: function () {
     var limitsDuplicates = this.getDuplicateKeys(this.data.limits);
     var pricesDuplicates = this.getDuplicateKeys(this.data.prices);
     var limitsMsg = '';
     var pricesMsg = '';
+    var tierMsg = this.validateTierPrices();
 
     if (limitsDuplicates.length > 0) {
       limitsMsg = '限制对象存在重复的键';
     }
     if (pricesDuplicates.length > 0) {
-      pricesMsg = '价格对象存在重复的键';
+      pricesMsg = '默认价格存在重复的键';
     }
 
     // limits 值须为非负整数；prices 值须为非负数
@@ -547,15 +719,16 @@ window.ModelPriceUpsert = {
       limitsMsg = '限制对象的值必须为非负整数';
     }
     if (!pricesMsg && pricesValueInvalid) {
-      pricesMsg = '价格对象的值必须为非负数';
+      pricesMsg = '默认价格的值必须为非负数';
     }
 
     this.errors.limits = limitsMsg;
     this.errors.prices = pricesMsg;
+    this.errors.tier_prices = tierMsg;
 
-    if (limitsMsg || pricesMsg) {
+    if (limitsMsg || pricesMsg || tierMsg) {
       this.refreshBody();
-      Prototype.toast(limitsMsg || pricesMsg, 'error');
+      Prototype.toast(limitsMsg || pricesMsg || tierMsg, 'error');
       return false;
     }
     return true;
@@ -565,6 +738,75 @@ window.ModelPriceUpsert = {
     var self = this;
     var drawer = document.getElementById(this.drawerId);
     if (!drawer) return;
+
+    // 提供商：下拉可选 + 可手动输入（AutoComplete）
+    var providerWrap = document.getElementById('proto-provider-autocomplete');
+    var providerEl = document.getElementById('field-provider');
+    if (providerWrap && providerEl) {
+      var providerDropdown = providerWrap.querySelector(
+        '.proto-autocomplete-dropdown',
+      );
+
+      function renderProviderDropdown(filter) {
+        var names = MockData.getProviderNames() || [];
+        var kw = (filter || '').toLowerCase();
+        var filtered = kw
+          ? names.filter(function (n) {
+              return n.toLowerCase().indexOf(kw) !== -1;
+            })
+          : names;
+        if (!filtered.length) {
+          providerDropdown.innerHTML =
+            '<div class="proto-autocomplete-empty">无匹配项</div>';
+        } else {
+          providerDropdown.innerHTML = filtered
+            .map(function (n) {
+              return (
+                '<div class="proto-autocomplete-option" data-value="' +
+                IvuUI.escapeHtml(n) +
+                '">' +
+                IvuUI.escapeHtml(n) +
+                '</div>'
+              );
+            })
+            .join('');
+        }
+        providerDropdown.style.display = 'block';
+      }
+
+      function applyProvider(value) {
+        var newProvider = (value || '').trim();
+        if (self.data.provider !== newProvider) {
+          self.data.provider = newProvider;
+          self.refreshBody();
+        } else {
+          providerDropdown.style.display = 'none';
+        }
+      }
+
+      providerEl.addEventListener('focus', function () {
+        renderProviderDropdown(providerEl.value);
+      });
+      providerEl.addEventListener('input', function () {
+        renderProviderDropdown(providerEl.value);
+      });
+      providerEl.addEventListener('blur', function () {
+        setTimeout(function () {
+          providerDropdown.style.display = 'none';
+          applyProvider(providerEl.value);
+        }, 150);
+      });
+      providerEl.addEventListener('change', function () {
+        applyProvider(providerEl.value);
+      });
+      providerDropdown.addEventListener('mousedown', function (e) {
+        var opt = e.target.closest('.proto-autocomplete-option');
+        if (!opt) return;
+        e.preventDefault();
+        providerEl.value = opt.getAttribute('data-value');
+        applyProvider(providerEl.value);
+      });
+    }
 
     // 动态列表添加
     drawer.querySelectorAll('.proto-dynamic-add').forEach(function (btn) {
@@ -605,21 +847,25 @@ window.ModelPriceUpsert = {
     });
 
     // 多选下拉展开/收起
-    drawer.querySelectorAll('.proto-multi-dropdown-trigger').forEach(function (trigger) {
-      trigger.onclick = function (e) {
-        e.stopPropagation();
-        var dropdown = trigger.closest('.proto-multi-dropdown');
-        if (dropdown) {
-          dropdown.classList.toggle('open');
-        }
-      };
-    });
-    document.addEventListener('click', function (e) {
-      drawer.querySelectorAll('.proto-multi-dropdown.open').forEach(function (dropdown) {
-        if (!dropdown.contains(e.target)) {
-          dropdown.classList.remove('open');
-        }
+    drawer
+      .querySelectorAll('.proto-multi-dropdown-trigger')
+      .forEach(function (trigger) {
+        trigger.onclick = function (e) {
+          e.stopPropagation();
+          var dropdown = trigger.closest('.proto-multi-dropdown');
+          if (dropdown) {
+            dropdown.classList.toggle('open');
+          }
+        };
       });
+    document.addEventListener('click', function (e) {
+      drawer
+        .querySelectorAll('.proto-multi-dropdown.open')
+        .forEach(function (dropdown) {
+          if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('open');
+          }
+        });
     });
 
     // 多选
@@ -637,10 +883,15 @@ window.ModelPriceUpsert = {
         self.data[field] = checked;
         var dropdown = cb.closest('.proto-multi-dropdown');
         if (dropdown) {
-          var triggerText = dropdown.querySelector('.proto-multi-dropdown-text');
-          var placeholder = dropdown.getAttribute('data-placeholder') || '请选择';
+          var triggerText = dropdown.querySelector(
+            '.proto-multi-dropdown-text',
+          );
+          var placeholder =
+            dropdown.getAttribute('data-placeholder') || '请选择';
           if (triggerText) {
-            triggerText.textContent = checked.length ? checked.join(', ') : placeholder;
+            triggerText.textContent = checked.length
+              ? checked.join(', ')
+              : placeholder;
           }
         }
       };
@@ -664,8 +915,9 @@ window.ModelPriceUpsert = {
   },
 
   handleSubmit: function () {
+    var self = this;
     var d = this.data;
-    this.errors = { source: '', limits: '', prices: '' };
+    this.errors = { source: '', limits: '', prices: '', tier_prices: '' };
 
     // 收集表单值
     var providerEl = document.getElementById('field-provider');
@@ -726,12 +978,12 @@ window.ModelPriceUpsert = {
       return;
     }
 
-    // 校验价格对象至少一个
+    // 校验默认价格至少一项
     var priceObj = this.listToObject(d.prices);
     if (Object.keys(priceObj).length === 0) {
-      this.errors.prices = '请至少添加一项价格';
+      this.errors.prices = '请至少添加一项默认价格';
       this.refreshBody();
-      Prototype.toast('请至少添加一项价格', 'error');
+      Prototype.toast('请至少添加一项默认价格', 'error');
       return;
     }
 
@@ -760,7 +1012,10 @@ window.ModelPriceUpsert = {
         );
       });
       if (duplicate) {
-        Prototype.toast('已存在相同提供商、模型名、模型模式的价格配置', 'error');
+        Prototype.toast(
+          '已存在相同提供商、模型名、模型模式的价格配置',
+          'error',
+        );
         return;
       }
     }
@@ -777,6 +1032,18 @@ window.ModelPriceUpsert = {
       prices: priceObj,
       metadata: d.metadata || {},
     };
+    var tierPrices = {};
+    Object.keys(d.tier_prices_map || {}).forEach(function (tierName) {
+      var tierObj = self.listToObject(d.tier_prices_map[tierName]);
+      if (Object.keys(tierObj).length > 0) {
+        tierPrices[tierName] = tierObj;
+      }
+    });
+    if (Object.keys(tierPrices).length > 0) {
+      payload.tier_prices = tierPrices;
+    } else {
+      payload.tier_prices = undefined;
+    }
 
     if (d.id) {
       // 编辑

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../assets/static/css/app.css" />
+  <link rel="stylesheet" href="../assets/static/css/cluster.list.css" />
+  <link rel="stylesheet" href="../assets/font/iconfont.css" />
+  <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  <script src="../assets/js/mock-data.js"></script>
+  <script src="../assets/js/ivu-ui.js"></script>
+  <script src="../assets/js/provider-upsert.js?v=2026082540"></script>
+  <script src="../assets/js/provider-pricing-tiers.js?v=2026082541"></script>
+  <script src="../assets/js/layout.js"></script>
+  <script src="../assets/js/prototype.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var root = Layout.render({ pageId: 'Provider.list', basePath: '../' });
+  root.innerHTML =
+    '<div class="clusters">' +
+      IvuUI.btn('添加服务商', 'primary', 'small', '', 'id="btn-add-provider"') +
+      '<div id="provider-table"></div>' +
+    '</div>' +
+    drawerUpsert() +
+    drawerDetail() +
+    drawerPricingTiers() +
+    drawerRefCheck();
+
+  var upsertController = null;
+  var state = {
+    allRows: cloneRows(MockData.providers),
+    filteredRows: cloneRows(MockData.providers),
+    search: { name: '', description: '', model_protocols: '', models: '' },
+    pageSize: 20,
+    currentPage: 1,
+    sortKey: '',
+    sortOrder: ''
+  };
+
+  function cloneRows(list) {
+    return JSON.parse(JSON.stringify(list || []));
+  }
+
+  function escapeAttr(value) {
+    return IvuUI.escapeHtml(value);
+  }
+
+  function renderModelTags(models) {
+    var list = (models || []).filter(Boolean);
+    if (!list.length) return '-';
+    var maxVisible = 2;
+    var visible = list.slice(0, maxVisible);
+    var hidden = list.slice(maxVisible);
+    var html = visible
+      .map(function (name) {
+        return '<span class="ivu-tag ivu-tag-default ivu-tag-small">' + escapeAttr(name) + '</span>';
+      })
+      .join(' ');
+    if (hidden.length) {
+      html +=
+        '<span class="proto-model-more-tag" title="' +
+        escapeAttr(list.join('\n')) +
+        '">+' +
+        hidden.length +
+        '</span>';
+    }
+    return '<span class="proto-provider-models-cell">' + html + '</span>';
+  }
+
+  function filterRows() {
+    state.filteredRows = state.allRows.filter(function (row) {
+      var nameKw = (state.search.name || '').trim().toUpperCase();
+      var descKw = (state.search.description || '').trim().toUpperCase();
+      var modelKw = (state.search.models || '').trim().toUpperCase();
+      if (nameKw && String(row.name || '').toUpperCase().indexOf(nameKw) === -1) return false;
+      if (descKw && String(row.description || '').toUpperCase().indexOf(descKw) === -1) return false;
+      if (state.search.model_protocols && (row.model_protocols || []).indexOf(state.search.model_protocols) === -1) return false;
+      if (modelKw && (row.models || []).join(', ').toUpperCase().indexOf(modelKw) === -1) return false;
+      return true;
+    });
+    state.filteredRows = Prototype.sortRows(state.filteredRows, state.sortKey, state.sortOrder);
+  }
+
+  function getPageRows() {
+    var start = (state.currentPage - 1) * state.pageSize;
+    return state.filteredRows.slice(start, start + state.pageSize);
+  }
+
+  function renderTable() {
+    filterRows();
+    var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+    if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+    var protocolOptions = (MockData.modelProtocols || []).map(function (p) {
+      return { value: p, label: p };
+    });
+
+    var container = document.getElementById('provider-table');
+    container.innerHTML = IvuUI.pageTable({
+      columns: [
+        {
+          title: '名称',
+          key: 'name',
+          sortable: true,
+          searchable: true,
+          searchPlaceholder: '请输入名称查询'
+        },
+        {
+          title: '描述',
+          key: 'description',
+          sortable: true,
+          searchable: true,
+          searchPlaceholder: '请输入描述查询'
+        },
+        {
+          title: '协议',
+          key: 'model_protocols',
+          sortable: true,
+          searchable: true,
+          searchType: 'select',
+          searchFilters: protocolOptions,
+          render: function (row) {
+            return (row.model_protocols || []).join(', ');
+          }
+        },
+        {
+          title: '模型',
+          key: 'models',
+          sortable: true,
+          searchable: true,
+          searchPlaceholder: '请输入模型查询',
+          render: function (row) {
+            return renderModelTags(row.models);
+          }
+        },
+        {
+          title: '操作',
+          key: 'action',
+          minWidth: 460,
+          render: function (row) {
+            return (
+              '<div class="proto-table-actions">' +
+              IvuUI.btn('详情', 'success', 'small', '', 'data-action="detail" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('分段计价配置', 'warning', 'small', '', 'data-action="pricing-tiers" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('查询模型价格', 'primary', 'small', '', 'data-action="prices" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('编辑', 'primary', 'small', '', 'data-action="edit" data-name="' + escapeAttr(row.name) + '"') +
+              IvuUI.btn('删除', 'error', 'small', '', 'data-action="delete" data-name="' + escapeAttr(row.name) + '"') +
+              '</div>'
+            );
+          }
+        }
+      ],
+      rows: getPageRows(),
+      total: state.filteredRows.length,
+      pageSize: state.pageSize,
+      currentPage: state.currentPage,
+      searchValues: state.search,
+      tableId: 'provider-page-table'
+    });
+    bindTableEvents(container);
+  }
+
+  function bindTableEvents(container) {
+    Prototype.bindPageTableSearch(container, function (key, value) {
+      state.search[key] = value;
+      state.currentPage = 1;
+      renderTable();
+    });
+    Prototype.bindPageTableSort(container, state, renderTable);
+
+    var sizeSelect = container.querySelector('.proto-page-size');
+    if (sizeSelect) {
+      sizeSelect.addEventListener('change', function () {
+        state.pageSize = parseInt(sizeSelect.value, 10) || 20;
+        state.currentPage = 1;
+        renderTable();
+      });
+    }
+
+    container.querySelectorAll('[data-action]').forEach(function (btn) {
+      btn.addEventListener('click', function (event) {
+        event.stopPropagation();
+        var name = btn.getAttribute('data-name');
+        var row = state.allRows.find(function (item) { return item.name === name; });
+        var action = btn.getAttribute('data-action');
+        if (action === 'detail') openDetail(row);
+        else if (action === 'edit') openUpsert(false, row);
+        else if (action === 'pricing-tiers') openPricingTiers(row);
+        else if (action === 'prices') {
+          window.location.href =
+            '../pages/model-prices.html?provider=' +
+            encodeURIComponent(name) +
+            '&autoView=1';
+        }
+        else if (action === 'delete') handleDelete(name);
+      });
+    });
+  }
+
+  function findProviderReferences(name) {
+    return (MockData.clusters || []).filter(function (item) {
+      return item.provider === name;
+    }).map(function (item) {
+      return { cluster: item.name };
+    });
+  }
+
+  function handleDelete(name) {
+    var refs = findProviderReferences(name);
+    if (refs.length > 0) {
+      var body = document.getElementById('provider-ref-body');
+      body.innerHTML =
+        '<div style="margin-bottom:12px;color:#ed4014;">删除失败（409）：Provider <b>' +
+        IvuUI.escapeHtml(name) +
+        '</b> 被以下集群引用。model-prices 不再作为阻塞条件。</div>' +
+        '<ul>' +
+        refs.map(function (ref) {
+          return '<li>集群：' + IvuUI.escapeHtml(ref.cluster) + '</li>';
+        }).join('') +
+        '</ul>';
+      Prototype.openDrawer('drawer-provider-ref');
+      return;
+    }
+    Prototype.confirmDelete('是否删除' + name + '？', function () {
+      state.allRows = state.allRows.filter(function (item) { return item.name !== name; });
+      renderTable();
+      Prototype.toast('删除成功');
+    });
+  }
+
+  function openUpsert(isAdd, row) {
+    var drawer = document.getElementById('drawer-provider-upsert');
+    var titleEl = drawer.querySelector('.ivu-drawer-header-inner');
+    if (titleEl) titleEl.textContent = isAdd ? '添加服务商' : '编辑服务商';
+    upsertController = ProviderUpsert.mount(
+      document.getElementById('provider-upsert-body'),
+      document.getElementById('provider-upsert-footer'),
+      {
+        isAdd: isAdd,
+        row: row,
+        existingNames: state.allRows.map(function (item) { return item.name; }),
+        onCancel: function () {
+          Prototype.closeDrawer('drawer-provider-upsert');
+        },
+        onSubmit: function (data) {
+          var now = Math.floor(Date.now() / 1000);
+          if (isAdd) {
+            data.create_time = now;
+            data.update_time = now;
+            state.allRows.push(data);
+          } else {
+            var target = state.allRows.find(function (item) { return item.name === row.name; });
+            if (target) {
+              data.create_time = target.create_time;
+              data.update_time = now;
+              Object.keys(data).forEach(function (key) { target[key] = data[key]; });
+            }
+          }
+          Prototype.closeDrawer('drawer-provider-upsert');
+          Prototype.toast('提交成功！');
+          renderTable();
+        }
+      }
+    );
+    Prototype.openDrawer('drawer-provider-upsert');
+  }
+
+  function openPricingTiers(row) {
+    ProviderPricingTiers.mount(
+      document.getElementById('provider-pricing-tiers-body'),
+      document.getElementById('provider-pricing-tiers-footer'),
+      {
+        row: row,
+        onCancel: function () {
+          Prototype.closeDrawer('drawer-provider-pricing-tiers');
+        },
+        onSubmit: function (payload) {
+          var target = state.allRows.find(function (item) {
+            return item.name === row.name;
+          });
+          if (target) {
+            target.time_zone = payload.time_zone;
+            target.tiers = payload.tiers;
+            target.update_time = Math.floor(Date.now() / 1000);
+          }
+          Prototype.closeDrawer('drawer-provider-pricing-tiers');
+          Prototype.toast('分段计价配置已更新');
+          renderTable();
+        },
+      },
+    );
+    Prototype.openDrawer('drawer-provider-pricing-tiers');
+  }
+
+  function openDetail(row) {
+    ProviderUpsert.mount(
+      document.getElementById('provider-detail-body'),
+      document.getElementById('provider-detail-footer'),
+      {
+        isAdd: false,
+        isView: true,
+        row: row,
+        onCancel: function () {
+          Prototype.closeDrawer('drawer-provider-detail');
+        }
+      }
+    );
+    Prototype.openDrawer('drawer-provider-detail');
+  }
+
+  document.getElementById('btn-add-provider').addEventListener('click', function () {
+    openUpsert(true, {});
+  });
+
+  renderTable();
+  Prototype.bindDrawerClose();
+});
+
+function drawerUpsert() {
+  return IvuUI.drawer('drawer-provider-upsert', '添加服务商',
+    '<div id="provider-upsert-body"></div>',
+    '<div id="provider-upsert-footer"></div>',
+    '70%');
+}
+
+function drawerPricingTiers() {
+  return IvuUI.drawer(
+    'drawer-provider-pricing-tiers',
+    '分段计价配置',
+    '<div id="provider-pricing-tiers-body"></div>',
+    '<div id="provider-pricing-tiers-footer"></div>',
+    '60%',
+  );
+}
+
+function drawerDetail() {
+  return IvuUI.drawer('drawer-provider-detail', '详情',
+    '<div id="provider-detail-body"></div>',
+    '<div id="provider-detail-footer"></div>', '70%');
+}
+
+function drawerRefCheck() {
+  return IvuUI.drawer('drawer-provider-ref', '引用检查',
+    '<div id="provider-ref-body"></div>',
+    IvuUI.btn('关闭', 'primary', 'default', '', 'data-close-drawer="drawer-provider-ref"'), '50%');
+}
+</script>
+</body>
+</html>

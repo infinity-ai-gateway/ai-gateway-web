@@ -19,10 +19,9 @@
 | /alb-pool | [alb-pool.md](./alb-pool.md) |
 | /auth | [auth.md](./auth.md) |
 | /certificates | [certificates.md](./certificates.md) |
+| /providers | [providers.md](./providers.md) |
 | /clusters | [clusters.md](./clusters.md) |
-| /model-provider-types | [model-provider-types.md](./model-provider-types.md) |
 | /model-prices | [model-prices.md](./model-prices.md) |
-| /tools | [tools.md](./tools.md) |
 | /expression/verify | [expression-verify.md](./expression-verify.md) |
 | 关键业务流程 | [workflows.md](./workflows.md) |
 | 对象关系图 | [object-relations.md](./object-relations.md) |

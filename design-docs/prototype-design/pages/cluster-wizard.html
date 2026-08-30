@@ -17,15 +17,14 @@
 document.addEventListener('DOMContentLoaded', function () {
   var isEdit = location.search.indexOf('edit=1') >= 0;
   var root = Layout.render({ pageId: 'AICluster.list', breadcrumb: isEdit ? '编辑集群' : '添加集群', basePath: '../' });
-  var titles = ['基本配置', '超时/重试', '被动健康检查', '实例配置', '大模型配置', '审核检查'];
+  var titles = ['基本配置', '超时/重试', '被动健康检查', '大模型配置', '审核检查'];
   root.innerHTML =
     '<div id="steps-bar"></div>' +
     '<div id="step-0" class="step-panel">' + stepBasic() + '</div>' +
     '<div id="step-1" class="step-panel proto-hidden-inline">' + stepTimeout() + '</div>' +
     '<div id="step-2" class="step-panel proto-hidden-inline">' + stepHealth() + '</div>' +
-    '<div id="step-3" class="step-panel proto-hidden-inline">' + stepInstance() + '</div>' +
-    '<div id="step-4" class="step-panel proto-hidden-inline">' + stepModel() + '</div>' +
-    '<div id="step-5" class="step-panel proto-hidden-inline">' + stepReview() + '</div>' +
+    '<div id="step-3" class="step-panel proto-hidden-inline">' + stepModel() + '</div>' +
+    '<div id="step-4" class="step-panel proto-hidden-inline">' + stepReview() + '</div>' +
     '<div class="com-btn-box">' +
       IvuUI.btn('上一步', 'default', 'default', '', 'id="btn-prev"') + ' ' +
       IvuUI.btn('下一步', 'primary', 'default', '', 'id="btn-next"') + ' ' +
@@ -34,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     '</div>';
 
   var panels = [];
-  for (var i = 0; i < 6; i++) panels.push(document.getElementById('step-' + i));
+  for (var i = 0; i < 5; i++) panels.push(document.getElementById('step-' + i));
   Prototype.initSteps({
     stepsBar: document.getElementById('steps-bar'),
     titles: titles,
@@ -57,26 +56,16 @@ function stepTimeout() {
 function stepHealth() {
   return IvuUI.card('被动健康检查', IvuUI.formItem('启用', IvuUI.select(['是', '否'], '是')));
 }
-function stepInstance() {
-  var rows = MockData.clusterInstances.map(function (item) {
-    var err = item.error ? ' ivu-input-error' : '';
-    var errMsg = item.error ? '<div class="ivu-form-item-error-tip">请输入IP地址</div>' : '';
-    return '<tr><td><div class="ivu-input-wrapper"><input class="ivu-input' + err + '" value="' + item.ip + '" placeholder="请输入IP地址" />' + errMsg + '</div></td>' +
-      '<td><div class="ivu-input-wrapper" style="width:100px;display:inline-block;"><input class="ivu-input" value="' + item.port + '" /></div></td>' +
-      '<td>' + IvuUI.btn('删除', 'error', 'small') + '</td></tr>';
-  }).join('');
-  return IvuUI.card('实例配置',
-    IvuUI.formItem('实例形态', IvuUI.select(['IP', '服务商域名'], 'IP')) +
-    IvuUI.formItem('实例IP列表', '<div class="formBox"><table><tr><th>IP地址</th><th>端口</th><th>操作</th></tr>' + rows +
-      '</table></div>' + IvuUI.btn('创建', 'primary', 'small', '', 'style="margin-top:8px;"')));
-}
 function stepModel() {
-  return IvuUI.card('大模型配置', IvuUI.formItem('模型服务地址', IvuUI.input('https://api.example.com/v1', '')));
+  var providers = (MockData.providers || []).map(function (item) { return item.name; });
+  return IvuUI.card('大模型配置',
+    IvuUI.formItem('所属服务商', IvuUI.select(providers, 'deepseek'), true) +
+    IvuUI.formItem('转发模型', IvuUI.input('deepseek-chat', '')));
 }
 function stepReview() {
   return IvuUI.card('审核检查',
     '<div class="info-row"><span class="info-label">集群名称</span><span>llm-cluster-a</span></div>' +
-    '<div class="info-row"><span class="info-label">实例</span><span>172.18.1.140:16516 等</span></div>');
+    '<div class="info-row"><span class="info-label">所属服务商</span><span>deepseek</span></div>');
 }
 </script>
 <style>.info-row{display:flex;padding:8px 0}.info-label{width:140px;color:#808695}.step-panel{margin-top:16px}</style>

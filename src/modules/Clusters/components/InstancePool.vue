@@ -1,145 +1,148 @@
-/**
-* Copyright(c) 2026 The rainway-ai-gateway Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The rainway-ai-gateway Authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */ /** * Copyright (c) 2021 The
+BFE Authors. * * Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License. * You may
+obtain a copy of the License at * * http://www.apache.org/licenses/LICENSE-2.0 *
+* Unless required by applicable law or agreed to in writing, software *
+distributed under the License is distributed on an "AS IS" BASIS, * WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. * See the
+License for the specific language governing permissions and * limitations under
+the License. */
 <template>
-    <div>
-        <Form
-            ref="formData"
-            :model="formData"
-            :rules="formRules"
-            label-position="top"
+  <div>
+    <Form
+      ref="formData"
+      :model="formData"
+      :rules="formRules"
+      label-position="top"
+    >
+      <FormItem
+        :label="$t('instancePool.instanceMode')"
+        prop="instanceMode"
+        style="width: 100%;"
+      >
+        <Select v-model="formData.instanceMode" style="width: 240px;">
+          <Option value="ip">{{ $t('instancePool.modeIp') }}</Option>
+          <Option value="domain">{{ $t('instancePool.modeDomain') }}</Option>
+        </Select>
+      </FormItem>
+
+      <FormItem
+        v-if="formData.instanceMode === 'domain'"
+        :label="$t('instancePool.domain')"
+        prop="domainName"
+        style="width: 100%;"
+      >
+        <Input
+          v-model="formData.domainName"
+          type="text"
+          :placeholder="$t('instancePool.domainPlaceholder')"
+          style="max-width: 480px;"
+        />
+      </FormItem>
+
+      <template v-else>
+        <FormItem
+          :label="$t('instancePool.list')"
+          prop="instances"
+          class="instance-list-form-item"
+          :show-message="false"
+          style="width: 100%;"
         >
-            <FormItem
-                :label="$t('instancePool.instanceMode')"
-                prop="instanceMode"
-                style="width: 100%;"
-            >
-                <Select v-model="formData.instanceMode" style="width: 240px;">
-                    <Option value="ip">{{ $t('instancePool.modeIp') }}</Option>
-                    <Option value="domain">{{ $t('instancePool.modeDomain') }}</Option>
-                </Select>
-            </FormItem>
-
-            <FormItem
-                v-if="formData.instanceMode === 'domain'"
-                :label="$t('instancePool.domain')"
-                prop="domainName"
-                style="width: 100%;"
-            >
-                <Input
-                    v-model="formData.domainName"
-                    type="text"
-                    :placeholder="$t('instancePool.domainPlaceholder')"
-                    style="max-width: 480px;"
-                />
-            </FormItem>
-
-            <template v-else>
-                <FormItem
-                    :label="$t('instancePool.list')"
-                    prop="instances"
-                    style="width: 100%;"
-                >
-                    <div class="formBox">
-                        <table border="0" cellspacing="0" cellpadding="0">
-                            <tr>
-                                <th>{{ $t('instancePool.ipAddress') }}</th>
-                                <th>{{ $t('instancePool.port') }}</th>
-                                <th>{{ $t('instancePool.weight') }}</th>
-                                <th>{{ $t('com.operation') }}</th>
-                            </tr>
-                            <tr v-for="(item, ind) in formData.instances" :key="ind">
-                                <td>
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.addr'"
-                                        :rules="instanceAddrRules"
-                                        class="table-cell-form-item"
-                                    >
-                                        <Input
-                                            v-model="item.addr"
-                                            type="text"
-                                            :placeholder="
+          <div class="formBox">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <th>{{ $t('instancePool.ipAddress') }}</th>
+                <th>{{ $t('instancePool.port') }}</th>
+                <th>{{ $t('instancePool.weight') }}</th>
+                <th>{{ $t('com.operation') }}</th>
+              </tr>
+              <tr
+                v-for="(item, ind) in formData.instances"
+                :key="ind"
+                :class="{ 'is-duplicate-row': isDuplicateInstance(item) }"
+              >
+                <td>
+                  <FormItem
+                    :prop="'instances.' + ind + '.addr'"
+                    :rules="instanceAddrRules"
+                    :show-message="false"
+                    class="table-cell-form-item"
+                  >
+                    <Input
+                      v-model="item.addr"
+                      type="text"
+                      :placeholder="
                                                 $t('com.tipEnterX', { obj: $t('instancePool.ipAddress') })
                                             "
-                                        />
-                                    </FormItem>
-                                </td>
-                                <td>
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.port'"
-                                        :rules="instancePortRules"
-                                        class="table-cell-form-item table-cell-form-item-port"
-                                    >
-                                        <InputNumber
-                                            v-model="item.port"
-                                            :max="65535"
-                                            :min="1"
-                                            class="poolInput"
-                                            :placeholder="$t('instancePool.portValue')"
-                                            style="width: 80px;"
-                                        ></InputNumber>
-                                    </FormItem>
-                                </td>
-                                <td>
-                                    <FormItem
-                                        :prop="'instances.' + ind + '.weight'"
-                                        :rules="instanceWeightRules"
-                                        class="table-cell-form-item"
-                                    >
-                                        <InputNumber
-                                            v-model="item.weight"
-                                            :max="100"
-                                            :min="0"
-                                            class="poolInput"
-                                            style="width: 80px;"
-                                        ></InputNumber>
-                                    </FormItem>
-                                </td>
-                                <td>
-                                    <Button
-                                        size="small"
-                                        type="error"
-                                        :disabled="!deleteAble"
-                                        @click="handleRemove(ind)"
-                                    >{{ $t('com.del') }}</Button>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <Button plain size="small" type="primary" @click="handleAdd">
-                        + {{ $t('com.create') }}
-                    </Button>
-                </FormItem>
-            </template>
-        </Form>
-    </div>
+                      @on-blur="scheduleInstanceErrorSync"
+                      @on-change="scheduleInstanceErrorSync"
+                    />
+                  </FormItem>
+                </td>
+                <td>
+                  <FormItem
+                    :prop="'instances.' + ind + '.port'"
+                    :rules="instancePortRules"
+                    :show-message="false"
+                    class="table-cell-form-item table-cell-form-item-port"
+                  >
+                    <InputNumber
+                      v-model="item.port"
+                      :max="65535"
+                      :min="1"
+                      class="poolInput"
+                      :placeholder="$t('instancePool.portValue')"
+                      style="width: 80px;"
+                      @on-change="scheduleInstanceErrorSync"
+                    ></InputNumber>
+                  </FormItem>
+                </td>
+                <td>
+                  <FormItem
+                    :prop="'instances.' + ind + '.weight'"
+                    :rules="instanceWeightRules"
+                    :show-message="false"
+                    class="table-cell-form-item"
+                  >
+                    <InputNumber
+                      v-model="item.weight"
+                      :max="100"
+                      :min="0"
+                      class="poolInput"
+                      style="width: 80px;"
+                      @on-change="scheduleInstanceErrorSync"
+                    ></InputNumber>
+                  </FormItem>
+                </td>
+                <td>
+                  <Button
+                    size="small"
+                    type="error"
+                    :disabled="!deleteAble"
+                    @click="handleRemove(ind)"
+                    >{{ $t('com.del') }}</Button
+                  >
+                </td>
+              </tr>
+            </table>
+          </div>
+          <Button plain size="small" type="primary" @click="handleAdd">
+            + {{ $t('com.create') }}
+          </Button>
+          <p v-if="instanceListError" class="instance-list-error">
+            {{ instanceListError }}
+          </p>
+        </FormItem>
+      </template>
+    </Form>
+  </div>
 </template>
 
 <script>
@@ -147,7 +150,6 @@ import { cloneDeep } from 'lodash';
 import { isIP } from 'validator';
 import { isHostname, NumRegCheck } from '@/utils/const';
 
-const DOMAIN_PORT = 443;
 const DOMAIN_WEIGHT = 100;
 
 export function getDefaultPortBySchema(schema) {
@@ -160,6 +162,33 @@ function createEmptyInstance() {
         port: 80,
         weight: 100
     };
+}
+
+function getInstanceAddrPortKey(instance) {
+    const addr = String((instance && instance.addr) || '').trim();
+    const port = instance && instance.port;
+    if (!addr || port == null || port === '') {
+        return '';
+    }
+    if (!isIP(addr, 4) && !isIP(addr, 6)) {
+        return '';
+    }
+    if (port < 1 || port > 65535) {
+        return '';
+    }
+    return `${addr}:${port}`;
+}
+
+function getDuplicateAddrPortKeys(list) {
+    const counts = Object.create(null);
+    (list || []).forEach(item => {
+        const key = getInstanceAddrPortKey(item);
+        if (!key) {
+            return;
+        }
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.keys(counts).filter(key => counts[key] > 1);
 }
 
 function toFormInstance(instance) {
@@ -218,16 +247,12 @@ export function detectInstanceMode(instances) {
 
 export function formatInstanceForApi(instance) {
     const item = toFormInstance(instance);
-    const payload = {
-        addr: String(item.addr || '').trim(),
+    const addr = String(item.addr || '').trim();
+    return {
+        addr,
         port: parseInt(item.port, 10),
         weight: parseInt(item.weight, 10)
     };
-    const name = String(item.name || '').trim();
-    if (name) {
-        payload.name = name;
-    }
-    return payload;
 }
 
 export function syncInstancePoolPortBySchema(instances, schema) {
@@ -266,11 +291,11 @@ export function getInstanceEndpointHosts(instances) {
         .filter(Boolean);
 }
 
-function buildDomainInstance(domain) {
+function buildDomainInstance(domain, schema) {
     const value = String(domain || '').trim();
     return {
         addr: value,
-        port: DOMAIN_PORT,
+        port: getDefaultPortBySchema(schema),
         weight: DOMAIN_WEIGHT
     };
 }
@@ -287,6 +312,10 @@ export default {
         },
         reportFlag: {
             type: Boolean
+        },
+        endpointSchema: {
+            type: String,
+            default: 'https'
         }
     },
 
@@ -302,38 +331,31 @@ export default {
             handler() {
                 this.handleSubmit();
             }
+        },
+        formData: {
+            handler() {
+                if (this.isApplyingPoolData) {
+                    return;
+                }
+                this.$emit('pool-change', this.getCurrentInstances());
+            },
+            deep: true
+        },
+        endpointSchema() {
+            if (this.isApplyingPoolData) {
+                return;
+            }
+            this.$emit('pool-change', this.getCurrentInstances());
+        }
+    },
+
+    computed: {
+        duplicateAddrPortKeySet() {
+            return new Set(getDuplicateAddrPortKeys(this.formData.instances));
         }
     },
 
     data() {
-        const getInstanceFieldIndex = (fieldPath) => {
-            const match = String(fieldPath || '').match(/^instances\.(\d+)\./);
-            return match ? parseInt(match[1], 10) : -1;
-        };
-
-        const getDuplicateAddrError = (index) => {
-            if (index < 0) {
-                return '';
-            }
-            const current = this.formData.instances[index];
-            const addr = String((current && current.addr) || '').trim();
-            if (!addr) {
-                return '';
-            }
-
-            const hasDuplicate = this.formData.instances.some((item, itemIndex) => {
-                if (itemIndex === index) {
-                    return false;
-                }
-                const otherAddr = String(item.addr || '').trim();
-                return otherAddr && otherAddr === addr;
-            });
-            if (!hasDuplicate) {
-                return '';
-            }
-            return this.$t('instancePool.tipDuplicateIp', { ip: addr });
-        };
-
         const validateDomainName = (rule, value, callback) => {
             if (!value) {
                 callback(new Error(this.$t('instancePool.domainRequired')));
@@ -372,11 +394,18 @@ export default {
                 callback(new Error(this.$t('instancePool.tipAtLeastOnePositiveWeight')));
                 return;
             }
+
+            const duplicateKeys = getDuplicateAddrPortKeys(list);
+            if (duplicateKeys.length) {
+                callback(new Error(this.$t('instancePool.tipDuplicateIpAndPort', {
+                    ipPort: duplicateKeys[0]
+                })));
+                return;
+            }
             callback();
         };
 
         const validateInstanceAddr = (rule, value, callback) => {
-            const index = getInstanceFieldIndex(rule.field);
             const addr = String(value || '').trim();
 
             if (!addr) {
@@ -392,11 +421,6 @@ export default {
                 return;
             }
 
-            const duplicateError = getDuplicateAddrError(index);
-            if (duplicateError) {
-                callback(new Error(duplicateError));
-                return;
-            }
             callback();
         };
 
@@ -405,6 +429,7 @@ export default {
                 callback(new Error(this.$t('instancePool.tipPortRang')));
                 return;
             }
+
             callback();
         };
 
@@ -423,6 +448,8 @@ export default {
         return {
             deleteAble: false,
             isApplyingPoolData: false,
+            instanceErrorSyncScheduled: false,
+            instanceListError: '',
             formData: {
                 instanceMode: 'ip',
                 domainName: '',
@@ -444,7 +471,8 @@ export default {
                 ],
                 instances: [
                     {
-                        validator: validateInstanceList
+                        validator: validateInstanceList,
+                        trigger: 'change'
                     }
                 ]
             },
@@ -470,6 +498,83 @@ export default {
     },
 
     methods: {
+        isDuplicateInstance(item) {
+            const key = getInstanceAddrPortKey(item);
+            return Boolean(key && this.duplicateAddrPortKeySet.has(key));
+        },
+
+        triggerInstanceListValidate() {
+            this.scheduleInstanceErrorSync();
+        },
+
+        scheduleInstanceErrorSync() {
+            if (this.instanceErrorSyncScheduled) {
+                return;
+            }
+            this.instanceErrorSyncScheduled = true;
+            this.$nextTick(() => {
+                this.instanceErrorSyncScheduled = false;
+                this.syncInstanceListError();
+            });
+        },
+
+        getFieldError(prop) {
+            const form = this.$refs.formData;
+            if (!form || !form.fields) {
+                return '';
+            }
+            const field = form.fields.find(item => item.prop === prop);
+            if (field && field.validateState === 'error' && field.validateMessage) {
+                return field.validateMessage;
+            }
+            return '';
+        },
+
+        syncInstanceListError() {
+            const form = this.$refs.formData;
+            if (!form) {
+                this.instanceListError = '';
+                return;
+            }
+            const list = this.formData.instances || [];
+            const fieldProps = [];
+            list.forEach((_, index) => {
+                fieldProps.push(`instances.${index}.addr`);
+                fieldProps.push(`instances.${index}.port`);
+                fieldProps.push(`instances.${index}.weight`);
+            });
+            fieldProps.push('instances');
+            let pending = fieldProps.length;
+            if (!pending) {
+                this.instanceListError = '';
+                return;
+            }
+            const done = () => {
+                pending -= 1;
+                if (pending > 0) {
+                    return;
+                }
+                for (let index = 0; index < list.length; index += 1) {
+                    const rowProps = [
+                        `instances.${index}.addr`,
+                        `instances.${index}.port`,
+                        `instances.${index}.weight`
+                    ];
+                    for (let i = 0; i < rowProps.length; i += 1) {
+                        const message = this.getFieldError(rowProps[i]);
+                        if (message) {
+                            this.instanceListError = message;
+                            return;
+                        }
+                    }
+                }
+                this.instanceListError = this.getFieldError('instances') || '';
+            };
+            fieldProps.forEach(prop => {
+                form.validateField(prop, () => done());
+            });
+        },
+
         applyInstancePoolData(data) {
             this.isApplyingPoolData = true;
             const instances = parseInstancePool(data);
@@ -491,6 +596,7 @@ export default {
             }
             this.$nextTick(() => {
                 this.isApplyingPoolData = false;
+                this.instanceListError = '';
             });
         },
 
@@ -499,6 +605,7 @@ export default {
                 this.deleteAble = false;
             }
             this.formData.instances.splice(index, 1);
+            this.triggerInstanceListValidate();
         },
 
         handleAdd() {
@@ -507,6 +614,31 @@ export default {
                 addr: '',
                 port: 80,
                 weight: 0
+            });
+            this.triggerInstanceListValidate();
+        },
+
+        getCurrentInstances() {
+            if (this.formData.instanceMode === 'domain') {
+                return [buildDomainInstance(this.formData.domainName, this.endpointSchema)];
+            }
+            return cloneDeep(this.formData.instances || []);
+        },
+
+        validateAndExport() {
+            return new Promise((resolve, reject) => {
+                if (!this.$refs.formData) {
+                    reject(new Error('invalid'));
+                    return;
+                }
+                this.$refs.formData.validate(valid => {
+                    if (!valid) {
+                        this.syncInstanceListError();
+                        reject(new Error('invalid'));
+                        return;
+                    }
+                    resolve(this.getCurrentInstances().map(item => toFormInstance(item)));
+                });
             });
         },
 
@@ -523,11 +655,12 @@ export default {
             }
             this.$refs.formData.validate(valid => {
                 if (!valid) {
+                    this.syncInstanceListError();
                     return;
                 }
                 if (this.formData.instanceMode === 'domain') {
                     const domain = String(this.formData.domainName || '').trim();
-                    this.emitSubmitData([buildDomainInstance(domain)]);
+                    this.emitSubmitData([buildDomainInstance(domain, this.endpointSchema)]);
                     return;
                 }
                 this.emitSubmitData(cloneDeep(this.formData.instances));
@@ -557,6 +690,7 @@ export default {
             padding: 5px 10px;
             border-left: 1px solid #d9dbe3;
             border-top: 1px solid #d9dbe3;
+            vertical-align: top;
         }
     }
 
@@ -570,6 +704,40 @@ export default {
     }
 }
 
+.instance-list-form-item.ivu-form-item-error /deep/ .formBox {
+    .ivu-input,
+    .ivu-input-number {
+        border-color: #dcdee2;
+    }
+
+    .ivu-input:hover,
+    .ivu-input:focus,
+    .ivu-input-number:hover {
+        border-color: #57a3f3;
+    }
+
+    .table-cell-form-item.ivu-form-item-error {
+        .ivu-input,
+        .ivu-input-number {
+            border-color: #ed4014;
+        }
+    }
+}
+
+.formBox tr.is-duplicate-row td:nth-child(1),
+.formBox tr.is-duplicate-row td:nth-child(2) {
+    /deep/ .ivu-input,
+    /deep/ .ivu-input-number {
+        border-color: #ed4014;
+    }
+
+    /deep/ .ivu-input:hover,
+    /deep/ .ivu-input:focus,
+    /deep/ .ivu-input-number:hover {
+        border-color: #ed4014;
+    }
+}
+
 .table-cell-form-item {
     margin-bottom: 0;
 
@@ -577,10 +745,23 @@ export default {
         margin-left: 0 !important;
         line-height: normal;
     }
+
+    /deep/ .ivu-form-item-error-tip {
+        position: relative;
+        padding-top: 2px;
+        line-height: 1.4;
+        white-space: normal;
+    }
 }
 
 .table-cell-form-item-port {
     display: inline-block;
     vertical-align: middle;
+}
+
+.instance-list-error {
+    color: #ed4014;
+    margin-top: 8px;
+    line-height: 1.5;
 }
 </style>
