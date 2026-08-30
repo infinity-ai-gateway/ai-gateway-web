@@ -163,7 +163,7 @@
 
 | 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | - | - | - | - | - |
-| enabled | bool | 是否开启会话级 Key 亲和性 | N | 默认 `false`；为 `true` 时开启基于 Redis + `ClientKeyId` 的 Key 绑定 | 非必填；必须为 bool |
+| enabled | bool | 是否开启会话级 Key 亲和性 | N | 默认 `true`；为 `true` 时开启基于 Redis + `ClientKeyId` 的 Key 绑定 | 非必填；必须为 bool |
 | ttl | int | 绑定空闲超时时间 | N | 单位秒，默认 `600`；命中绑定后 BFE 会刷新 TTL，持续请求则绑定保持 | 非必填；若传入，须为 `>0` 的整数 |
 | redis_prefix | string | Redis key 前缀 | N | 默认 `"bfe:ai:key_affinity"` | 非必填；若传入，必须非空 |
 | penalty_enable | bool | 是否开启 Key 惩罚 | N | 默认 `true`；为 `true` 时，近期返回 429/401/403 的 Key 会被跳过 | 非必填；必须为 bool |

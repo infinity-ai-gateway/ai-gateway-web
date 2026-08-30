@@ -391,7 +391,7 @@ function defaultKeyPolicy() {
 
 function defaultKeyAffinity() {
     return {
-        enabled: false,
+        enabled: true,
         ttl: 600,
         redis_prefix: 'bfe:ai:key_affinity',
         penalty_enable: true
@@ -724,7 +724,7 @@ export default {
             };
             const affinitySrc = src.key_affinity || {};
             this.formData.key_affinity = {
-                enabled: toBoolean(affinitySrc.enabled, false),
+                enabled: toBoolean(affinitySrc.enabled, true),
                 ttl: affinitySrc.ttl != null ? Number(affinitySrc.ttl) : 600,
                 redis_prefix: affinitySrc.redis_prefix || 'bfe:ai:key_affinity',
                 penalty_enable: toBoolean(affinitySrc.penalty_enable, true)
