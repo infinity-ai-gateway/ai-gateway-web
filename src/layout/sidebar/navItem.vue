@@ -60,6 +60,9 @@ export default {
                 'AIGatewayInstancePool.list': 'iconfont icon-instancePool',
                 'AIGatewayInstancePoolManage': 'iconfont icon-instancePool',
 
+                'Provider.list': 'ivu-icon-ios-cloud',
+                'ProviderManage': 'ivu-icon-ios-cloud',
+
                 'certs.list': 'iconfont icon-cert',
                 'CertsManage': 'iconfont icon-cert',
                 'CertificateManage': 'iconfont icon-cert',

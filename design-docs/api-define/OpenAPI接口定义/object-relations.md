@@ -39,10 +39,21 @@ classDiagram
         +int64 create_time
     }
 
+    class Provider {
+        +string name
+        +string description
+        +Endpoint model_endpoint
+        +[]string models
+        +[]ProviderKey keys
+        +[]Instance instance_pool
+        +[]string model_protocols
+        +int64 create_time
+        +int64 update_time
+    }
+
     class Cluster {
         +string name
         +string description
-        +[]Instance instance_pool
         +BasicConfig basic
         +StickySessions sticky_sessions
         +PassiveHealthCheck passive_health_check
@@ -50,11 +61,21 @@ classDiagram
     }
 
     class LLMConfig {
-        +Endpoint model_endpoint
         +[]string models
         +[]ModelMapping model_mappings
-        +string key
-        +string provider_type
+        +[]ClusterKeyRef keys
+        +KeyPolicy key_policy
+        +string provider
+        +string match_prefix
+        +bool strip_prefix
+    }
+
+    class ModelPrice {
+        +int64 id
+        +string provider
+        +string model
+        +string mode
+        +object prices
     }
 
     class QuotaPlan {
@@ -142,6 +163,8 @@ classDiagram
     RateLimitPolicy "1" --> "1" Rules : rules
     Rules "1" --> "0..3" TPMConfig : tpm
     Rules "1" --> "0..3" RPMConfig : rpm
+    Provider "1" --> "*" Cluster : 被引用
+    Provider "1" ..> "*" ModelPrice : 按名称关联（非强制）
     Cluster "1" --> "1" LLMConfig : llm_config
 ```
 
@@ -162,6 +185,8 @@ classDiagram
 - **RateLimitPolicy → Rules**：一个RateLimitPolicy包含一组Rules，Rules中可配置tpm（最多3个）、rpm（最多3个）和max_concurrency（默认-1，表示不限制）。
 - **运行时层级生效逻辑**：API-Key挂载到Entity后，运行时生效的QuotaPlan和RateLimitPolicy为该API-Key自身直接拥有的 + 该Entity直接拥有的 + 该Entity所有祖先Entity直接拥有的（去重）。
 - **GlobalRouteTable → RouteRules → AiRouteRule → AiRouteTarget/AiRouteFallback**：Global路由表通过嵌套的 RouteRules 管理规则，每条规则包含转发目标（targets）和降级目标（fallbacks）。
-- **Cluster → LLMConfig**：一个Cluster包含1个LLMConfig，用于描述AI服务接入信息（provider_type、models、key、model_endpoint、model_mappings）。设置LLMConfig即开启AI网关能力。
+- **Provider → Cluster**：一个 Provider 可被多个 Cluster 引用；Cluster 通过 `llm_config.provider` 关联 Provider，并只保留“转发策略”。
+- **Provider → ModelPrice**：一个 Provider 的名称可被多条 ModelPrice 记录使用；`model-prices.provider` 不强制引用已存在的 Provider。
+- **Cluster → LLMConfig**：一个 Cluster 包含 1 个 LLMConfig，用于描述 AI 转发策略（models、key 引用与权重、model_mappings、provider 引用等）。设置 LLMConfig 即开启 AI 网关能力。
 
 

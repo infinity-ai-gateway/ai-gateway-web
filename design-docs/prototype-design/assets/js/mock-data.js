@@ -3,7 +3,7 @@ window.MockData = {
   entities: [
     {
       id: 1,
-      name: '研发部',
+      name: 'rd-dept',
       type: 'dep',
       parent_id: '',
       allow_models: ['*'],
@@ -24,7 +24,7 @@ window.MockData = {
           max_concurrency: 50,
           tpm: [
             {
-              name: 'tpm-default',
+              name: 'tpm_1min',
               model: '*',
               window_minutes: 1,
               max_tokens: 100000,
@@ -33,7 +33,7 @@ window.MockData = {
           ],
           rpm: [
             {
-              name: 'rpm-default',
+              name: 'rpm_1min',
               model: '*',
               window_minutes: 1,
               max_requests: 1000,
@@ -48,7 +48,7 @@ window.MockData = {
     },
     {
       id: 2,
-      name: '算法组',
+      name: 'algo-team',
       type: 'team',
       parent_id: 1,
       allow_models: ['gpt-4o'],
@@ -81,7 +81,7 @@ window.MockData = {
     },
     {
       id: 3,
-      name: '测试组',
+      name: 'qa-team',
       type: 'team',
       parent_id: 1,
       allow_models: ['*'],
@@ -136,7 +136,7 @@ window.MockData = {
       update_time: 1743494400,
       subnet: '*',
       models: ['*'],
-      entity: { id: 'e1', name: '研发部', type: 'dep' },
+      entity: { id: 'e1', name: 'rd-dept', type: 'dep' },
       quota_plan: {
         unlimited: false,
         quota: 1000000,
@@ -151,7 +151,7 @@ window.MockData = {
           max_concurrency: 100,
           tpm: [
             {
-              name: 'tpm-gpt4',
+              name: 'tpm_gpt4',
               model: 'gpt-4o',
               window_minutes: 1,
               max_tokens: 100000,
@@ -160,7 +160,7 @@ window.MockData = {
           ],
           rpm: [
             {
-              name: 'rpm-default',
+              name: 'rpm_1min',
               model: '*',
               window_minutes: 1,
               max_requests: 1000,
@@ -193,7 +193,7 @@ window.MockData = {
       update_time: 1741276800,
       subnet: '10.0.0.0/24',
       models: ['gpt-4o'],
-      entity: { id: 'e3', name: '测试组', type: 'team' },
+      entity: { id: 'e3', name: 'qa-team', type: 'team' },
       quota_plan: {
         unlimited: true,
         quota: 0,
@@ -211,9 +211,69 @@ window.MockData = {
       },
     },
   ],
+  providers: [
+    {
+      name: 'deepseek',
+      description: 'DeepSeek 官方 API',
+      model_endpoint: { schema: 'https', uri: '/v1/models' },
+      models: ['deepseek-chat', 'deepseek-coder'],
+      keys: [
+        { name: 'key-primary', key: 'sk-aaaaaaaaaaaa' },
+        { name: 'key-secondary', key: 'sk-bbbbbbbbbbbb' },
+      ],
+      instance_pool: [
+        {
+          name: 'backend-1',
+          addr: 'api.deepseek.com',
+          weight: 100,
+          port: 443,
+        },
+      ],
+      model_protocols: ['openai'],
+      time_zone: 'Asia/Shanghai',
+      tiers: [
+        {
+          name: 'peak',
+          time_ranges: [
+            { weekdays: [1, 2, 3, 4, 5], start: '09:00', end: '12:00' },
+            { weekdays: [1, 2, 3, 4, 5], start: '14:00', end: '18:00' },
+          ],
+        },
+      ],
+      create_time: 1716883200,
+      update_time: 1716883200,
+    },
+    {
+      name: 'openai',
+      description: 'OpenAI 官方 API',
+      model_endpoint: { schema: 'https', uri: '/v1/models' },
+      models: ['gpt-4o', 'gpt-4o-mini'],
+      keys: [{ name: 'key-prod', key: 'sk-openai-xxxx' }],
+      instance_pool: [
+        { name: 'api', addr: 'api.openai.com', weight: 100, port: 443 },
+      ],
+      model_protocols: ['openai'],
+      create_time: 1704067200,
+      update_time: 1717209600,
+    },
+    {
+      name: 'anthropic',
+      description: 'Anthropic Claude API',
+      model_endpoint: { schema: 'https', uri: '/v1/models' },
+      models: ['claude-3-5-sonnet'],
+      keys: [{ name: 'key-claude', key: 'sk-ant-xxxx' }],
+      instance_pool: [
+        { name: 'api', addr: 'api.anthropic.com', weight: 100, port: 443 },
+      ],
+      model_protocols: ['anthropic'],
+      create_time: 1714521600,
+      update_time: 1719878400,
+    },
+  ],
+  modelProtocols: ['openai', 'anthropic'],
   clusters: [
-    { name: 'test', description: '' },
-    { name: 'cluster-test1', description: '测试更新' },
+    { name: 'test', description: '', provider: 'deepseek' },
+    { name: 'cluster-test1', description: '测试更新', provider: 'openai' },
   ],
   routeTables: [
     { type: 'global', owner: 'global', enabled: true },
@@ -261,9 +321,7 @@ window.MockData = {
       description: 'Claude 模型路由',
     },
   ],
-  gatewayInstances: [
-    { hostname: '127.0.0.1', ip: '127.0.0.1', port: 8080 },
-  ],
+  gatewayInstances: [{ hostname: '127.0.0.1', ip: '127.0.0.1', port: 8080 }],
   users: [
     { user_name: 'admin', is_admin: true },
     { user_name: 'operator', is_admin: true },
@@ -430,10 +488,18 @@ window.MockData = {
       prices: {
         input_cost_per_token: 0.00000027,
         output_cost_per_token: 0.0000011,
+        cache_read_input_token_cost: 0.00000007,
+      },
+      tier_prices: {
+        peak: {
+          input_cost_per_token: 0.00000054,
+          output_cost_per_token: 0.0000022,
+          cache_read_input_token_cost: 0.00000014,
+        },
       },
       metadata: {
         source: 'https://platform.deepseek.com/pricing',
-        notes: 'DeepSeek 官方定价',
+        notes: 'DeepSeek 官方定价，含 peak 分段计价',
       },
       create_time: 1717209600,
       update_time: 1722470400,
@@ -480,11 +546,21 @@ window.MockData = {
       update_time: 1717209600,
     },
   ],
-  modelProviderTypes: [
-    { type: 'openai_compatible', label: 'OpenAI 兼容' },
-    { type: 'anthropic', label: 'Anthropic' },
-    { type: 'azure_openai', label: 'Azure OpenAI' },
-  ],
+  getModelPriceProviders: function () {
+    var names = {};
+    (this.modelPrices || []).forEach(function (item) {
+      if (item.provider) names[item.provider] = true;
+    });
+    return Object.keys(names).sort();
+  },
+  getProviderNames: function () {
+    return (this.providers || [])
+      .map(function (item) {
+        return item.name;
+      })
+      .filter(Boolean)
+      .sort();
+  },
   modelModeOptions: [
     'chat',
     'completion',
@@ -555,6 +631,10 @@ window.MockData = {
     'output_cost_per_token_above_200k_tokens',
     'output_cost_per_image',
     'output_cost_per_pixel',
+    'output_cost_per_image_low_quality',
+    'output_cost_per_image_high_quality',
+    'input_cost_per_audio_per_second',
+    'input_cost_per_video_per_second',
     'output_cost_per_second',
     'input_cost_per_query',
     'search_context_cost_per_query',
@@ -564,4 +644,5 @@ window.MockData = {
     'output_cost_per_video',
     'output_cost_per_video_per_second',
   ],
+  modelTierOptions: [{ value: 'peak', label: '忙时（peak）' }],
 };

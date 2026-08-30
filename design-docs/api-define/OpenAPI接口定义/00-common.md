@@ -268,10 +268,10 @@
   "enabled": true,
   "rules": {
     "tpm": [
-      {"name": "1分钟窗口", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
+      {"name": "tpm_1min", "model": "*", "window_minutes": 1, "max_tokens": 10000, "step_minutes": 1}
     ],
     "rpm": [
-      {"name": "1分钟请求", "model": "*", "window_minutes": 1, "max_requests": 100}
+      {"name": "rpm_1min", "model": "*", "window_minutes": 1, "max_requests": 100}
     ],
     "max_concurrency": 50
   }
@@ -284,7 +284,7 @@ Token 每分钟限制配置。
 
 | 字段 | 类型 | 必填 | 说明 | 合法性条件 |
 |------|------|------|------|------------|
-| `name` | string | Y | 规则名称 | 必填、非空；长度 1-128 字符；同一 `RateLimitPolicy` 内不能重复 |
+| `name` | string | Y | 规则名称 | 必填、非空；长度 1-128 字符；字符集限制为 `[a-zA-Z0-9_-]`；同一 `RateLimitPolicy` 内不能重复；创建后不可修改 |
 | `model` | string | N | 适用模型 | 默认 `"*"`；类型为 [AIModel](#5-ai-模型名称aimodel) |
 | `window_minutes` | int | Y | 统计时间窗口（分钟） | 取值范围 1-360 |
 | `max_tokens` | int | Y | 最大 Token 数 | 非负整数（>=0） |
@@ -294,7 +294,7 @@ Token 每分钟限制配置。
 
 ```json
 {
-  "name": "1分钟窗口",
+  "name": "tpm_1min",
   "model": "*",
   "window_minutes": 1,
   "max_tokens": 10000,
@@ -308,7 +308,7 @@ Token 每分钟限制配置。
 
 | 字段 | 类型 | 必填 | 说明 | 合法性条件 |
 |------|------|------|------|------------|
-| `name` | string | Y | 规则名称 | 必填、非空；长度 1-128 字符；同一 `RateLimitPolicy` 内不能重复 |
+| `name` | string | Y | 规则名称 | 必填、非空；长度 1-128 字符；字符集限制为 `[a-zA-Z0-9_-]`；同一 `RateLimitPolicy` 内不能重复；创建后不可修改 |
 | `model` | string | N | 适用模型 | 默认 `"*"`；类型为 [AIModel](#5-ai-模型名称aimodel) |
 | `window_minutes` | int | Y | 统计时间窗口（分钟） | 取值范围 1-360 |
 | `max_requests` | int | Y | 最大请求数 | 非负整数（>=0） |
@@ -317,7 +317,7 @@ Token 每分钟限制配置。
 
 ```json
 {
-  "name": "1分钟请求",
+  "name": "rpm_1min",
   "model": "*",
   "window_minutes": 1,
   "max_requests": 100
@@ -363,6 +363,22 @@ Entity-Type 名称字符串，用于 `/entity-types` 相关接口。
 | 字段 | 类型 | 必填 | 说明 | 合法性条件 |
 |------|------|------|------|------------|
 | - | string | - | Entity-Type 名称 | 长度 1-32 字符；仅允许小写字母、数字、`_`、`-`；不能以 `-`、`_` 开头或结尾；全局唯一；不能包含空白字符 |
+
+## 17. Entity 名称（EntityName）
+
+Entity 名称字符串，用于 `/entities` 相关接口。
+
+| 字段 | 类型 | 必填 | 说明 | 合法性条件 |
+|------|------|------|------|------------|
+| - | string | - | Entity 名称 | 长度 1-64 字符；仅允许小写字母、数字、`_`、`-`；不能以 `-`、`_` 开头或结尾；全局唯一；不能包含空白字符 |
+
+## 18. Provider 名称（ProviderName）
+
+Provider 名称字符串，用于 `/providers` 及 `/clusters`、`/model-prices` 等引用 provider 的接口。
+
+| 字段 | 类型 | 必填 | 说明 | 合法性条件 |
+|------|------|------|------|------------|
+| - | string | - | Provider 名称 | 长度 1-64 字符；仅允许字母、数字、`_`、`-`、`.`；不能以 `.`、`-`、`_` 开头或结尾；全局唯一；不能包含空白字符 |
 
 
 ---

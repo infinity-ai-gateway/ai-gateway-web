@@ -1,33 +1,19 @@
-/**
-* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors. * *
+Licensed under the Apache License, Version 2.0 (the "License"); * you may not
+use this file except in compliance with the License. * You may obtain a copy of
+the License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless
+required by applicable law or agreed to in writing, software * distributed under
+the License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. * See the License for the
+specific language governing permissions and * limitations under the License. */
+/** * Copyright (c) 2021 The BFE Authors. * * Licensed under the Apache License,
+Version 2.0 (the "License"); * you may not use this file except in compliance
+with the License. * You may obtain a copy of the License at * *
+http://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable law
+or agreed to in writing, software * distributed under the License is distributed
+on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */
 <template>
   <div class="Review">
     <div class="panel">
@@ -159,7 +145,7 @@
         </ul>
         <ul class="clearFloat">
           <li class="title">{{ $t('cluster.healthCheckHost') }}:</li>
-          <li class="value">{{ displayPassiveHealthData.host || '-' }}</li>
+          <li class="value">{{ displayHealthCheckHost }}</li>
         </ul>
         <ul class="clearFloat">
           <li class="title">{{ $t('cluster.healthCheckUri') }}:</li>
@@ -171,57 +157,16 @@
         </ul>
       </div>
     </div>
-    <div class="panel">
-      <div class="panel-header">{{ $t('instancePool.config') }}</div>
-      <div class="panel-body">
-        <ul class="clearFloat">
-          <li class="title">{{ $t('instancePool.instanceMode') }}:</li>
-          <li class="value">{{ instanceModeText }}</li>
-        </ul>
-        <ul v-if="isDomainMode" class="clearFloat">
-          <li class="title">{{ $t('instancePool.domain') }}:</li>
-          <li class="value">{{ providerDomain || '-' }}</li>
-        </ul>
-        <ul
-          v-else
-          class="clearFloat detail-row detail-row-block instance-ip-list-row"
-        >
-          <li class="title">{{ $t('instancePool.list') }}:</li>
-          <li class="value">
-            <pageTable :columns="ipColumns" :tableData="instancePoolUsed" />
-          </li>
-        </ul>
-      </div>
-    </div>
     <!-- 大模型 -->
     <div class="panel">
       <div class="panel-header">{{ $t('llmConfig.title') }}</div>
       <div class="panel-body" v-if="llmConfigData">
         <ul class="clearFloat">
-          <li class="title">{{ $t('gatewayConfig.modelServiceProvider') }}:</li>
-          <li class="value">{{ providerTypeText }}</li>
-        </ul>
-        <ul class="clearFloat">
-          <li class="title">{{ $t('gatewayConfig.provider') }}:</li>
+          <li class="title">{{ $t('gatewayConfig.ownedProvider') }}:</li>
           <li class="value">{{ displayProvider }}</li>
         </ul>
-        <ul class="clearFloat">
-          <li class="title">{{ $t('gatewayConfig.stripPrefix') }}:</li>
-          <li class="value">{{ displayStripPrefix }}</li>
-        </ul>
-        <ul v-if="isStripPrefixEnabled" class="clearFloat">
-          <li class="title">{{ $t('gatewayConfig.matchPrefix') }}:</li>
-          <li class="value">{{ displayMatchPrefix }}</li>
-        </ul>
-        <ul class="clearFloat">
-          <li class="title">{{ $t('gatewayConfig.modelListEndpoint') }}:</li>
-          <li class="value">
-            <p>{{ endpointSchema }}://{{ ipStr }}{{ endpointUri }}</p>
-            <p>header: {{ displayEndpointHeaders }}</p>
-          </li>
-        </ul>
         <ul class="clearFloat detail-row">
-          <li class="title">{{ $t('llmConfig.models') }}:</li>
+          <li class="title">{{ $t('gatewayConfig.forwardModels') }}:</li>
           <li class="value">
             <template v-if="displayModels.length">
               <span
@@ -234,14 +179,22 @@
             <span v-else class="empty-text">-</span>
           </li>
         </ul>
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.stripPrefix') }}:</li>
+          <li class="value">{{ displayStripPrefix }}</li>
+        </ul>
+        <ul v-if="isStripPrefixEnabled" class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.matchPrefix') }}:</li>
+          <li class="value">{{ displayMatchPrefix }}</li>
+        </ul>
         <ul class="clearFloat detail-row detail-row-block">
-          <li class="title">{{ $t('llmConfig.modelRedirect') }}:</li>
+          <li class="title">{{ $t('gatewayConfig.modelRedirect') }}:</li>
           <li class="value">
             <table v-if="displayModelMappings.length" class="mapping-table">
               <thead>
                 <tr>
-                  <th>{{ $t('llmConfig.originalModelName') }}</th>
-                  <th>{{ $t('llmConfig.backendModelName') }}</th>
+                  <th>{{ $t('gatewayConfig.originalModelName') }}</th>
+                  <th>{{ $t('gatewayConfig.backendModelName') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -255,20 +208,18 @@
           </li>
         </ul>
         <ul class="clearFloat detail-row detail-row-block">
-          <li class="title">{{ $t('llmConfig.serviceAuthKeys') }}:</li>
+          <li class="title">{{ $t('gatewayConfig.serviceAuthKeys') }}:</li>
           <li class="value">
             <table v-if="displayKeys.length" class="mapping-table">
               <thead>
                 <tr>
-                  <th>{{ $t('gatewayConfig.keyName') }}</th>
-                  <th>{{ $t('gatewayConfig.keyValue') }}</th>
+                  <th>{{ $t('gatewayConfig.providerKey') }}</th>
                   <th>{{ $t('gatewayConfig.keyWeight') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(item, index) in displayKeys" :key="index">
                   <td>{{ item.name }}</td>
-                  <td>{{ item.key }}</td>
                   <td>{{ item.weight }}</td>
                 </tr>
               </tbody>
@@ -280,7 +231,7 @@
           v-if="displayKeyPolicy"
           class="clearFloat detail-row-block policy-row"
         >
-          <li class="title">{{ $t('llmConfig.keyPolicy') }}:</li>
+          <li class="title">{{ $t('gatewayConfig.keyPolicy') }}:</li>
           <li class="value">
             <Card class="policy-card">
               <Row :gutter="24" class="review-row">
@@ -331,7 +282,73 @@
           </li>
         </ul>
         <ul v-else class="clearFloat">
-          <li class="title">{{ $t('llmConfig.keyPolicy') }}:</li>
+          <li class="title">{{ $t('gatewayConfig.keyPolicy') }}:</li>
+          <li class="value"><span class="empty-text">-</span></li>
+        </ul>
+        <ul
+          v-if="displayKeyAffinity"
+          class="clearFloat detail-row-block policy-row"
+        >
+          <li class="title">{{ $t('gatewayConfig.keyAffinity') }}:</li>
+          <li class="value">
+            <Card class="policy-card">
+              <div class="review-item">
+                <div class="review-label">
+                  {{ $t('gatewayConfig.keyAffinityEnabled') }}:
+                </div>
+                <div class="review-value">
+                  {{
+                    displayKeyAffinity.enabled
+                      ? $t('com.enable')
+                      : $t('com.deactivate')
+                  }}
+                </div>
+              </div>
+              <template v-if="displayKeyAffinity.enabled">
+                <Row :gutter="24" class="review-row">
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.keyAffinityTtlReview') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayKeyAffinity.ttl }}
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.keyAffinityPenalty') }}:
+                      </div>
+                      <div class="review-value">
+                        {{
+                          displayKeyAffinity.penalty_enable
+                            ? $t('com.enable')
+                            : $t('com.deactivate')
+                        }}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+                <Row :gutter="24">
+                  <Col span="24">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.keyAffinityRedisPrefix') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayKeyAffinity.redis_prefix }}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </template>
+            </Card>
+          </li>
+        </ul>
+        <ul v-else class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.keyAffinity') }}:</li>
           <li class="value"><span class="empty-text">-</span></li>
         </ul>
       </div>
@@ -339,14 +356,9 @@
   </div>
 </template>
 <script>
-import pageTable from '@/components/table/pageTable';
-import { parseInstancePool, detectInstanceMode, getInstanceEndpointHosts } from './InstancePool';
 import { formatPassiveHealthCheckForApi } from './PassiveHealthCheck';
-import { maskSecretKey } from '@/utils/const';
 export default {
     name: 'Review',
-
-    components: { pageTable },
 
     props: {
         baseConfigData: {
@@ -357,22 +369,8 @@ export default {
             type: Object,
             required: true
         },
-        instancePoolData: {
-            type: Array,
-            required: true
-        },
         llmConfigData: {
             type: Object
-        },
-        originalLlmConfigKey: {
-            type: String,
-            default: ''
-        },
-        originalLlmConfigHeaders: {
-            type: Object,
-            default() {
-                return {};
-            }
         },
         showFooter: {
             type: Boolean,
@@ -386,49 +384,14 @@ export default {
             type: Boolean
         }
     },
-    mounted() {
-        this.getProviders();
-    },
     watch: {
-        instancePoolData: {
-            handler(v) {
-                const pool = Array.isArray(v) ? v : parseInstancePool(v);
-                this.instancePoolUsed = parseInstancePool(pool);
-                const source = this.instancePoolUsed.length ? this.instancePoolUsed : pool;
-                const { mode, domain } = detectInstanceMode(source);
-                this.instanceMode = mode;
-                this.providerDomain = domain;
-                this.ipStr = getInstanceEndpointHosts(source).join('\n');
-            },
-            immediate: true,
-            deep: true
-        },
         reportFlag: {
             handler() {
                 this.handleSubmit();
             }
         }
     },
-    data() {
-        return {
-            instancePoolUsed: [],
-            instanceMode: 'ip',
-            providerDomain: '',
-            spinShow: false,
-            productName: '',
-            ipStr: '',
-            providers: []
-        };
-    },
     computed: {
-        providerTypeText() {
-            const providerType = this.llmConfigData && this.llmConfigData.provider_type;
-            if (!providerType) {
-                return '-';
-            }
-            const provider = this.providers.find(item => item.id === providerType);
-            return provider ? provider.name : providerType;
-        },
         displayProvider() {
             const provider = this.llmConfigData && this.llmConfigData.provider;
             return provider || '-';
@@ -445,40 +408,12 @@ export default {
             const prefix = this.llmConfigData && this.llmConfigData.match_prefix;
             return prefix || '-';
         },
-        isDomainMode() {
-            return this.instanceMode === 'domain';
-        },
-        instanceModeText() {
-            return this.isDomainMode
-                ? this.$t('instancePool.modeDomain')
-                : this.$t('instancePool.modeIp');
-        },
-        ipColumns() {
-            return [
-                {
-                    title: this.$t('instancePool.ipAddress'),
-                    key: 'addr'
-                },
-                {
-                    title: this.$t('instancePool.port'),
-                    key: 'port'
-                },
-                {
-                    title: this.$t('instancePool.weight'),
-                    key: 'weight'
-                }
-            ];
-        },
         displayPassiveHealthData() {
             return formatPassiveHealthCheckForApi(this.passiveHealthData);
         },
-        endpointSchema() {
-            const endpoint = this.llmConfigData && this.llmConfigData.model_endpoint;
-            return (endpoint && endpoint.schema) || 'https';
-        },
-        endpointUri() {
-            const endpoint = this.llmConfigData && this.llmConfigData.model_endpoint;
-            return (endpoint && endpoint.uri) || '/v1/models';
+        displayHealthCheckHost() {
+            const host = this.displayPassiveHealthData && this.displayPassiveHealthData.host;
+            return host || this.$t('cluster.healthCheckHostTip');
         },
         displayModels() {
             const models = this.llmConfigData && this.llmConfigData.models;
@@ -506,11 +441,12 @@ export default {
             if (!Array.isArray(keys)) {
                 return [];
             }
-            return keys.map(item => ({
-                name: item.name || '',
-                key: item.key ? maskSecretKey(item.key) : '',
-                weight: item.weight || 0
-            }));
+            return keys
+                .filter(item => item && item.name)
+                .map(item => ({
+                    name: item.name || '',
+                    weight: item.weight || 0
+                }));
         },
         displayKeyPolicy() {
             const policy = this.llmConfigData && this.llmConfigData.key_policy;
@@ -534,42 +470,31 @@ export default {
                 retry_backoff_max: getValue('retry_backoff_max')
             };
         },
-        displayEndpointHeaders() {
-            const headers =
-                this.llmConfigData &&
-                this.llmConfigData.model_endpoint &&
-                this.llmConfigData.model_endpoint.headers;
-            if (!headers || typeof headers !== 'object' || !Object.keys(headers).length) {
-                return '-';
+        displayKeyAffinity() {
+            const affinity = this.llmConfigData && this.llmConfigData.key_affinity;
+            if (!affinity) {
+                return null;
             }
-            const originalHeaders = this.originalLlmConfigHeaders || {};
-            return Object.keys(headers)
-                .map(key => {
-                    const value = headers[key];
-                    const displayValue =
-                        originalHeaders[key] != null && value === originalHeaders[key]
-                            ? maskSecretKey(value)
-                            : value;
-                    return `${key}: ${displayValue}`;
-                })
-                .join('; ');
+            const defaults = {
+                enabled: false,
+                ttl: 600,
+                redis_prefix: 'bfe:ai:key_affinity',
+                penalty_enable: true
+            };
+            const getValue = key => {
+                const value = affinity[key];
+                return value !== undefined && value !== null && value !== '' ? value : defaults[key];
+            };
+            const isTrue = value => value === true || value === 'true';
+            return {
+                enabled: isTrue(getValue('enabled')),
+                ttl: getValue('ttl'),
+                redis_prefix: getValue('redis_prefix'),
+                penalty_enable: isTrue(getValue('penalty_enable'))
+            };
         }
     },
     methods: {
-        getProviders() {
-            this.$request({
-                url: 'model-provider-types',
-                method: 'get',
-                openapi: true
-            }).then(data => {
-                if (data.status === 200) {
-                    this.providers = (data.data.Data || []).map(item => ({
-                        id: item,
-                        name: item
-                    }));
-                }
-            });
-        },
         handleSubmit() {
             this.$emit('submitData');
         }
@@ -612,7 +537,6 @@ export default {
     }
 
     .panel-body ul.clearFloat.detail-row-block,
-    .panel-body ul.clearFloat.instance-ip-list-row,
     .panel-body ul.clearFloat.policy-row {
         align-items: flex-start;
     }
@@ -620,18 +544,6 @@ export default {
     .detail-row-block {
         .title {
             padding-top: 8px;
-        }
-    }
-
-    .instance-ip-list-row {
-        .value {
-            /deep/ .page-table {
-                margin-top: 0;
-            }
-
-            /deep/ .page-table .page {
-                margin-top: 12px;
-            }
         }
     }
 }

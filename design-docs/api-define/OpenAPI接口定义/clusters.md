@@ -6,14 +6,6 @@
 {
     "name": "my-cluster",
     "description": "示例集群",
-    "instance_pool": [
-        {
-            "name": "backend-1",
-            "addr": "10.0.0.1",
-            "weight": 50,
-            "port": 8080
-        }
-    ],
     "basic": {
         "protocol": "http",
         "connection": {
@@ -47,13 +39,6 @@
         "statuscode": 0
     },
     "llm_config": {
-        "model_endpoint": {
-            "schema": "https",
-            "uri": "/v1/models",
-            "headers": {
-                "Authorization": "Bearer ${API_KEY}"
-            }
-        },
         "models": ["deepseek-chat", "deepseek-coder"],
         "model_mappings": [
             {"source_model": "gpt-4", "target_model": "deepseek-chat"}
@@ -61,12 +46,10 @@
         "keys": [
             {
                 "name": "key-primary",
-                "key": "sk-aaaaaaaaaaaa",
                 "weight": 70
             },
             {
                 "name": "key-secondary",
-                "key": "sk-bbbbbbbbbbbb",
                 "weight": 30
             }
         ],
@@ -76,7 +59,12 @@
             "retry_backoff_initial": 500,
             "retry_backoff_max": 5000
         },
-        "provider_type": "deepseek",
+        "key_affinity": {
+            "enabled": true,
+            "ttl": 600,
+            "redis_prefix": "bfe:ai:key_affinity",
+            "penalty_enable": true
+        },
         "provider": "deepseek",
         "match_prefix": "deepseek/",
         "strip_prefix": true
@@ -90,20 +78,10 @@
 |------|------|------|----------|----------|
 | `name` | string | 集群名 | 全局唯一 | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername) |
 | `description` | string | 集群描述信息 | - | 非必填；若传入，长度 0-256 字符；不能包含控制字符 |
-| `instance_pool` | []Instance | 实例列表 | 系统自动据此创建实例池和子集群 | 必填；至少1个元素；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0` |
 | `basic` | object | 基本参数 | 见下方 表：连接设置、表：重试设置、表：超时设置 | 非必填；未传时使用 AI 网关场景默认值 |
 | `sticky_sessions` | object | 会话保持 | 见下方 表：会话保持 | 非必填；未传时使用默认值 |
 | `passive_health_check` | object | 被动健康检查 | 见下方 表：被动健康检查 | 非必填；未传时使用默认值 |
 | `llm_config` | object | AI LLM 服务配置 | 见下方 表：LLM配置 | 必填 |
-
-**Instance 结构**
-
-| 字段 | 类型 | 说明 | 可能取值 | 合法性条件 |
-|------|------|------|----------|----------|
-| `name` | string | 实例名称 | - | 选填；若传入，长度 1-128 字符；未传入时默认与 `addr` 相同 |
-| `addr` | string | 实例地址 | - | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
-| `weight` | int | 实例权重 | 范围 [0,100] | 必填；取值范围 [0,100]；`0` 表示该实例不接收流量 |
-| `port` | int | 实例端口 | - | 必填；类型为 [Port](./00-common.md#3-网络端口port) |
 
 **表：连接设置**
 
@@ -142,7 +120,7 @@
 | - | -  | - | - | - | - |
 | failnum| int |  进入健康检查的失败次数阈值 | N | 连续转发失败多次后，BFE进入健康检查状态，对下游RS发起探活；**默认值为3** | 非必填；默认值为3；须为 >=0 的整数 |
 | interval| int |  连续健康检查的时间间隔 | N | 单位ms；**默认值为1000** | 非必填；默认值为1000；须为 >=0 的整数 |
-| host| string |  健康检查请求的域名| N | 为空时使用 `instance_pool` 中第一个实例的 `addr` | 非必填；为空时使用 `instance_pool` 首个实例的 `addr` |
+| host| string |  健康检查请求的域名| N | 为空时使用所属 provider 的 `instance_pool` 中第一个实例的 `addr` | 非必填；为空时使用 provider 首个实例的 `addr` |
 | uri| string |  健康检查请求的URI  | N | **默认值为 `/`** | 非必填；默认值为 `/`；非空；须以 `/` 开头 |
 | statuscode| int |  期望的健康检查返回码 | N | 如果需要忽略返回码，此处可以填0；**默认值为0** | 非必填；默认值为0；须为 `0` 或 `100-599` 的整数 |
 
@@ -150,46 +128,45 @@
 
 | 参数名 | 类型 |参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | -  | - | - | - | - |
-| model_endpoint| object |  模型列表端点配置 | N | 用于调用第三方AI模型提供商的模型列表接口，具体字段见下方 表：Endpoint；未设置时使用默认值 | 非必填；未设置时默认 `schema=https`、`uri=/v1/models` |
-| models| []string |  支持的模型名称列表 | Y | 指定该集群支持的AI模型名称 | 必填；至少1个元素；每个模型名非空；元素不能重复 |
+| models| []string |  cluster 可转发的模型名称列表 | Y | 必须是所属 provider `models` 的子集 | 必填；至少1个元素；每个模型名非空；元素不能重复；每个元素必须存在于 provider 的 `models` 中 |
 | model_mappings| []object |  模型名称映射 | N | 用于将用户请求的模型名映射为后端实际使用的模型名，具体字段见下方 表：模型映射 | 非必填；元素须满足 模型映射 结构约束 |
-| keys| []APIKey |  API-Key 列表 | N | 一个 cluster 支持配置多个 Key，按权重做路由；为空数组表示不配置 API-Key | 非必填；默认值为空数组 `[]`；元素须满足 表：API-Key 结构 |
+| keys| []ClusterKeyRef |  Key 引用与权重列表 | N | 一个 cluster 支持配置多个 Key，按权重做路由；通过 `name` 引用 provider 中定义的 key；为空数组表示不配置 API-Key | 非必填；默认值为空数组 `[]`；元素须满足 表：ClusterKeyRef 结构 |
 | key_policy| object |  Key 路由策略 | N | 多 Key 时的选择策略、重试与退避配置 | 非必填；默认见下方 表：Key 路由策略；`strategy` 本版仅支持 `weighted_random` |
-| provider_type| string |  AI模型提供商类型 | N | 取值如：deepseek、openai、qwen 等。数据来自 `/model-provider-types` | 非必填；若传入，须为 `/model-provider-types` 中已存在的类型 |
-| provider| string |  该 cluster 在 `model_prices` 中对应的 provider | N | 用于 InnerAPI 自动填充 `AIConf.ModelTable`；为空时 `ModelTable` 为空列表 | 非必填；默认空字符串；OpenAPI 可读写 |
+| key_affinity| object |  Key 亲和性配置 | N | 基于 Redis + `ClientKeyId` 的会话级 Key 亲和性 | 非必填；默认见下方 表：Key 亲和性配置 |
+| provider| string |  所属 provider | Y | 用于关联 provider、解析后端实例池/key 明文/生成 `ModelTable` | 必填；非空；必须引用 `/providers` 中已存在的 provider |
 | match_prefix| string |  需要匹配的 provider/model 前缀 | N | 例如 `openrouter/`；用于 OpenRouter 等聚合 provider 场景；必须以 `/` 结尾 | 非必填；`strip_prefix=true` 时必填 |
 | strip_prefix| bool |  是否裁剪 `match_prefix` 指定前缀 | N | `true` 时转发给下游前会从请求 `model` 字段中去掉该前缀；`false` 时仅用于路由标识，不裁剪 | 非必填；默认 `false` |
 
-> **说明**：`model_endpoint.headers` 中的 `${API_KEY}` 占位符，当 `keys` 非空时由当前选中的 Key 替换；当 `keys` 为空时，不允许出现该占位符，否则在校验阶段返回 `422`。
->
 > **注意：** `model_table` 不在 OpenAPI `/clusters` 端点中展示，仅通过 InnerAPI 根据 `provider` 自动填充后下发给 BFE。
 >
 > **注意：** `enable` 字段已移除，设置 `llm_config` 时默认开启 AI 网关能力。
+>
+> **注意：** cluster 不再返回 key 明文。`GET /clusters` 与 `GET /clusters/{name}` 仅返回 `keys[].name` 与 `keys[].weight`。
 
-**表：API-Key 结构（`llm_config.keys` 元素）**
+**表：ClusterKeyRef 结构（`llm_config.keys` 元素）**
 
-| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| 参数名 | 类型 |参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | -  | - | - | - | - |
-| name | string | Key 名称/标识 | Y | 用于日志、监控、运维识别 | 必填；长度 1-128 字符；同一 `keys` 数组内唯一 |
-| key | string | API-Key 值 | Y | 实际用于后端认证的密钥 | 必填；非空；长度 1-512 字符 |
+| name | string | 引用 provider 中 key 的 name | Y | 用于标识引用的 provider key | 必填；非空；必须对应 provider `keys` 中存在的 name；同一 `keys` 数组内唯一 |
 | weight | int | 权重 | Y | 用于加权随机选择，范围 `[0,100]` | 必填；取值范围 `[0,100]`；`0` 表示该 Key 不接收流量（等效于禁用） |
 
 **表：Key 路由策略（`llm_config.key_policy`）**
 
-| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| 参数名 | 类型 |参数含义 | 必填 | 补充描述 | 合法性条件 |
 | - | -  | - | - | - | - |
 | strategy | string | Key 选择策略 | N | 多 Key 时的选择算法 | 非必填；默认 `weighted_random`；本版仅支持 `weighted_random` |
 | max_retries | int | 总额外重试次数 | N | 该 cluster 在当前请求内的总重试次数；不是单个 Key 的重试次数 | 非必填；默认 `0`；须为 `>=0` 的整数 |
 | retry_backoff_initial | int (ms) | 初始退避时间 | N | 首次重试的退避时间，单位毫秒 | 非必填；默认 `500`；须为 `>=0` 的整数 |
 | retry_backoff_max | int (ms) | 最大退避时间 | N | 退避时间上限，单位毫秒 | 非必填；默认 `5000`；须为 `>=0` 的整数，且须 `>= retry_backoff_initial` |
 
-**表：Endpoint**
+**表：Key 亲和性配置（`llm_config.key_affinity`）**
 
-| 参数名 | 类型 |参数含义 | 必填 | 补充描述 | 合法性条件 |
-| - | -  | - | - | - | - |
-| schema| string |  请求协议 | N |  取值为 http、https；**默认值为 https** | 非必填；默认值为 `https`；有效值 `http`、`https` |
-| uri| string |  请求URI | N |  **默认值为 `/v1/models`** | 非必填；默认值为 `/v1/models` |
-| headers| map[string]string |  请求头参数 | N | 自定义请求头 | 非必填 |
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | - | - | - | - | - |
+| enabled | bool | 是否开启会话级 Key 亲和性 | N | 默认 `true`；为 `true` 时开启基于 Redis + `ClientKeyId` 的 Key 绑定 | 非必填；必须为 bool |
+| ttl | int | 绑定空闲超时时间 | N | 单位秒，默认 `600`；命中绑定后 BFE 会刷新 TTL，持续请求则绑定保持 | 非必填；若传入，须为 `>0` 的整数 |
+| redis_prefix | string | Redis key 前缀 | N | 默认 `"bfe:ai:key_affinity"` | 非必填；若传入，必须非空 |
+| penalty_enable | bool | 是否开启 Key 惩罚 | N | 默认 `true`；为 `true` 时，近期返回 429/401/403 的 Key 会被跳过 | 非必填；必须为 bool |
 
 **表：模型映射**
 
@@ -202,21 +179,23 @@
 
 - `name` 必填，类型为 [ClusterName](./00-common.md#15-集群名称clustername)，全局唯一。
 - `description` 可选；若传入，长度 0-256 字符，不能包含控制字符。
-- `instance_pool` 必填，至少包含1个实例；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0`。
-- 每个实例的 `name` 选填，若传入长度须为 1-128 字符，未传入时默认与 `addr` 相同；`addr` 必填且类型为 [Hostname](./00-common.md#1-主机名hostname)；`weight` 取值范围 [0,100]，`port` 必填且类型为 [Port](./00-common.md#3-网络端口port)。
-- `llm_config` 必填，`models` 至少包含1个非空模型名且不能重复；`model_mappings` 中 `source_model` 不能重复。
+- `llm_config` 必填；`provider` 必填且必须引用 `/providers` 中已存在的 provider。
+- `llm_config.models` 至少包含 1 个非空模型名且不能重复；每个模型名必须存在于所属 provider 的 `models` 中。
+- `llm_config.model_mappings` 中 `source_model` 不能重复。
 - `llm_config.keys` 非必填，默认值为空数组 `[]`；若非空：
-  - 每个元素 `key` 必填且非空，长度 1-512；
-  - 每个元素 `name` 必填，长度 1-128，同一 `keys` 数组内唯一；
+  - 每个元素 `name` 必填，且必须对应 provider `keys` 中存在的 name；
+  - 同一 `keys` 数组内 `name` 唯一；
   - 每个元素 `weight` ∈ `[0,100]`；
   - 所有 Key 的 `weight` 之和必须等于 `100`。
 - `llm_config.key_policy` 若传入：
   - `strategy` 仅允许 `weighted_random`；
   - `max_retries` 须为 `>=0` 的整数；
   - `retry_backoff_initial`、`retry_backoff_max` 须为 `>=0` 的整数，且 `retry_backoff_max >= retry_backoff_initial`。
-- `llm_config.model_endpoint.headers` 中若包含 `${API_KEY}` 占位符，则 `keys` 不能为空，否则返回 `422`。
-- `llm_config.provider_type` 若传入，须为 `/model-provider-types` 中已存在的类型。
-- `llm_config.provider` 若传入，表示该 cluster 在 `model_prices` 中对应的 provider；为空时 InnerAPI 下发的 `AIConf.ModelTable` 为空列表。
+- `llm_config.key_affinity` 若传入：
+  - `enabled` 必须为 bool；
+  - `ttl` 须为 `>0` 的整数；
+  - `redis_prefix` 若传入须非空；
+  - `penalty_enable` 必须为 bool。
 - `llm_config.match_prefix` / `strip_prefix`：
   - `strip_prefix=true` 时，`match_prefix` 必填且非空；
   - `match_prefix` 若传入，必须以 `/` 结尾。
@@ -229,7 +208,6 @@
 - `basic.timeouts.*` 各项均须为 >0 的整数。
 - `sticky_sessions.hash_strategy` 有效值为 `CLIENT_IP_ONLY`、`CLIENT_ID_ONLY`、`CLIENT_ID_PREFERED`。
 - `passive_health_check.failnum`、`interval` 须为 >=0 的整数；`uri` 非空且须以 `/` 开头；`statuscode` 须为 `0` 或 `100-599`。
-- `model_endpoint.schema` 有效值为 `http`、`https`，未设置时默认 `https`。
 - `sub_clusters` 与 `scheduler` 为系统内部自动生成数据，不再对外暴露；每个集群只包含一个子集群，调度设置固定为 `GSLB_BLACKHOLE=0`。
 - `llm_config.enable` 字段已移除，设置 `llm_config` 时默认开启 AI 网关能力。
 - 删除集群时自动级联清理关联的实例池和子集群。
@@ -242,7 +220,7 @@
 
 | 项目 | 值 | 说明 |
 | - | - | - |
-| 含义 | 创建集群（一键创建实例池 + 子集群 + 绑定） | - |
+| 含义 | 创建集群（通过引用 provider 自动创建实例池 + 子集群 + 绑定） | - |
 | 端点 | /clusters | - |
 | 版本 | v1 | - |
 | method | POST | - |
@@ -253,15 +231,10 @@
 | - | -  | - | - | - | - |
 | name| string |  集群名 | Y | 集群名必须全局唯一 | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername) |
 | description| string |  集群描述信息| N |  | 非必填；若传入，长度 0-256 字符；不能包含控制字符 |
-| instance_pool| []Instance |  实例列表 | Y | 系统自动据此创建实例池和子集群 | 必填；至少1个元素；同一集群内，对于 `name` 不为空的实例，`name` 不能重复；同一集群内 `(name, addr)` 组合不能重复；至少有一个实例 `weight > 0` |
-| instance_pool[].name| string | 实例名称 | N | 未传入时默认与 `addr` 相同 | 选填；若传入，长度 1-128 字符 |
-| instance_pool[].addr| string | 实例地址 | Y | 无 DNS 时可填写 IP 地址 | 必填；类型为 [Hostname](./00-common.md#1-主机名hostname) |
-| instance_pool[].weight| int | 实例权重，范围 [0,100] | Y | | 必填；取值范围 [0,100]；`0` 表示该实例不接收流量 |
-| instance_pool[].port| int | 实例端口 | Y | | 必填；类型为 [Port](./00-common.md#3-网络端口port) |
 | basic| object |  基本参数| N | AI网关场景默认推荐值：protocol=https；connection.max_idle_conn_per_rs=0、cancel_on_client_close=false；retries.max_retry_in_cluster=2；buffers.req_write_buffer_size=512；timeouts.timeout_conn_serv=50000、timeout_response_header=50000、timeout_readbody_client=30000、timeout_read_client_again=30000、timeout_write_client=60000 | 非必填；未传时使用 AI 网关场景默认值；子字段合法性见 1 中各表 |
 | sticky_sessions| object |  会话保持| N | AI网关场景默认推荐值：enabled=false；若开启，hash_strategy=CLIENT_ID_ONLY、hash_header为空 | 非必填；未传时使用默认值；子字段合法性见 1 中各表 |
-| passive_health_check| object |  被动健康检查| N | AI网关场景默认推荐值：failnum=3、interval=1000ms、host为空（使用instance_pool首个实例addr）、uri="/"、statuscode=0 | 非必填；未传时使用默认值；子字段合法性见 1 中各表 |
-| llm_config| object |  AI LLM服务配置| Y | 见 1 数据模型中表：LLM配置 | 必填；`models` 至少1个非空元素且不能重复；子字段合法性见 1 中各表 |
+| passive_health_check| object |  被动健康检查| N | AI网关场景默认推荐值：failnum=3、interval=1000ms、host为空（使用provider首个实例addr）、uri="/"、statuscode=0 | 非必填；未传时使用默认值；子字段合法性见 1 中各表 |
+| llm_config| object |  AI LLM服务配置| Y | 见 1 数据模型中表：LLM配置 | 必填；`provider` 必填且引用已存在 provider；`models` 至少1个非空元素且不能重复；子字段合法性见 1 中各表 |
 
 **HTTP BODY参数示例**
 
@@ -269,20 +242,6 @@
 {
     "name": "my-cluster",
     "description": "示例集群",
-    "instance_pool": [
-        {
-            "name": "backend-1",
-            "addr": "10.0.0.1",
-            "weight": 50,
-            "port": 8080
-        },
-        {
-            "name": "backend-2",
-            "addr": "10.0.0.2",
-            "weight": 50,
-            "port": 8080
-        }
-    ],
     "basic": {
         "protocol": "http",
         "connection": {
@@ -316,13 +275,6 @@
         "statuscode": 0
     },
     "llm_config": {
-        "model_endpoint": {
-            "schema": "https",
-            "uri": "/v1/models",
-            "headers": {
-                "Authorization": "Bearer ${API_KEY}"
-            }
-        },
         "models": [
             "deepseek-chat",
             "deepseek-coder"
@@ -336,12 +288,10 @@
         "keys": [
             {
                 "name": "key-prod-01",
-                "key": "sk-aaaaaaaaaaaa",
                 "weight": 70
             },
             {
                 "name": "key-prod-02",
-                "key": "sk-bbbbbbbbbbbb",
                 "weight": 30
             }
         ],
@@ -351,7 +301,6 @@
             "retry_backoff_initial": 500,
             "retry_backoff_max": 5000
         },
-        "provider_type": "deepseek",
         "provider": "deepseek"
     }
 }
@@ -363,19 +312,7 @@
 {
     "name": "internal-cluster",
     "description": "内部集群，无需 API-Key",
-    "instance_pool": [
-        {
-            "name": "backend-1",
-            "addr": "10.0.0.1",
-            "weight": 100,
-            "port": 8080
-        }
-    ],
     "llm_config": {
-        "model_endpoint": {
-            "schema": "http",
-            "uri": "/v1/models"
-        },
         "models": ["deepseek-chat"],
         "model_mappings": [],
         "keys": [],
@@ -385,7 +322,6 @@
             "retry_backoff_initial": 500,
             "retry_backoff_max": 5000
         },
-        "provider_type": "deepseek",
         "provider": "deepseek"
     }
 }
@@ -395,10 +331,10 @@
 
 创建集群时，系统自动执行以下步骤：
 
-1. 校验请求参数（`name`、`instance_pool`、`llm_config` 等必填项；`basic`、`sticky_sessions`、`passive_health_check` 若未传则使用 AI 网关场景默认推荐值）
+1. 校验请求参数（`name` 必填；`llm_config` 必填，且 `provider` 引用已存在的 provider；`llm_config.models` 为 provider `models` 的子集；`llm_config.keys` 引用 provider 中存在的 key name 等）
 2. 若 `llm_config` 不为 nil，内部自动设置 `enable = true`
 3. 创建集群
-4. 自动创建实例池（名称格式：`{product_name}.{cluster_name}`）
+4. 根据 `llm_config.provider` 查找对应 provider，读取其 `instance_pool`，自动创建实例池（名称格式：`{product_name}.{cluster_name}`）
 5. 自动创建子集群（名称：`{cluster_name}`，绑定实例池）
 6. 自动绑定子集群到集群
 
@@ -408,11 +344,12 @@
 | - | -  | - |
 | name | string | 集群名 |
 | description | string | 集群描述信息 |
-| instance_pool | []Instance | 实例列表 |
 | llm_config | object | LLM 配置 |
 | basic | object | 基本参数 |
 | sticky_sessions | object | 会话保持 |
 | passive_health_check | object | 被动健康检查 |
+
+> **注意**：返回数据中不再包含 `instance_pool`；实例池信息通过 `llm_config.provider` 关联到 provider 获取。
 
 **成功返回示例**
 ```json
@@ -422,14 +359,6 @@
     "Data": {
         "name": "my-cluster",
         "description": "示例集群",
-        "instance_pool": [
-            {
-                "name": "backend-1",
-                "addr": "10.0.0.1",
-                "weight": 50,
-                "port": 8080
-            }
-        ],
         "llm_config": { "...": "..." },
         "basic": { "...": "..." },
         "sticky_sessions": { "...": "..." },
@@ -451,7 +380,9 @@
 
 **输入参数（Query）**
 
-无。
+| 参数名 | 类型 | 参数含义 | 必填 | 补充描述 | 合法性条件 |
+| - | - | - | - | - | - |
+| provider | string | 按 Provider 过滤 | N | - | 须为已存在的 provider name |
 
 **返回数据（Data内容）**
 
@@ -484,7 +415,7 @@
 
 | 项目 | 值 | 说明 |
 | - | - | - |
-| 含义 | 更新集群基本信息 | 可编辑描述信息、Basic配置段、sticky_sessions配置段、healthcheck配置段、instance_pool、llm_config |
+| 含义 | 更新集群基本信息 | 可编辑描述信息、Basic配置段、sticky_sessions配置段、healthcheck配置段、llm_config |
 | 端点 | /clusters/{cluster_name} | - |
 | 版本 | v1 | - |
 | method | PATCH | - |
@@ -496,26 +427,18 @@
 | cluster_name | string | 集群名字 | Y | - | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername)；必须引用已存在的集群 |
 
 **输入参数（Body）**
-可修改字段含义同创建接口。若传入 `instance_pool` 字段，系统会自动同步更新对应的实例池；其中每个实例的 `addr` 必填，`name` 选填（未传入时默认与 `addr` 相同），`port` 必填。
+
+可修改字段含义同创建接口，但**输入参数不包括 `name`，即不能修改 cluster 的 name**（名称由 URI 中的 `cluster_name` 指定）。若请求体中仍包含 `name`，返回 422。不支持直接修改 `instance_pool`；如需调整后端实例，请更新对应 provider 的 `instance_pool`。
 
 > **注意：**
-> - `sub_clusters` 与 `scheduler` 为系统内部自动生成，更新时不支持手动修改，请通过 `instance_pool` 调整实例。
-> - `llm_config.keys` 作为数组，按**全量替换**处理，即调用方需传入完整的最新 Key 列表。这与当前 `instance_pool`、`model_mappings` 的 PATCH 语义保持一致。
+> - `sub_clusters` 与 `scheduler` 为系统内部自动生成，更新时不支持手动修改。
+> - `llm_config.keys` 作为数组，按**全量替换**处理，即调用方需传入完整的最新 Key 引用列表。这与当前 `model_mappings` 的 PATCH 语义保持一致。
 
 **HTTP BODY参数示例**
 
 ```json
 {
-    "name": "my-cluster",
     "description": "更新后的集群描述",
-    "instance_pool": [
-        {
-            "name": "backend-1",
-            "addr": "10.0.0.1",
-            "weight": 100,
-            "port": 8080
-        }
-    ],
     "basic": {
         "protocol": "http",
         "connection": {
@@ -549,20 +472,14 @@
         "statuscode": 0
     },
     "llm_config": {
-        "model_endpoint": {
-            "schema": "https",
-            "uri": "/v1/models"
-        },
         "models": ["deepseek-chat"],
         "keys": [
             {
                 "name": "key-prod-01",
-                "key": "sk-aaaaaaaaaaaa",
                 "weight": 50
             },
             {
                 "name": "key-prod-02",
-                "key": "sk-bbbbbbbbbbbb",
                 "weight": 50
             }
         ],
@@ -572,7 +489,6 @@
             "retry_backoff_initial": 500,
             "retry_backoff_max": 5000
         },
-        "provider_type": "deepseek",
         "provider": "deepseek"
     }
 }
@@ -600,7 +516,10 @@
 | cluster_name | string | 集群名字 | Y | - | 必填；类型为 [ClusterName](./00-common.md#15-集群名称clustername)；必须引用已存在的集群 |
 
 **执行逻辑**
-删除集群时，系统自动执行以下级联清理：
+
+删除集群时，系统先检查该集群是否被 **AI 路由规则**（global / entity / api-key 级别）引用；若被引用，删除失败。
+
+通过引用检查后，系统自动执行以下级联清理：
 1. 解绑集群关联的子集群
 2. 删除子集群
 3. 删除子集群关联的实例池
@@ -611,4 +530,3 @@
 同创建接口。
 
 ---
-

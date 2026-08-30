@@ -3,29 +3,33 @@ window.ClusterUpsert = (function () {
     { content: '基本配置' },
     { content: '超时和重传' },
     { content: '被动健康检查' },
-    { content: '实例配置' },
     { content: '大模型配置' },
     { content: '复查&检查' },
   ];
 
   var HASH_STRATEGY_OPTIONS = [
-    'CLIENT_ID_ONLY',
     'CLIENT_IP_ONLY',
+    'CLIENT_ID_ONLY',
     'CLIENT_ID_PREFERED',
   ];
 
-  var ALL_MODELS = [
-    'gpt-4o',
-    'gpt-4o-mini',
-    'claude-3-5-sonnet',
-    'deepseek-chat',
-  ];
+  function getProviders() {
+    return (window.MockData && MockData.providers) || [];
+  }
 
-  // 名称格式校验：字母/数字/连字符/下划线/点，以字母或数字开头，长度 1-64
+  function getProviderByName(name) {
+    return (
+      getProviders().find(function (item) {
+        return item.name === name;
+      }) || null
+    );
+  }
+
+  // 名称格式校验：1-64 字符，字母或数字开头结尾，允许字母、数字、_、-、.
   function validateClusterNameFormat(name) {
     if (!name) return false;
-    if (name.length > 64) return false;
-    return /^[a-zA-Z0-9][a-zA-Z0-9_\-.]*$/.test(name);
+    if (name.length < 1 || name.length > 64) return false;
+    return /^[A-Za-z0-9][A-Za-z0-9_.-]*[A-Za-z0-9]$|^[A-Za-z0-9]$/.test(name);
   }
 
   // 描述长度校验
@@ -37,77 +41,7 @@ window.ClusterUpsert = (function () {
     return true;
   }
 
-  function maskSecretKey(key) {
-    if (!key) return '';
-    var s = String(key);
-    if (s.length <= 8) return '****';
-    return s.slice(0, 4) + '****' + s.slice(-4);
-  }
-
-  function cloneInstance(item) {
-    return {
-      ip: item.ip || '',
-      ports: {
-        Default:
-          item.port != null
-            ? item.port
-            : item.ports && item.ports.Default != null
-            ? item.ports.Default
-            : 80,
-      },
-      hostname: item.hostname || '',
-      weight: item.weight != null ? item.weight : 100,
-      tags: item.tags || { key: 'value' },
-    };
-  }
-
-  function getDefaultInstances() {
-    var list = (window.MockData && MockData.clusterInstances) || [];
-    var instances = list
-      .filter(function (item) {
-        return item.ip;
-      })
-      .map(cloneInstance);
-    if (instances.length) return instances;
-    return [
-      {
-        ip: '172.18.1.140',
-        ports: { Default: 16516 },
-        hostname: '',
-        weight: 50,
-        tags: { key: 'value' },
-      },
-      {
-        ip: '172.18.1.140',
-        ports: { Default: 16517 },
-        hostname: '',
-        weight: 30,
-        tags: { key: 'value' },
-      },
-      {
-        ip: '172.18.1.140',
-        ports: { Default: 16518 },
-        hostname: '',
-        weight: 20,
-        tags: { key: 'value' },
-      },
-    ];
-  }
-
   function ensurePrefilledData(data) {
-    if (!data.instancePoolData || !data.instancePoolData.length) {
-      data.instancePoolData = getDefaultInstances();
-    }
-    if (!data.headerList || !data.headerList.length) {
-      data.headerList = [
-        {
-          key: 'Authorization',
-          value: 'Bearer sk-****',
-          originalValue: '',
-          valueModified: false,
-        },
-      ];
-    }
     if (
       !data.llmConfigData.model_mappings ||
       !data.llmConfigData.model_mappings.length
@@ -116,14 +50,11 @@ window.ClusterUpsert = (function () {
         { source_model: 'gpt-4-turbo', target_model: 'gpt-4o' },
       ];
     }
-    if (!data.llmConfigData.models || !data.llmConfigData.models.length) {
-      data.llmConfigData.models = ['gpt-4o'];
-    }
     if (
       !Array.isArray(data.llmConfigData.keys) ||
       !data.llmConfigData.keys.length
     ) {
-      data.llmConfigData.keys = [{ name: '', key: '', weight: 100 }];
+      data.llmConfigData.keys = [{ name: '', weight: 100 }];
     }
     if (!data.llmConfigData.key_policy) {
       data.llmConfigData.key_policy = {
@@ -133,49 +64,20 @@ window.ClusterUpsert = (function () {
         retry_backoff_max: 5000,
       };
     }
-  }
-
-  function getInstanceIpStr(data) {
-    ensurePrefilledData(data);
-    return data.instancePoolData
-      .map(function (item) {
-        var port =
-          item.ports && item.ports.Default != null ? item.ports.Default : 80;
-        return (item.ip || '') + ':' + port;
-      })
-      .filter(function (line) {
-        return line !== ':';
-      })
-      .join(',');
-  }
-
-  // 编辑页使用：只返回第一个实例的 ip:port
-  function getInstanceIpFirstStr(data) {
-    ensurePrefilledData(data);
-    var instances = data.instancePoolData
-      .map(function (item) {
-        var port =
-          item.ports && item.ports.Default != null ? item.ports.Default : 80;
-        return (item.ip || '') + ':' + port;
-      })
-      .filter(function (line) {
-        return line !== ':';
-      });
-    return instances.length ? instances[0] : '';
-  }
-
-  function getProviderTypes() {
-    return (
-      (window.MockData && MockData.modelProviderTypes) || [
-        { type: 'openai_compatible', label: 'OpenAI 兼容' },
-        { type: 'anthropic', label: 'Anthropic' },
-        { type: 'azure_openai', label: 'Azure OpenAI' },
-      ]
-    );
+    if (!data.llmConfigData.key_affinity) {
+      data.llmConfigData.key_affinity = {
+        enabled: false,
+        ttl: 600,
+        redis_prefix: 'bfe:ai:key_affinity',
+        penalty_enable: true,
+      };
+    }
   }
 
   function createDefaultData(row) {
     row = row || {};
+    var providerName = row.provider || '';
+    var provider = getProviderByName(providerName);
     return {
       baseConfigData: {
         name: row.name || '',
@@ -188,14 +90,14 @@ window.ClusterUpsert = (function () {
         buffers: { req_write_buffer_size: 512 },
         sticky_sessions: {
           enabled: 'false',
-          hash_strategy: 'CLIENT_ID_ONLY',
+          hash_strategy: 'CLIENT_IP_ONLY',
           hash_header: '',
         },
         timeouts: {
-          timeout_conn_serv: 2000,
-          timeout_response_header: 60000,
+          timeout_conn_serv: 50000,
+          timeout_response_header: 50000,
           timeout_readbody_client: 30000,
-          timeout_read_client_again: 60000,
+          timeout_read_client_again: 30000,
           timeout_write_client: 60000,
         },
         retries: {
@@ -204,44 +106,36 @@ window.ClusterUpsert = (function () {
       },
       passiveHealthData: {
         interval: 1000,
-        failnum: 10,
-        host: 'example.com',
-        uri: '/health',
-        statuscode: 200,
+        failnum: 3,
+        host: '',
+        uri: '/',
+        statuscode: 0,
       },
-      instanceMode: 'ip',
-      domainName: '',
-      instancePoolData: getDefaultInstances(),
       llmConfigData: {
-        provider_type: '',
-        provider: '',
+        provider: providerName,
         strip_prefix: false,
         match_prefix: '',
-        model_endpoint: {
-          schema: 'https',
-          uri: '/v1/models',
-          headers: {},
-        },
-        models: ['gpt-4o'],
+        models: provider && provider.models ? provider.models.slice() : [],
         model_mappings: [
           { source_model: 'gpt-4-turbo', target_model: 'gpt-4o' },
         ],
-        keys: [{ name: '', key: '', weight: 100 }],
+        keys:
+          provider && provider.keys && provider.keys.length
+            ? [{ name: provider.keys[0].name, weight: 100 }]
+            : [{ name: '', weight: 100 }],
         key_policy: {
           strategy: 'weighted_random',
           max_retries: 0,
           retry_backoff_initial: 500,
           retry_backoff_max: 5000,
         },
-      },
-      headerList: [
-        {
-          key: 'Authorization',
-          value: 'Bearer sk-****',
-          originalValue: '',
-          valueModified: false,
+        key_affinity: {
+          enabled: false,
+          ttl: 600,
+          redis_prefix: 'bfe:ai:key_affinity',
+          penalty_enable: true,
         },
-      ],
+      },
     };
   }
 
@@ -288,7 +182,7 @@ window.ClusterUpsert = (function () {
           IvuUI.escapeHtml(b.name) +
           '" ' +
           (isAdd ? '' : 'disabled="disabled" ') +
-          'placeholder="1-64个字符，以字母或数字开头，支持字母、数字、下划线、连字符、点"/></div>',
+          'placeholder="1-64个字符，以字母或数字开头和结尾，支持字母、数字、下划线、连字符、点"/></div>',
         true,
       ) +
         IvuUI.formTopItem(
@@ -335,7 +229,7 @@ window.ClusterUpsert = (function () {
           '请求写缓存大小（Byte）',
           IvuUI.inputNumber(
             b.buffers.req_write_buffer_size,
-            'class="proto-field" data-field="base.buffers.req_write_buffer_size" min="0"',
+            'class="proto-field" data-field="base.buffers.req_write_buffer_size" min="1"',
           ),
           true,
         ) +
@@ -367,7 +261,7 @@ window.ClusterUpsert = (function () {
         '客户端连接空闲超时(ms) ',
         IvuUI.inputNumber(
           t.timeout_read_client_again,
-          'class="proto-field" data-field="base.timeouts.timeout_read_client_again" min="0"',
+          'class="proto-field" data-field="base.timeouts.timeout_read_client_again" min="1"',
         ),
         true,
       ) +
@@ -375,7 +269,7 @@ window.ClusterUpsert = (function () {
           '读客户端请求Body超时(ms)',
           IvuUI.inputNumber(
             t.timeout_readbody_client,
-            'class="proto-field" data-field="base.timeouts.timeout_readbody_client" min="0"',
+            'class="proto-field" data-field="base.timeouts.timeout_readbody_client" min="1"',
           ),
           true,
         ) +
@@ -383,7 +277,7 @@ window.ClusterUpsert = (function () {
           '连接后端超时(ms) ',
           IvuUI.inputNumber(
             t.timeout_conn_serv,
-            'class="proto-field" data-field="base.timeouts.timeout_conn_serv" min="0"',
+            'class="proto-field" data-field="base.timeouts.timeout_conn_serv" min="1"',
           ),
           true,
         ) +
@@ -391,7 +285,7 @@ window.ClusterUpsert = (function () {
           '读后端响应头部超时(ms) ',
           IvuUI.inputNumber(
             t.timeout_response_header,
-            'class="proto-field" data-field="base.timeouts.timeout_response_header" min="0"',
+            'class="proto-field" data-field="base.timeouts.timeout_response_header" min="1"',
           ),
           true,
         ) +
@@ -399,7 +293,7 @@ window.ClusterUpsert = (function () {
           '写客户端响应Body超时(ms)',
           IvuUI.inputNumber(
             t.timeout_write_client,
-            'class="proto-field" data-field="base.timeouts.timeout_write_client" min="0"',
+            'class="proto-field" data-field="base.timeouts.timeout_write_client" min="1"',
           ),
           true,
         ) +
@@ -440,14 +334,13 @@ window.ClusterUpsert = (function () {
             '健康检查Host',
             '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="health.host" value="' +
               IvuUI.escapeHtml(h.host) +
-              '" placeholder="example.com" /></div>',
-            true,
+              '" placeholder="为空时使用所属服务商首个实例地址" /></div>',
           ) +
           IvuUI.formTopItem(
             '健康检查Uri',
             '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="health.uri" value="' +
               IvuUI.escapeHtml(h.uri) +
-              '" placeholder="/example" /></div>',
+              '" placeholder="/" /></div>',
             true,
           ) +
           IvuUI.formTopItem(
@@ -463,115 +356,14 @@ window.ClusterUpsert = (function () {
     );
   }
 
-  // ============ 实例配置 ============
-  function renderInstancePool(data) {
-    ensurePrefilledData(data);
-    var rows = data.instancePoolData
-      .map(function (item, index) {
-        return (
-          '<tr data-instance-index="' +
-          index +
-          '">' +
-          '<td><div class="ivu-input-wrapper ivu-input-type-text">' +
-          '<input type="text" class="ivu-input proto-instance-ip" data-index="' +
-          index +
-          '" value="' +
-          IvuUI.escapeHtml(item.ip) +
-          '" placeholder="请输入IP地址" />' +
-          '</div></td>' +
-          '<td>' +
-          '<div class="ivu-input-number poolInput" style="width:80px;display:inline-block;vertical-align:middle;">' +
-          '<input type="number" class="ivu-input-number-input proto-instance-port" data-index="' +
-          index +
-          '" min="1" max="65535" value="' +
-          (item.ports.Default != null ? item.ports.Default : 80) +
-          '" placeholder="端口值" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;" />' +
-          '</div>' +
-          '</td>' +
-          '<td>' +
-          '<div class="ivu-input-number poolInput" style="width:80px;display:inline-block;vertical-align:middle;">' +
-          '<input type="number" class="ivu-input-number-input proto-instance-weight" data-index="' +
-          index +
-          '" min="0" max="100" value="' +
-          (item.weight != null ? item.weight : 100) +
-          '" placeholder="权重" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;" />' +
-          '</div>' +
-          '</td>' +
-          '<td>' +
-          IvuUI.btn(
-            '删除',
-            'error',
-            'small',
-            '',
-            'data-action="remove-instance" data-index="' +
-              index +
-              '" ' +
-              (data.instancePoolData.length <= 1 ? 'disabled="disabled"' : ''),
-          ) +
-          '</td>' +
-          '</tr>'
-        );
-      })
-      .join('');
-
-    // 计算权重总和提示
-    var weightSum = data.instancePoolData.reduce(function (sum, item) {
-      return sum + (Number(item.weight) || 0);
-    }, 0);
-    var weightTip =
-      weightSum === 100
-        ? '<div style="color:#19be6b;font-size:12px;margin-top:8px;">权重总和：' +
-          weightSum +
-          '（符合要求）</div>'
-        : '<div style="color:#ed4014;font-size:12px;margin-top:8px;">权重总和：' +
-          weightSum +
-          '（必须等于 100）</div>';
-
-    return IvuUI.formTop(
-      IvuUI.formTopItem(
-        '实例形态',
-        '<select id="cluster-instance-mode" class="proto-field" data-field="instanceMode" style="width:240px;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;">' +
-          '<option value="ip"' +
-          (data.instanceMode === 'ip' ? ' selected' : '') +
-          '>IP</option>' +
-          '<option value="domain"' +
-          (data.instanceMode === 'domain' ? ' selected' : '') +
-          '>服务商域名</option>' +
-          '</select>',
-      ) +
-        (data.instanceMode === 'domain'
-          ? IvuUI.formTopItem(
-              '服务商域名',
-              '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="domainName" id="cluster-domain-name" value="' +
-                IvuUI.escapeHtml(data.domainName) +
-                '" placeholder="请输入服务商域名，例如 example.com" /></div>',
-            )
-          : IvuUI.formTopItem(
-              '实例IP列表',
-              '<div class="formBox"><table border="0" cellspacing="0" cellpadding="0">' +
-                '<tr><th>IP地址</th><th>端口</th><th>权重</th><th>操作</th></tr>' +
-                rows +
-                '</table></div>' +
-                IvuUI.btn(
-                  '+创建',
-                  'primary',
-                  'small',
-                  '',
-                  'id="cluster-add-instance" style="margin-top:8px;"',
-                ) +
-                weightTip,
-            )),
-    );
-  }
-
   // ============ 大模型配置 ============
   function renderGatewayConfig(data) {
     ensurePrefilledData(data);
     var llm = data.llmConfigData;
-    var ipStr = getInstanceIpFirstStr(data);
-    var providerTypes = getProviderTypes();
+    var provider = getProviderByName(llm.provider);
+    var providerModels = (provider && provider.models) || [];
+    var providerKeys = (provider && provider.keys) || [];
 
-    // 帮助图标
     function helpIcon(tip) {
       return (
         '<span class="form-help-icon" title="' +
@@ -580,38 +372,110 @@ window.ClusterUpsert = (function () {
       );
     }
 
-    // Header 行（支持脱敏编辑）
-    var headerRows = (data.headerList || [])
-      .map(function (header, index) {
-        return (
-          '<div class="header-pair" data-header-index="' +
-          index +
-          '">' +
-          '<div class="ivu-input-wrapper ivu-input-type-text header-input">' +
-          '<input type="text" class="ivu-input proto-header-key" data-index="' +
-          index +
-          '" value="' +
-          IvuUI.escapeHtml(header.key) +
-          '" placeholder="Header Key" />' +
-          '</div>' +
-          '<span class="header-separator">:</span>' +
-          '<div class="ivu-input-wrapper ivu-input-type-text header-input">' +
-          '<input type="text" class="ivu-input proto-header-value" data-index="' +
-          index +
-          '" value="' +
-          IvuUI.escapeHtml(header.value) +
-          '" placeholder="Header Value" autocomplete="new-password" />' +
-          '</div>' +
-          '<button type="button" class="ivu-btn ivu-btn-error ivu-btn-small proto-header-del-btn" data-action="remove-header" data-index="' +
-          index +
-          '">' +
-          '<span>删除</span></button>' +
-          '</div>'
-        );
-      })
-      .join('');
+    var providerSelectHtml =
+      '<div class="ivu-select ivu-select-single" style="width:100%;">' +
+      '<div class="ivu-select-selection">' +
+      '<select class="proto-field proto-ivu-select-native" data-field="llm.provider" id="cluster-provider-select" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
+      '<option value="">请选择已创建的服务商</option>' +
+      getProviders()
+        .map(function (item) {
+          return (
+            '<option value="' +
+            IvuUI.escapeHtml(item.name) +
+            '"' +
+            (llm.provider === item.name ? ' selected' : '') +
+            '>' +
+            IvuUI.escapeHtml(item.name) +
+            '</option>'
+          );
+        })
+        .join('') +
+      '</select>' +
+      '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
+      '</div></div>';
 
-    // 模型映射行
+    var stripSwitchHtml =
+      '<div class="ivu-switch' +
+      (llm.strip_prefix ? ' ivu-switch-checked' : '') +
+      '" id="proto-strip-prefix-switch">' +
+      '<span class="ivu-switch-inner"></span></div>';
+
+    var stripPrefixHtml =
+      IvuUI.formTopItem(
+        '裁剪前缀' + helpIcon('开启后转发前去掉 match_prefix'),
+        stripSwitchHtml,
+      ) +
+      (llm.strip_prefix
+        ? IvuUI.formTopItem(
+            '匹配前缀',
+            '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="llm.match_prefix" value="' +
+              IvuUI.escapeHtml(llm.match_prefix || '') +
+              '" placeholder="必须以 / 结尾，如 openrouter/" /></div>',
+            true,
+          )
+        : '');
+
+    var selectedModels = llm.models || [];
+    var modelTagsHtml = selectedModels.length
+      ? selectedModels
+          .map(function (m) {
+            return (
+              '<span class="ivu-tag ivu-tag-primary ivu-tag-checked ivu-tag-closable proto-forward-model-tag">' +
+              '<span class="ivu-tag-text">' +
+              IvuUI.escapeHtml(m) +
+              '</span>' +
+              '<i class="ivu-icon ivu-icon-ios-close proto-protocol-remove proto-forward-model-remove" data-value="' +
+              IvuUI.escapeHtml(m) +
+              '"></i></span>'
+            );
+          })
+          .join('')
+      : '<span class="ivu-select-placeholder">' +
+        (provider ? '请选择转发模型（可多选）' : '请先选择所属服务商') +
+        '</span>';
+
+    var allModelsSelected =
+      providerModels.length > 0 &&
+      providerModels.every(function (model) {
+        return selectedModels.indexOf(model) !== -1;
+      });
+
+    var selectAllOption =
+      providerModels.length && !allModelsSelected
+        ? '<li class="ivu-select-item proto-forward-model-option proto-forward-select-all" data-value="__SELECT_ALL__">全选</li>'
+        : '';
+
+    var modelOptions =
+      selectAllOption +
+      (providerModels.length
+        ? providerModels
+            .map(function (model) {
+              var on = selectedModels.indexOf(model) !== -1;
+              return (
+                '<li class="ivu-select-item proto-forward-model-option' +
+                (on ? ' ivu-select-item-selected' : '') +
+                '" data-value="' +
+                IvuUI.escapeHtml(model) +
+                '">' +
+                IvuUI.escapeHtml(model) +
+                '</li>'
+              );
+            })
+            .join('')
+        : '<li class="ivu-select-item" style="color:#c5c8ce;cursor:default;">暂无模型</li>');
+
+    var modelSelectHtml =
+      '<div class="ivu-select ivu-select-multiple proto-protocol-select proto-forward-model-select' +
+      (provider ? '' : ' ivu-select-disabled') +
+      '">' +
+      '<div class="ivu-select-selection proto-forward-model-toggle">' +
+      modelTagsHtml +
+      '<i class="ivu-icon ivu-icon-ios-arrow-down ivu-select-arrow"></i></div>' +
+      '<div class="ivu-select-dropdown proto-protocol-dropdown proto-forward-model-dropdown" style="display:none;">' +
+      '<ul class="ivu-select-dropdown-list">' +
+      modelOptions +
+      '</ul></div></div>';
+
     var mappingRows = (llm.model_mappings || [])
       .map(function (mapping, index) {
         return (
@@ -623,11 +487,9 @@ window.ClusterUpsert = (function () {
           '" value="' +
           IvuUI.escapeHtml(mapping.source_model || '') +
           '" placeholder="请输入原模型名称" /></div></td>' +
-          '<td><div class="ivu-select ivu-select-single" style="width:100%;">' +
-          '<div class="ivu-select-selection">' +
-          '<select class="proto-mapping-value proto-ivu-select-native" data-index="' +
+          '<td><select class="proto-mapping-value" data-index="' +
           index +
-          '" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
+          '" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;">' +
           '<option value="">请选择目标模型</option>' +
           (llm.models || [])
             .map(function (model) {
@@ -642,184 +504,63 @@ window.ClusterUpsert = (function () {
               );
             })
             .join('') +
-          '</select>' +
-          '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
-          '</div></div></td>' +
+          '</select></td>' +
           '<td style="width:80px;">' +
           '<button type="button" class="ivu-btn ivu-btn-error ivu-btn-small" data-action="remove-mapping" data-index="' +
           index +
-          '">' +
-          '<span>删除</span></button>' +
-          '</td>' +
-          '</tr>'
+          '"><span>删除</span></button></td></tr>'
         );
       })
       .join('');
 
-    // 模型多选（模拟 el-select multiple 标签式多选）
-    var selectedModels = llm.models || [];
-    var modelTagsHtml = selectedModels.length
-      ? selectedModels
-          .map(function (m) {
-            return (
-              '<span class="ivu-tag ivu-tag-primary ivu-tag-checked proto-model-tag">' +
-              '<span class="ivu-tag-text">' +
-              IvuUI.escapeHtml(m) +
-              '</span>' +
-              '<i class="ivu-icon ivu-icon-ios-close"></i></span>'
-            );
-          })
-          .join('')
-      : '<span class="proto-placeholder">请选择模型</span>';
-
-    var modelSelectHtml =
-      '<div class="proto-model-select-wrap" style="display:flex;align-items:center;gap:10px;">' +
-      '<div class="proto-model-select" id="proto-model-select" style="flex:1;min-height:32px;">' +
-      '<div class="proto-model-select-tags">' +
-      modelTagsHtml +
-      '</div>' +
-      '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
-      '</div>' +
-      '<button type="button" class="ivu-btn ivu-btn-primary" id="cluster-query-models"><span>获取</span></button>' +
-      '</div>';
-
-    // 服务鉴权 Keys 表格
     var keyRows = (llm.keys || [])
       .map(function (keyItem, index) {
         return (
           '<tr data-key-index="' +
           index +
           '">' +
-          '<td><div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-key-name" data-index="' +
+          '<td><select class="proto-key-name" data-index="' +
           index +
-          '" value="' +
-          IvuUI.escapeHtml(keyItem.name || '') +
-          '" placeholder="Key 名称" /></div></td>' +
-          '<td><div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-key-value" data-index="' +
-          index +
-          '" value="' +
-          IvuUI.escapeHtml(keyItem.key || '') +
-          '" placeholder="Key 值" autocomplete="new-password" /></div></td>' +
-          '<td style="width:120px;">' +
-          '<div class="ivu-input-number ivu-input-number-default" style="width:100%;">' +
-          '<div class="ivu-input-number-input-wrap">' +
-          '<input type="number" class="ivu-input-number-input proto-key-weight" data-index="' +
+          '" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;"' +
+          (provider ? '' : ' disabled') +
+          '>' +
+          providerKeys
+            .map(function (item) {
+              return (
+                '<option value="' +
+                IvuUI.escapeHtml(item.name) +
+                '"' +
+                (keyItem.name === item.name ? ' selected' : '') +
+                '>' +
+                IvuUI.escapeHtml(item.name) +
+                '</option>'
+              );
+            })
+            .join('') +
+          '</select></td>' +
+          '<td style="width:120px;"><input type="number" class="ivu-input proto-key-weight" data-index="' +
           index +
           '" min="0" max="100" value="' +
           (keyItem.weight != null ? keyItem.weight : 0) +
-          '" />' +
-          '</div></div>' +
-          '</td>' +
-          '<td style="width:80px;">' +
-          '<button type="button" class="ivu-btn ivu-btn-error ivu-btn-small" data-action="remove-key" data-index="' +
+          '" /></td>' +
+          '<td style="width:80px;"><button type="button" class="ivu-btn ivu-btn-error ivu-btn-small" data-action="remove-key" data-index="' +
           index +
-          '">' +
-          '<span>删除</span></button>' +
-          '</td>' +
-          '</tr>'
+          '"><span>删除</span></button></td></tr>'
         );
       })
       .join('');
 
-    // 计算 Key 权重总和
     var validKeys = (llm.keys || []).filter(function (k) {
-      return (k.name && k.name.trim()) || (k.key && k.key.trim());
+      return k.name && k.name.trim();
     });
     var keyWeightSum = validKeys.reduce(function (sum, k) {
       return sum + (Number(k.weight) || 0);
     }, 0);
-    var keyWeightTip = '';
-    if (validKeys.length > 0 && keyWeightSum !== 100) {
-      keyWeightTip =
-        '<p style="color:#ed4014;font-size:12px;margin:8px 0 0;">Key 权重总和必须等于 100</p>';
-    }
+    var keyWeightTip =
+      validKeys.length > 0 && keyWeightSum !== 100
+        ? '<p class="proto-keys-error" style="color:#ed4014;font-size:12px;margin:8px 0 0;">所有 Key 的权重之和必须等于 100</p>'
+        : '';
 
-    // 裁剪前缀 - Switch 开关
-    var stripSwitchHtml =
-      '<div class="ivu-switch' +
-      (llm.strip_prefix ? ' ivu-switch-checked' : '') +
-      '" id="proto-strip-prefix-switch">' +
-      '<span class="ivu-switch-inner"></span></div>';
-
-    var stripPrefixHtml =
-      IvuUI.formTopItem(
-        '裁剪前缀' + helpIcon('裁剪前缀配置'),
-        stripSwitchHtml,
-      ) +
-      (llm.strip_prefix
-        ? IvuUI.formTopItem(
-            '匹配前缀',
-            '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="llm.match_prefix" value="' +
-              IvuUI.escapeHtml(llm.match_prefix || '') +
-              '" placeholder="/v1/" /></div>',
-            true,
-          )
-        : '');
-
-    // 模型服务商类型下拉
-    var providerTypeSelectHtml =
-      '<div class="ivu-select ivu-select-single" style="width:100%;">' +
-      '<div class="ivu-select-selection">' +
-      '<select class="proto-field proto-ivu-select-native" data-field="llm.provider_type" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
-      '<option value="">请选择服务商类型</option>' +
-      providerTypes
-        .map(function (item) {
-          return (
-            '<option value="' +
-            item.type +
-            '"' +
-            (llm.provider_type === item.type ? ' selected' : '') +
-            '>' +
-            item.label +
-            '</option>'
-          );
-        })
-        .join('') +
-      '</select>' +
-      '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
-      '</div></div>';
-
-    // 价格关联提供商输入
-    var priceProviderHtml =
-      '<div class="ivu-input-wrapper ivu-input-type-text">' +
-      '<input type="text" class="ivu-input proto-field" data-field="llm.price_provider" value="' +
-      IvuUI.escapeHtml(llm.price_provider || '') +
-      '" placeholder="" />' +
-      '</div>';
-
-    // 模型列表接口区域
-    var endpointHtml =
-      '<div class="endpoint-url-group" style="display:flex;align-items:stretch;gap:0;">' +
-      '<div class="ivu-select ivu-select-single endpoint-protocol" style="width:90px;">' +
-      '<div class="ivu-select-selection">' +
-      '<select class="proto-field proto-ivu-select-native" data-field="llm.model_endpoint.schema" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
-      '<option value="http"' +
-      (llm.model_endpoint.schema === 'http' ? ' selected' : '') +
-      '>http://</option>' +
-      '<option value="https"' +
-      (llm.model_endpoint.schema === 'https' ? ' selected' : '') +
-      '>https://</option>' +
-      '</select>' +
-      '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
-      '</div></div>' +
-      '<span class="endpoint-host" title="' +
-      IvuUI.escapeHtml(ipStr) +
-      '" style="flex:1;border:1px solid #dcdee2;border-left:0;border-right:0;padding:0 10px;background:#f8f8f9;font-size:13px;color:#515a6e;line-height:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
-      IvuUI.escapeHtml(ipStr) +
-      '</span>' +
-      '<div class="ivu-input-wrapper ivu-input-type-text" style="width:180px;">' +
-      '<input type="text" class="ivu-input proto-field" data-field="llm.model_endpoint.uri" value="' +
-      IvuUI.escapeHtml(llm.model_endpoint.uri || '') +
-      '" placeholder="/v1/models" />' +
-      '</div>' +
-      '</div>' +
-      '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="cluster-add-header" style="margin-top:14px;margin-bottom:14px;">' +
-      '<span>+添加Header</span></button>' +
-      '<div class="header-controls">' +
-      headerRows +
-      '</div>';
-
-    // Key 策略（两列布局）
     var kp = llm.key_policy || {};
     var keyPolicyHtml =
       '<div class="llm-card-title">Key 策略</div>' +
@@ -827,15 +568,10 @@ window.ClusterUpsert = (function () {
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
       IvuUI.formTopItem(
         '策略',
-        '<div class="ivu-select ivu-select-single" style="width:100%;">' +
-          '<div class="ivu-select-selection">' +
-          '<select class="proto-field proto-ivu-select-native" data-field="llm.key_policy.strategy" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
+        '<select class="proto-field" data-field="llm.key_policy.strategy" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;">' +
           '<option value="weighted_random"' +
           (kp.strategy === 'weighted_random' ? ' selected' : '') +
-          '>weighted_random</option>' +
-          '</select>' +
-          '<span class="proto-select-arrow" aria-hidden="true">▾</span>' +
-          '</div></div>',
+          '>weighted_random</option></select>',
       ) +
       '</div>' +
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
@@ -846,8 +582,7 @@ window.ClusterUpsert = (function () {
           'class="proto-field" data-field="llm.key_policy.max_retries" min="0"',
         ),
       ) +
-      '</div>' +
-      '</div>' +
+      '</div></div>' +
       '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
       '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
       IvuUI.formTopItem(
@@ -866,91 +601,143 @@ window.ClusterUpsert = (function () {
           'class="proto-field" data-field="llm.key_policy.retry_backoff_max" min="0"',
         ),
       ) +
-      '</div>' +
-      '</div>';
+      '</div></div>';
 
-    // 组合：模型服务配置
-    var modelServiceCard =
-      '<div class="llm-card">' +
-      '<div class="llm-card-title">模型服务配置</div>' +
-      '<div class="llm-card-body">' +
-      IvuUI.formTop(
-        IvuUI.formTopItem(
-          '模型服务商类型' + helpIcon('模型服务商类型说明'),
-          providerTypeSelectHtml,
-        ) +
-          IvuUI.formTopItem(
-            '价格关联提供商' + helpIcon('用于模型价格关联的服务商标识'),
-            priceProviderHtml,
-          ) +
-          stripPrefixHtml +
-          IvuUI.formTopItem('模型列表接口', endpointHtml) +
-          IvuUI.formTopItem('模型', modelSelectHtml, true),
+    var ka = llm.key_affinity || {};
+    function ivuSelectNative(field, value, options) {
+      return (
+        '<div class="ivu-select ivu-select-single" style="width:100%;">' +
+        '<div class="ivu-select-selection">' +
+        '<select class="proto-field proto-ivu-select-native" data-field="' +
+        field +
+        '" style="width:100%;height:32px;border:0;background:transparent;padding:0 24px 0 8px;appearance:none;">' +
+        options
+          .map(function (opt) {
+            return (
+              '<option value="' +
+              IvuUI.escapeHtml(opt.value) +
+              '"' +
+              (opt.value === String(value) ? ' selected' : '') +
+              '>' +
+              IvuUI.escapeHtml(opt.label) +
+              '</option>'
+            );
+          })
+          .join('') +
+        '</select></div></div>'
+      );
+    }
+
+    var keyAffinityHtml =
+      '<div class="llm-card-title">Key 亲和性</div>' +
+      '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
+      '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+      IvuUI.formTopItem(
+        '是否启用' +
+          helpIcon(
+            '开启后，同一会话的请求将绑定到同一 Key，避免会话内切换时 Key 漂移',
+          ),
+        ivuSelectNative('llm.key_affinity.enabled', ka.enabled, [
+          { value: 'false', label: '停用' },
+          { value: 'true', label: '启用' },
+        ]),
       ) +
-      '</div>' +
-      '</div>';
+      '</div></div>' +
+      (ka.enabled
+        ? '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
+          '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+          IvuUI.formTopItem(
+            '空闲超时(秒)',
+            IvuUI.inputNumber(
+              ka.ttl,
+              'class="proto-field" data-field="llm.key_affinity.ttl" min="1"',
+            ),
+          ) +
+          '</div>' +
+          '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+          IvuUI.formTopItem(
+            'Key 惩罚' +
+              helpIcon('开启后，失败的 Key 会被临时惩罚，降低再次被选中概率'),
+            ivuSelectNative(
+              'llm.key_affinity.penalty_enable',
+              ka.penalty_enable,
+              [
+                { value: 'false', label: '关闭' },
+                { value: 'true', label: '开启' },
+              ],
+            ),
+          ) +
+          '</div></div>' +
+          '<div class="ivu-row" style="margin-left:-12px;margin-right:-12px;">' +
+          '<div class="ivu-col ivu-col-span-12" style="padding:0 12px;">' +
+          IvuUI.formTopItem(
+            'Redis Key 前缀',
+            '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="llm.key_affinity.redis_prefix" value="' +
+              IvuUI.escapeHtml(ka.redis_prefix || '') +
+              '" /></div>',
+            true,
+          ) +
+          '</div></div>'
+        : '');
 
-    // 模型重定向 Card
-    var modelRedirectCard =
-      '<div class="llm-card">' +
-      '<div class="llm-card-title">模型重定向</div>' +
-      '<div class="llm-card-body">' +
-      '<table class="mapping-table" style="width:100%;border-collapse:collapse;border:1px solid #e7e9f0;">' +
-      '<thead><tr style="background:#f8f8f9;">' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;">原请求的模型名称</th>' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;">转发的后端模型名称</th>' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;width:80px;">操作</th>' +
-      '</tr></thead>' +
-      '<tbody id="cluster-mapping-body">' +
-      mappingRows +
-      '</tbody>' +
-      '</table>' +
-      '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="cluster-add-mapping" style="margin-top:20px;">' +
-      '<span>+添加</span></button>' +
-      '</div>' +
-      '</div>';
-
-    // 服务鉴权 Keys Card
-    var authKeysCard =
-      '<div class="llm-card">' +
-      '<div class="llm-card-title">服务鉴权 Keys</div>' +
-      '<div class="llm-card-body">' +
-      '<table class="keys-table" style="width:100%;border-collapse:collapse;border:1px solid #e7e9f0;">' +
-      '<thead><tr style="background:#f8f8f9;">' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;">Key 名称</th>' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;">Key 值</th>' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;width:120px;">权重</th>' +
-      '<th style="border:1px solid #e7e9f0;padding:10px 20px;text-align:left;font-weight:500;color:#515a6e;width:80px;">操作</th>' +
-      '</tr></thead>' +
-      '<tbody id="cluster-keys-body">' +
-      keyRows +
-      '</tbody>' +
-      '</table>' +
-      keyWeightTip +
-      '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="cluster-add-key" style="margin-top:20px;">' +
-      '<span>+添加 Key</span></button>' +
-      '</div>' +
-      '</div>';
-
-    // Key 策略 Card
-    var keyPolicyCard =
-      '<div class="llm-card">' +
-      '<div class="llm-card-body">' +
-      keyPolicyHtml +
-      '</div>' +
-      '</div>';
+    var instanceHint = '';
+    // if (provider && provider.instance_pool && provider.instance_pool.length) {
+    //   instanceHint =
+    //     '<p style="color:#808695;font-size:12px;margin:0 0 12px;">后端实例由服务商管理：' +
+    //     provider.instance_pool
+    //       .map(function (item) {
+    //         return IvuUI.escapeHtml(item.addr + ':' + item.port);
+    //       })
+    //       .join('、') +
+    //     '。如需调整请前往「模型服务商」。</p>';
+    // }
 
     return (
       '<div class="gateway-config">' +
-      modelServiceCard +
-      modelRedirectCard +
-      authKeysCard +
-      keyPolicyCard +
+      '<div class="llm-card"><div class="llm-card-title">模型服务配置</div><div class="llm-card-body">' +
+      instanceHint +
+      IvuUI.formTop(
+        IvuUI.formTopItem(
+          '所属服务商' + helpIcon('必填，引用 /providers 中已存在的服务商'),
+          providerSelectHtml,
+          true,
+        ) +
+          IvuUI.formTopItem(
+            '转发模型' +
+              helpIcon('多选；选择所属服务商后展示该服务商的模型列表'),
+            modelSelectHtml,
+            true,
+          ) +
+          stripPrefixHtml,
+      ) +
+      '</div></div>' +
+      '<div class="llm-card"><div class="llm-card-title">模型重定向</div><div class="llm-card-body">' +
+      '<table class="mapping-table" style="width:100%;border-collapse:collapse;border:1px solid #e7e9f0;">' +
+      '<thead><tr style="background:#f8f8f9;"><th>原请求的模型名称</th><th>转发的后端模型名称</th><th style="width:80px;">操作</th></tr></thead>' +
+      '<tbody>' +
+      mappingRows +
+      '</tbody></table>' +
+      '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="cluster-add-mapping" style="margin-top:20px;"><span>+添加</span></button>' +
+      '</div></div>' +
+      '<div class="llm-card"><div class="llm-card-title">Keys配置</div><div class="llm-card-body">' +
+      '<table class="keys-table" style="width:100%;border-collapse:collapse;border:1px solid #e7e9f0;">' +
+      '<thead><tr style="background:#f8f8f9;"><th>Key</th><th style="width:120px;">权重</th><th style="width:80px;">操作</th></tr></thead>' +
+      '<tbody>' +
+      keyRows +
+      '</tbody></table>' +
+      '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="cluster-add-key" style="margin-top:20px;"><span>+添加 Key</span></button>' +
+      keyWeightTip +
+      '</div></div>' +
+      '<div class="llm-card"><div class="llm-card-body">' +
+      keyPolicyHtml +
+      '</div></div>' +
+      '<div class="llm-card"><div class="llm-card-body">' +
+      keyAffinityHtml +
+      '</div></div>' +
       '</div>'
     );
   }
 
-  // ============ 复查 & 详情 ============
   function renderReviewPanel(title, rowsHtml) {
     return (
       '<div class="panel"><div class="panel-header">' +
@@ -971,42 +758,12 @@ window.ClusterUpsert = (function () {
     );
   }
 
-  function renderInstanceReviewTable(instances) {
-    if (!instances || !instances.length) {
-      return '<span class="empty-text">-</span>';
-    }
-    var rows = instances
-      .map(function (item) {
-        var port =
-          item.ports && item.ports.Default != null ? item.ports.Default : '-';
-        var weight = item.weight != null ? item.weight : '-';
-        return (
-          '<tr><td>' +
-          IvuUI.escapeHtml(item.ip || '-') +
-          '</td><td>' +
-          IvuUI.escapeHtml(port) +
-          '</td><td>' +
-          IvuUI.escapeHtml(weight) +
-          '</td></tr>'
-        );
-      })
-      .join('');
-    return (
-      '<div class="formBox review-instance-table"><table border="0" cellspacing="0" cellpadding="0">' +
-      '<tr><th>IP地址</th><th>端口</th><th>权重</th></tr>' +
-      rows +
-      '</table></div>'
-    );
-  }
-
   function renderReview(data) {
     ensurePrefilledData(data);
     var b = data.baseConfigData;
     var h = data.passiveHealthData;
     var llm = data.llmConfigData;
-    var ipStr = getInstanceIpStr(data);
-    var providerTypes = getProviderTypes();
-
+    var provider = getProviderByName(llm.provider);
     var stickyEnabled =
       b.sticky_sessions && b.sticky_sessions.enabled === 'true';
 
@@ -1045,20 +802,9 @@ window.ClusterUpsert = (function () {
     var healthRows =
       reviewRow('故障阈值', h.failnum) +
       reviewRow('健康检查间隔(ms)', h.interval) +
-      reviewRow('健康检查Host', h.host) +
+      reviewRow('健康检查Host', h.host || '（使用所属服务商首个实例）') +
       reviewRow('健康检查Uri', h.uri) +
       reviewRow('健康检查期望的状态码', h.statuscode);
-
-    var instanceRows =
-      reviewRow(
-        '实例形态',
-        data.instanceMode === 'domain' ? '服务商域名' : 'IP',
-      ) +
-      (data.instanceMode === 'domain'
-        ? reviewRow('服务商域名', data.domainName)
-        : '<ul class="clearFloat detail-row detail-row-block instance-ip-list-row"><li class="title">实例IP列表:</li><li class="value">' +
-          renderInstanceReviewTable(data.instancePoolData) +
-          '</li></ul>');
 
     var modelsHtml =
       (llm.models || [])
@@ -1069,97 +815,77 @@ window.ClusterUpsert = (function () {
         })
         .join('') || '<span class="empty-text">-</span>';
 
-    // 服务商类型文字
-    var providerTypeLabel = '-';
-    if (llm.provider_type) {
-      var pt = providerTypes.find(function (item) {
-        return item.type === llm.provider_type;
-      });
-      providerTypeLabel = pt ? pt.label : llm.provider_type;
-    }
-
-    // Header 显示（脱敏）
-    var headerDisplay = '-';
-    if (data.headerList && data.headerList.length) {
-      var hdrs = data.headerList
-        .filter(function (h) {
-          return h.key;
-        })
-        .map(function (h) {
-          return (
-            IvuUI.escapeHtml(h.key) +
-            ': ' +
-            IvuUI.escapeHtml(maskSecretKey(h.value))
-          );
-        });
-      if (hdrs.length) headerDisplay = hdrs.join('; ');
-    }
-
-    // Keys 表格
     var keysHtml = '<span class="empty-text">-</span>';
-    if (llm.keys && llm.keys.length) {
-      var validKs = llm.keys.filter(function (k) {
-        return (k.name && k.name.trim()) || (k.key && k.key.trim());
-      });
-      if (validKs.length) {
-        keysHtml =
-          '<table class="mapping-table"><thead><tr><th>Key 名称</th><th>Key 值</th><th>权重</th></tr></thead><tbody>' +
-          validKs
-            .map(function (item) {
-              return (
-                '<tr><td>' +
-                IvuUI.escapeHtml(item.name || '') +
-                '</td><td>' +
-                IvuUI.escapeHtml(maskSecretKey(item.key || '')) +
-                '</td><td>' +
-                IvuUI.escapeHtml(item.weight || 0) +
-                '</td></tr>'
-              );
-            })
-            .join('') +
-          '</tbody></table>';
-      }
+    var validKs = (llm.keys || []).filter(function (k) {
+      return k.name && k.name.trim();
+    });
+    if (validKs.length) {
+      keysHtml =
+        '<table class="mapping-table"><thead><tr><th>Key</th><th>权重</th></tr></thead><tbody>' +
+        validKs
+          .map(function (item) {
+            return (
+              '<tr><td>' +
+              IvuUI.escapeHtml(item.name || '') +
+              '</td><td>' +
+              IvuUI.escapeHtml(item.weight || 0) +
+              '</td></tr>'
+            );
+          })
+          .join('') +
+        '</tbody></table>';
     }
 
-    // Key 策略
     var kp = llm.key_policy || {};
     var keyPolicyHtml =
       '<ul class="clearFloat detail-row detail-row-block policy-row"><li class="title">Key 策略:</li><li class="value">' +
       '<div class="policy-card" style="border:1px solid #e7e9f0;border-radius:4px;padding:12px;background:#fafafa;">' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px 24px;">' +
-      '<div><span style="color:#515a6e;">策略：</span>' +
+      '<div>策略：' +
       IvuUI.escapeHtml(kp.strategy || 'weighted_random') +
       '</div>' +
-      '<div><span style="color:#515a6e;">最大重试次数：</span>' +
+      '<div>最大重试次数：' +
       IvuUI.escapeHtml(kp.max_retries != null ? kp.max_retries : 0) +
       '</div>' +
-      '<div><span style="color:#515a6e;">初始退避时间(ms)：</span>' +
+      '<div>初始退避时间(ms)：' +
       IvuUI.escapeHtml(
         kp.retry_backoff_initial != null ? kp.retry_backoff_initial : 500,
       ) +
       '</div>' +
-      '<div><span style="color:#515a6e;">最大退避时间(ms)：</span>' +
+      '<div>最大退避时间(ms)：' +
       IvuUI.escapeHtml(
         kp.retry_backoff_max != null ? kp.retry_backoff_max : 5000,
       ) +
+      '</div></div></div></li></ul>';
+
+    var ka = llm.key_affinity || {};
+    var keyAffinityHtml =
+      '<ul class="clearFloat detail-row detail-row-block policy-row"><li class="title">Key 亲和性:</li><li class="value">' +
+      '<div class="policy-card" style="border:1px solid #e7e9f0;border-radius:4px;padding:12px;background:#fafafa;">' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px 24px;">' +
+      '<div>启用：' +
+      (ka.enabled ? '开启' : '关闭') +
       '</div>' +
-      '</div>' +
-      '</div>' +
-      '</li></ul>';
+      (ka.enabled
+        ? '<div>绑定空闲超时(秒)：' +
+          IvuUI.escapeHtml(ka.ttl != null ? ka.ttl : 600) +
+          '</div>' +
+          '<div>Redis Key 前缀：' +
+          IvuUI.escapeHtml(ka.redis_prefix || 'bfe:ai:key_affinity') +
+          '</div>' +
+          '<div>Key 惩罚：' +
+          (ka.penalty_enable ? '开启' : '关闭') +
+          '</div>'
+        : '') +
+      '</div></div></div></li></ul>';
 
     var llmRows =
-      reviewRow('模型服务商类型', providerTypeLabel) +
-      reviewRow('价格关联提供商', llm.price_provider || '-') +
-      reviewRow('裁剪前缀', llm.strip_prefix ? '开启' : '关闭') +
-      (llm.strip_prefix ? reviewRow('匹配前缀', llm.match_prefix || '-') : '') +
-      reviewRow(
-        '模型列表接口',
-        llm.model_endpoint.schema + '://' + ipStr + llm.model_endpoint.uri,
-      ) +
-      reviewRow('请求头', headerDisplay) +
-      '<ul class="clearFloat detail-row"><li class="title">模型:</li><li class="value">' +
+      reviewRow('所属服务商', llm.provider || '-') +
+      '<ul class="clearFloat detail-row"><li class="title">转发模型:</li><li class="value">' +
       modelsHtml +
       '</li></ul>' +
+      reviewRow('裁剪前缀', llm.strip_prefix ? '开启' : '关闭') +
+      (llm.strip_prefix ? reviewRow('匹配前缀', llm.match_prefix || '-') : '') +
       '<ul class="clearFloat detail-row detail-row-block"><li class="title">模型重定向:</li><li class="value">' +
       (llm.model_mappings && llm.model_mappings.length
         ? '<table class="mapping-table"><thead><tr><th>原请求的模型名称</th><th>转发的后端模型名称</th></tr></thead><tbody>' +
@@ -1180,20 +906,19 @@ window.ClusterUpsert = (function () {
       '<ul class="clearFloat detail-row detail-row-block"><li class="title">服务鉴权 Keys:</li><li class="value">' +
       keysHtml +
       '</li></ul>' +
-      keyPolicyHtml;
+      keyPolicyHtml +
+      keyAffinityHtml;
 
     return (
       '<div class="Review">' +
       renderReviewPanel('基本配置', basicRows) +
       renderReviewPanel('超时和重传', timeoutRows) +
       renderReviewPanel('被动健康检查', healthRows) +
-      renderReviewPanel('实例配置', instanceRows) +
       renderReviewPanel('大模型配置', llmRows) +
       '</div>'
     );
   }
 
-  // ============ 数据同步 ============
   function setNestedValue(obj, path, value) {
     var parts = path.split('.');
     var current = obj;
@@ -1208,111 +933,56 @@ window.ClusterUpsert = (function () {
     root.querySelectorAll('.proto-field').forEach(function (field) {
       var path = field.getAttribute('data-field');
       if (!path) return;
-      var value;
-      if (field.tagName === 'SELECT' && field.multiple) {
-        value = Array.from(field.selectedOptions).map(function (opt) {
-          return opt.value;
-        });
-      } else if (field.tagName === 'SELECT') {
-        value = field.value;
-      } else if (field.type === 'number') {
-        value = field.value === '' ? null : Number(field.value);
-      } else if (field.type === 'checkbox') {
-        value = field.checked;
-      } else {
-        value = field.value;
-      }
-
-      // strip_prefix 特殊处理：转为 boolean
-      if (path === 'llm.strip_prefix') {
-        value = value === 'true';
-      }
-
+      var value =
+        field.tagName === 'SELECT'
+          ? field.value
+          : field.type === 'number'
+          ? field.value === ''
+            ? null
+            : Number(field.value)
+          : field.value;
       if (path.indexOf('base.') === 0)
         setNestedValue(data.baseConfigData, path.slice(5), value);
       else if (path.indexOf('health.') === 0)
         data.passiveHealthData[path.slice(7)] = value;
-      else if (path === 'instanceMode') data.instanceMode = value;
-      else if (path === 'domainName') data.domainName = value;
       else if (path.indexOf('llm.') === 0) {
         var key = path.slice(4);
-        if (key.indexOf('model_endpoint.') === 0) {
-          if (!data.llmConfigData.model_endpoint)
-            data.llmConfigData.model_endpoint = {};
-          data.llmConfigData.model_endpoint[key.slice(15)] = value;
-        } else if (key.indexOf('key_policy.') === 0) {
+        if (key.indexOf('key_policy.') === 0) {
           if (!data.llmConfigData.key_policy)
             data.llmConfigData.key_policy = {};
           data.llmConfigData.key_policy[key.slice(11)] = value;
-        } else if (key === 'strip_prefix') {
-          data.llmConfigData.strip_prefix = value;
+        } else if (key.indexOf('key_affinity.') === 0) {
+          if (!data.llmConfigData.key_affinity)
+            data.llmConfigData.key_affinity = {};
+          var kaKey = key.slice(13);
+          if (kaKey === 'enabled' || kaKey === 'penalty_enable') {
+            data.llmConfigData.key_affinity[kaKey] =
+              value === 'true' || value === true;
+          } else {
+            data.llmConfigData.key_affinity[kaKey] = value;
+          }
         } else {
           data.llmConfigData[key] = value;
         }
       }
     });
 
-    // 实例列表
-    if (data.instanceMode !== 'domain') {
-      var ipInputs = root.querySelectorAll('.proto-instance-ip');
-      if (ipInputs.length) {
-        data.instancePoolData = [];
-        ipInputs.forEach(function (input) {
-          var index = parseInt(input.getAttribute('data-index'), 10);
-          var portInput = root.querySelector(
-            '.proto-instance-port[data-index="' + index + '"]',
-          );
-          var weightInput = root.querySelector(
-            '.proto-instance-weight[data-index="' + index + '"]',
-          );
-          data.instancePoolData.push({
-            ip: input.value.trim(),
-            ports: { Default: portInput ? Number(portInput.value) : 80 },
-            hostname: '',
-            weight: weightInput
-              ? weightInput.value === ''
-                ? 0
-                : Number(weightInput.value)
-              : 100,
-            tags: { key: 'value' },
-          });
-        });
-      }
-    }
-
-    // Header 列表
-    data.headerList = [];
-    root.querySelectorAll('.header-pair').forEach(function (pair, index) {
-      var keyInput = pair.querySelector('.proto-header-key');
-      var valueInput = pair.querySelector('.proto-header-value');
-      data.headerList.push({
-        key: keyInput ? keyInput.value : '',
-        value: valueInput ? valueInput.value : '',
-        originalValue: pair.getAttribute('data-original-value') || '',
-        valueModified: pair.getAttribute('data-modified') === 'true',
-      });
-    });
-
-    // 模型映射
     data.llmConfigData.model_mappings = [];
     root.querySelectorAll('[data-mapping-index]').forEach(function (row) {
-      var keyInput = row.querySelector('.proto-mapping-key');
-      var valueSelect = row.querySelector('.proto-mapping-value');
       data.llmConfigData.model_mappings.push({
-        source_model: keyInput ? keyInput.value : '',
-        target_model: valueSelect ? valueSelect.value : '',
+        source_model:
+          (row.querySelector('.proto-mapping-key') || {}).value || '',
+        target_model:
+          (row.querySelector('.proto-mapping-value') || {}).value || '',
       });
     });
 
-    // Keys 表格
     data.llmConfigData.keys = [];
     root.querySelectorAll('[data-key-index]').forEach(function (row) {
       var nameInput = row.querySelector('.proto-key-name');
-      var valueInput = row.querySelector('.proto-key-value');
       var weightInput = row.querySelector('.proto-key-weight');
       data.llmConfigData.keys.push({
         name: nameInput ? nameInput.value : '',
-        key: valueInput ? valueInput.value : '',
         weight: weightInput
           ? weightInput.value === ''
             ? 0
@@ -1322,21 +992,15 @@ window.ClusterUpsert = (function () {
     });
   }
 
-  // ============ 校验 ============
   function validateStep0(data, isAdd, clusterNames) {
     var b = data.baseConfigData;
     var name = (b.name || '').trim();
-    if (!name) {
-      return '请输入集群名称';
-    }
+    if (!name) return '请输入集群名称';
     if (!validateClusterNameFormat(name)) {
-      return '集群名称格式不正确：1-64个字符，以字母或数字开头，支持字母、数字、下划线、连字符、点';
+      return '集群名称格式不正确：1-64个字符，字母或数字开头结尾，允许字母、数字、_、-、.';
     }
-    if (isAdd) {
-      var names = clusterNames || [];
-      if (names.indexOf(name) !== -1) {
-        return '集群名称已存在，请更换名称';
-      }
+    if (isAdd && (clusterNames || []).indexOf(name) !== -1) {
+      return '集群名称已存在，请更换名称';
     }
     if (!validateDescription(b.description || '')) {
       return '集群说明长度不能超过 256 个字符，且不能包含控制字符';
@@ -1344,86 +1008,115 @@ window.ClusterUpsert = (function () {
     if (
       b.sticky_sessions &&
       b.sticky_sessions.enabled === 'true' &&
-      b.sticky_sessions.hash_strategy !== 'CLIENT_IP_ONLY'
+      b.sticky_sessions.hash_strategy !== 'CLIENT_IP_ONLY' &&
+      !(b.sticky_sessions.hash_header || '').trim()
     ) {
-      if (
-        !b.sticky_sessions.hash_header ||
-        !b.sticky_sessions.hash_header.trim()
-      ) {
-        return '请输入哈希头部';
-      }
+      return '请输入哈希头部';
+    }
+    var buf = Number(b.buffers && b.buffers.req_write_buffer_size);
+    if (!Number.isFinite(buf) || buf <= 0) {
+      return '请求写缓存大小须为大于 0 的整数';
+    }
+    var idle = Number(b.connection && b.connection.max_idle_conn_per_rs);
+    if (!Number.isFinite(idle) || idle < 0) {
+      return '单个后端最大空闲连接数须为 >=0 的整数';
     }
     return null;
   }
 
-  function validateStep3(data) {
-    if (data.instanceMode === 'domain') {
-      if (!data.domainName || !data.domainName.trim()) {
-        return '请输入服务商域名';
+  function validateTimeouts(data) {
+    var t = data.baseConfigData.timeouts || {};
+    var timeoutFields = [
+      ['timeout_read_client_again', '客户端连接空闲超时'],
+      ['timeout_readbody_client', '读客户端请求Body超时'],
+      ['timeout_conn_serv', '连接后端超时'],
+      ['timeout_response_header', '读后端响应头部超时'],
+      ['timeout_write_client', '写客户端响应Body超时'],
+    ];
+    for (var i = 0; i < timeoutFields.length; i++) {
+      var val = Number(t[timeoutFields[i][0]]);
+      if (!Number.isFinite(val) || val <= 0) {
+        return timeoutFields[i][1] + '须为大于 0 的整数';
       }
-      return null;
     }
-    var instances = data.instancePoolData || [];
-    if (!instances.length) return '至少需要一个实例';
-
-    // IP + 端口 非空 & 组合重复校验
-    var ipPortSet = {};
-    for (var i = 0; i < instances.length; i++) {
-      var ip = (instances[i].ip || '').trim();
-      var port =
-        instances[i].port || (instances[i].ports && instances[i].ports.Default);
-      if (!ip) return '第 ' + (i + 1) + ' 行请输入 IP 地址';
-      var key = ip + ':' + port;
-      if (ipPortSet[key]) return '实例重复：' + ip + ':' + port;
-      ipPortSet[key] = true;
+    var retries = Number(
+      data.baseConfigData.retries &&
+        data.baseConfigData.retries.max_retry_in_cluster,
+    );
+    if (!Number.isFinite(retries) || retries < 0) {
+      return '同集群重试次数须为 >=0 的整数';
     }
-
-    // 权重总和校验
-    var weightSum = instances.reduce(function (sum, item) {
-      return sum + (Number(item.weight) || 0);
-    }, 0);
-    if (weightSum !== 100) {
-      return '所有实例权重之和必须等于 100，当前为 ' + weightSum;
-    }
-
     return null;
   }
 
-  function validateStep4(data) {
+  function validateHealth(data) {
+    var h = data.passiveHealthData || {};
+    var failnum = Number(h.failnum);
+    if (!Number.isFinite(failnum) || failnum < 0) {
+      return '故障阈值须为 >=0 的整数';
+    }
+    var interval = Number(h.interval);
+    if (!Number.isFinite(interval) || interval < 0) {
+      return '健康检查间隔须为 >=0 的整数';
+    }
+    var uri = (h.uri || '').trim();
+    if (!uri || uri.charAt(0) !== '/') {
+      return '健康检查 Uri 非空且必须以 / 开头';
+    }
+    var statuscode = Number(h.statuscode);
+    if (
+      !Number.isFinite(statuscode) ||
+      !(statuscode === 0 || (statuscode >= 100 && statuscode <= 599))
+    ) {
+      return '健康检查状态码须为 0 或 100-599';
+    }
+    return null;
+  }
+
+  function validateGateway(data) {
     var llm = data.llmConfigData;
+    if (!llm.provider) return '请选择所属服务商';
+    var provider = getProviderByName(llm.provider);
+    if (!provider) return '所选服务商不存在';
 
-    // 裁剪前缀时匹配前缀必填
     if (llm.strip_prefix) {
       if (!llm.match_prefix || !llm.match_prefix.trim()) {
         return '开启裁剪前缀时，匹配前缀必填';
       }
-      if (!llm.match_prefix.endsWith('/')) {
+      if (llm.match_prefix.slice(-1) !== '/') {
         return '匹配前缀必须以 / 结尾';
       }
     }
 
-    // 模型多选至少选一个
-    if (!llm.models || !llm.models.length) {
-      return '请至少选择一个模型';
-    }
-
-    // Key 名称重复校验
-    var keys = llm.keys || [];
-    var validKeys = keys.filter(function (k) {
-      return (k.name && k.name.trim()) || (k.key && k.key.trim());
-    });
-    var nameSet = {};
-    for (var i = 0; i < validKeys.length; i++) {
-      var nm = (validKeys[i].name || '').trim();
-      if (nm) {
-        if (nameSet[nm]) return 'Key 名称不能重复：' + nm;
-        nameSet[nm] = true;
+    if (!llm.models || !llm.models.length) return '请至少选择一个模型';
+    var providerModels = provider.models || [];
+    for (var i = 0; i < llm.models.length; i++) {
+      if (providerModels.indexOf(llm.models[i]) === -1) {
+        return '模型 ' + llm.models[i] + ' 不在所属服务商的 models 中';
       }
     }
 
-    // Key 权重总和校验
-    if (validKeys.length > 0) {
-      var keyWeightSum = validKeys.reduce(function (sum, k) {
+    var keys = (llm.keys || []).filter(function (k) {
+      return k.name && k.name.trim();
+    });
+    var nameSet = {};
+    var providerKeyNames = (provider.keys || []).map(function (item) {
+      return item.name;
+    });
+    for (var j = 0; j < keys.length; j++) {
+      var nm = keys[j].name.trim();
+      if (providerKeyNames.indexOf(nm) === -1) {
+        return 'Key ' + nm + ' 不在所属服务商的 keys 中';
+      }
+      if (nameSet[nm]) return 'Key 名称不能重复：' + nm;
+      nameSet[nm] = true;
+      var kw = Number(keys[j].weight);
+      if (!Number.isFinite(kw) || kw < 0 || kw > 100) {
+        return 'Key 权重须为 0–100';
+      }
+    }
+    if (keys.length > 0) {
+      var keyWeightSum = keys.reduce(function (sum, k) {
         return sum + (Number(k.weight) || 0);
       }, 0);
       if (keyWeightSum !== 100) {
@@ -1431,18 +1124,13 @@ window.ClusterUpsert = (function () {
       }
     }
 
-    // Key 策略退避时间校验
     var kp = llm.key_policy || {};
-    var initial = Number(kp.retry_backoff_initial);
-    var maxB = Number(kp.retry_backoff_max);
-    if (!isNaN(initial) && !isNaN(maxB) && maxB < initial) {
+    if (Number(kp.retry_backoff_max) < Number(kp.retry_backoff_initial)) {
       return '最大退避时间必须大于或等于初始退避时间';
     }
-
     return null;
   }
 
-  // ============ 步骤按钮 ============
   function renderActionButtons(currentStep, reviewStepIndex) {
     return (
       (currentStep === reviewStepIndex
@@ -1472,7 +1160,6 @@ window.ClusterUpsert = (function () {
     );
   }
 
-  // ============ mount ============
   function mount(bodyEl, footerEl, options) {
     options = options || {};
     var state = {
@@ -1492,10 +1179,8 @@ window.ClusterUpsert = (function () {
         case 2:
           return renderPassiveHealth(state.data);
         case 3:
-          return renderInstancePool(state.data);
-        case 4:
           return renderGatewayConfig(state.data);
-        case 5:
+        case 4:
           return renderReview(state.data);
         default:
           return '';
@@ -1510,8 +1195,7 @@ window.ClusterUpsert = (function () {
         '</div>' +
         '<footer class="cluster-steps-footer"><div class="ivu-steps ivu-steps-horizontal">' +
         IvuUI.clusterSteps(STEP_DEFS, state.currentStep) +
-        '</div></footer>' +
-        '</div>';
+        '</div></footer></div>';
     }
 
     function renderFooter() {
@@ -1534,21 +1218,20 @@ window.ClusterUpsert = (function () {
       if (nextBtn)
         nextBtn.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
-
-          // 步骤校验
           var err = null;
           if (state.currentStep === 0) {
             err = validateStep0(state.data, state.isAdd, state.clusterNames);
+          } else if (state.currentStep === 1) {
+            err = validateTimeouts(state.data);
+          } else if (state.currentStep === 2) {
+            err = validateHealth(state.data);
           } else if (state.currentStep === 3) {
-            err = validateStep3(state.data);
-          } else if (state.currentStep === 4) {
-            err = validateStep4(state.data);
+            err = validateGateway(state.data);
           }
           if (err) {
             Prototype.toast(err, 'error');
             return;
           }
-
           state.currentStep += 1;
           render();
         });
@@ -1569,7 +1252,6 @@ window.ClusterUpsert = (function () {
             options.onSubmit(state.data);
         });
 
-      // 基本配置：会话保持开关切换
       var stickyEnabledSelect = bodyEl.querySelector(
         '[data-field="base.sticky_sessions.enabled"]',
       );
@@ -1579,7 +1261,6 @@ window.ClusterUpsert = (function () {
           render();
         });
 
-      // 哈希策略切换
       var hashStrategySelect = bodyEl.querySelector(
         '[data-field="base.sticky_sessions.hash_strategy"]',
       );
@@ -1589,90 +1270,93 @@ window.ClusterUpsert = (function () {
           render();
         });
 
-      // 实例形态切换
-      var modeSelect = bodyEl.querySelector('#cluster-instance-mode');
-      if (modeSelect)
-        modeSelect.addEventListener('change', function () {
+      var providerSelect = bodyEl.querySelector('#cluster-provider-select');
+      if (providerSelect)
+        providerSelect.addEventListener('change', function () {
           syncFromDom(bodyEl, state.data);
+          var next = getProviderByName(state.data.llmConfigData.provider);
+          var nextModels = next && next.models ? next.models : [];
+          var prevModels = state.data.llmConfigData.models || [];
+          state.data.llmConfigData.models = prevModels.filter(function (model) {
+            return nextModels.indexOf(model) !== -1;
+          });
+          state.data.llmConfigData.keys =
+            next && next.keys && next.keys.length
+              ? [{ name: next.keys[0].name, weight: 100 }]
+              : [{ name: '', weight: 100 }];
           render();
         });
 
-      // 添加实例
-      var addInstanceBtn = bodyEl.querySelector('#cluster-add-instance');
-      if (addInstanceBtn)
-        addInstanceBtn.addEventListener('click', function () {
-          syncFromDom(bodyEl, state.data);
-          state.data.instancePoolData.push({
-            ip: '',
-            ports: { Default: 80 },
-            hostname: '',
-            weight: 0,
-            tags: { key: 'value' },
+      function bindForwardModelSelect(keepOpen) {
+        var wrap = bodyEl.querySelector('.proto-forward-model-select');
+        if (!wrap || wrap.classList.contains('ivu-select-disabled')) return;
+        var dropdown = wrap.querySelector('.proto-forward-model-dropdown');
+        var toggle = wrap.querySelector('.proto-forward-model-toggle');
+        if (keepOpen && dropdown) dropdown.style.display = 'block';
+
+        if (toggle) {
+          toggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (e.target.closest('.proto-forward-model-remove')) return;
+            if (!dropdown) return;
+            dropdown.style.display =
+              dropdown.style.display === 'none' ? 'block' : 'none';
           });
-          render();
-        });
+        }
 
-      // 删除实例
-      bodyEl
-        .querySelectorAll('[data-action="remove-instance"]')
-        .forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            syncFromDom(bodyEl, state.data);
-            var index = parseInt(btn.getAttribute('data-index'), 10);
-            state.data.instancePoolData.splice(index, 1);
-            render();
+        wrap
+          .querySelectorAll('.proto-forward-model-option')
+          .forEach(function (item) {
+            item.addEventListener('click', function (e) {
+              e.stopPropagation();
+              var value = item.getAttribute('data-value');
+              if (!value) return;
+              syncFromDom(bodyEl, state.data);
+              if (value === '__SELECT_ALL__') {
+                var prov = getProviderByName(state.data.llmConfigData.provider);
+                state.data.llmConfigData.models =
+                  prov && prov.models ? prov.models.slice() : [];
+              } else {
+                var list = state.data.llmConfigData.models || [];
+                var idx = list.indexOf(value);
+                if (idx === -1) list.push(value);
+                else list.splice(idx, 1);
+                state.data.llmConfigData.models = list;
+              }
+              state.keepForwardModelOpen = true;
+              render();
+            });
           });
-        });
 
-      // 实例权重/IP 实时变化提示更新
-      bodyEl
-        .querySelectorAll('.proto-instance-weight, .proto-instance-ip')
-        .forEach(function (input) {
-          input.addEventListener('input', function () {
-            // 不重新渲染，只更新数据状态（点击下一步时会再同步）
+        wrap
+          .querySelectorAll('.proto-forward-model-remove')
+          .forEach(function (icon) {
+            icon.addEventListener('click', function (e) {
+              e.stopPropagation();
+              var value = icon.getAttribute('data-value');
+              syncFromDom(bodyEl, state.data);
+              state.data.llmConfigData.models = (
+                state.data.llmConfigData.models || []
+              ).filter(function (item) {
+                return item !== value;
+              });
+              render();
+            });
           });
-        });
+      }
 
-      // 添加 Header
-      var addHeaderBtn = bodyEl.querySelector('#cluster-add-header');
-      if (addHeaderBtn)
-        addHeaderBtn.addEventListener('click', function () {
-          syncFromDom(bodyEl, state.data);
-          if (!state.data.headerList) state.data.headerList = [];
-          state.data.headerList.push({
-            key: '',
-            value: '',
-            originalValue: '',
-            valueModified: false,
-          });
-          render();
-        });
+      if (!bodyEl._fwdModelOutside) {
+        bodyEl._fwdModelOutside = function (e) {
+          var wrap = bodyEl.querySelector('.proto-forward-model-select');
+          if (!wrap || wrap.contains(e.target)) return;
+          var dropdown = wrap.querySelector('.proto-forward-model-dropdown');
+          if (dropdown) dropdown.style.display = 'none';
+        };
+        document.addEventListener('click', bodyEl._fwdModelOutside);
+      }
+      bindForwardModelSelect(!!state.keepForwardModelOpen);
+      state.keepForwardModelOpen = false;
 
-      // 删除 Header
-      bodyEl
-        .querySelectorAll('[data-action="remove-header"]')
-        .forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            syncFromDom(bodyEl, state.data);
-            state.data.headerList.splice(
-              parseInt(btn.getAttribute('data-index'), 10),
-              1,
-            );
-            render();
-          });
-        });
-
-      // Header Value 焦点脱敏逻辑：聚焦时若为掩码则清空
-      bodyEl.querySelectorAll('.proto-header-value').forEach(function (input) {
-        input.addEventListener('focus', function () {
-          // 简单 mock：如果值包含 ****，认为是掩码，聚焦清空
-          if (input.value.indexOf('****') !== -1) {
-            input.value = '';
-          }
-        });
-      });
-
-      // 添加映射
       var addMappingBtn = bodyEl.querySelector('#cluster-add-mapping');
       if (addMappingBtn)
         addMappingBtn.addEventListener('click', function () {
@@ -1686,7 +1370,6 @@ window.ClusterUpsert = (function () {
           render();
         });
 
-      // 删除映射
       bodyEl
         .querySelectorAll('[data-action="remove-mapping"]')
         .forEach(function (btn) {
@@ -1700,14 +1383,6 @@ window.ClusterUpsert = (function () {
           });
         });
 
-      // 获取模型
-      var queryModelsBtn = bodyEl.querySelector('#cluster-query-models');
-      if (queryModelsBtn)
-        queryModelsBtn.addEventListener('click', function () {
-          Prototype.toast('获取模型列表成功');
-        });
-
-      // 裁剪前缀切换（switch 开关）
       var stripPrefixSwitch = bodyEl.querySelector(
         '#proto-strip-prefix-switch',
       );
@@ -1721,18 +1396,34 @@ window.ClusterUpsert = (function () {
           render();
         });
 
-      // 添加 Key
+      var keyAffinitySelect = bodyEl.querySelector(
+        '[data-field="llm.key_affinity.enabled"]',
+      );
+      if (keyAffinitySelect)
+        keyAffinitySelect.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          render();
+        });
+
+      var keyPenaltySelect = bodyEl.querySelector(
+        '[data-field="llm.key_affinity.penalty_enable"]',
+      );
+      if (keyPenaltySelect)
+        keyPenaltySelect.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          render();
+        });
+
       var addKeyBtn = bodyEl.querySelector('#cluster-add-key');
       if (addKeyBtn)
         addKeyBtn.addEventListener('click', function () {
           syncFromDom(bodyEl, state.data);
           if (!state.data.llmConfigData.keys)
             state.data.llmConfigData.keys = [];
-          state.data.llmConfigData.keys.push({ name: '', key: '', weight: 0 });
+          state.data.llmConfigData.keys.push({ name: '', weight: 0 });
           render();
         });
 
-      // 删除 Key
       bodyEl
         .querySelectorAll('[data-action="remove-key"]')
         .forEach(function (btn) {
@@ -1748,7 +1439,6 @@ window.ClusterUpsert = (function () {
     }
 
     render();
-
     return {
       getData: function () {
         return state.data;

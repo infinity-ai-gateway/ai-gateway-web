@@ -2,6 +2,7 @@
 var NAV_ICONS = {
   'AIGatewayInstancePool.list': 'iconfont icon-instancePool',
   'AICluster.list': 'iconfont icon-jiqun',
+  'Provider.list': 'ivu-icon ivu-icon-ios-cloud',
   'AdvanceRouteRule.list': 'iconfont icon-zhuanfa',
   'user.list': 'iconfont icon-user',
   'APIKey.list': 'ivu-icon ivu-icon-ios-key',
@@ -29,6 +30,13 @@ window.PrototypeNav = [
         page: 'instance-pool-ai.html',
         text: 'AI网关实例池',
         icon: navIcon('AIGatewayInstancePool.list'),
+      },
+      {
+        id: 'Provider.list',
+        i18n: 'ProviderManage',
+        page: 'providers.html',
+        text: '模型服务商',
+        icon: navIcon('Provider.list'),
       },
       {
         id: 'AICluster.list',
@@ -78,7 +86,7 @@ window.PrototypeNav = [
         id: 'Entity.list',
         i18n: 'EntityManage',
         page: 'entity.html',
-        text: 'Entity管理',
+        text: 'Entity 管理',
         icon: navIcon('Entity.list'),
       },
     ],

@@ -58,15 +58,12 @@
       />
     </Drawer>
 
-    <Drawer :title="$t('com.detail')" v-model="infoVisible" width="80">
+    <Drawer :title="$t('com.detail')" v-model="infoVisible" width="65">
       <Review
         :showFooter="false"
         :baseConfigData="baseConfigData"
-        :instancePoolData="instancePoolData"
         :passiveHealthData="passiveHealthData"
         :llmConfigData="llmConfigData"
-        :originalLlmConfigKey="originalLlmConfigKey"
-        :originalLlmConfigHeaders="originalLlmConfigHeaders"
       />
     </Drawer>
 
@@ -103,7 +100,6 @@
 import pageTable from '@/components/table/pageTable';
 import Upsert, { formatStickySessionsForEdit } from './components';
 import Review from './components/Review';
-import { getClusterInstancePool } from './components/InstancePool';
 import { cloneDeep } from 'lodash';
 export default {
     name: 'Clusters',
@@ -126,7 +122,8 @@ export default {
                 },
                 {
                     title: this.$t('com.desc'),
-                    key: 'description'
+                    key: 'description',
+                    searchable: true
                 },
                 {
                     title: this.$t('com.operation'),
@@ -206,10 +203,7 @@ export default {
             clusterNames: [],
             baseConfigData: {},
             passiveHealthData: {},
-            instancePoolData: [],
             llmConfigData: {},
-            originalLlmConfigKey: '',
-            originalLlmConfigHeaders: {},
             deleteErrorVisible: false,
             deleteErrorCluster: '',
             deleteErrorRefs: []
@@ -265,7 +259,23 @@ export default {
                 });
         },
         onDetails(data) {
-            const tmpData = cloneDeep(data.row);
+            this.$request({
+                url: this.$urlFormat('clusters/{cluster_name}', {
+                    cluster_name: data.row.name
+                }),
+                method: 'get'
+            })
+                .then(res => {
+                    const tmpData = cloneDeep(
+                        res.status === 200 && res.data.Data ? res.data.Data : data.row
+                    );
+                    this.applyDetailData(tmpData);
+                })
+                .catch(() => {
+                    this.applyDetailData(cloneDeep(data.row));
+                });
+        },
+        applyDetailData(tmpData) {
             this.baseConfigData = {
                 name: tmpData.name,
                 description: tmpData.description,
@@ -281,15 +291,7 @@ export default {
                     String(this.baseConfigData.connection.cancel_on_client_close);
             }
             this.passiveHealthData = tmpData.passive_health_check || {};
-            this.llmConfigData = tmpData.llm_config;
-            this.originalLlmConfigKey = (tmpData.llm_config && tmpData.llm_config.key) || '';
-            this.originalLlmConfigHeaders = cloneDeep(
-                (tmpData.llm_config &&
-                    tmpData.llm_config.model_endpoint &&
-                    tmpData.llm_config.model_endpoint.headers) ||
-                    {}
-            );
-            this.instancePoolData = getClusterInstancePool(tmpData);
+            this.llmConfigData = tmpData.llm_config || {};
             this.infoVisible = true;
         },
         onDel(params) {
@@ -380,7 +382,7 @@ export default {
                             this.fetchTableRules(row).then(rules => {
                                 const matched = (rules || []).filter(rule => {
                                     const inTargets = (rule.targets || []).some(
-                                        t => t.ClusterName === clusterName
+                                        t => t.cluster_name === clusterName
                                     );
                                     return inTargets;
                                 });

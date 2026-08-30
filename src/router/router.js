@@ -78,6 +78,16 @@ export default [
         component: (r) =>
           require.ensure(
             [],
+            () => r(require('../modules/Providers')),
+            'Provider.list',
+          ),
+        path: 'providers',
+        name: 'Provider.list',
+      },
+      {
+        component: (r) =>
+          require.ensure(
+            [],
             () => r(require('../modules/Clusters')),
             'cluster.list',
           ),
