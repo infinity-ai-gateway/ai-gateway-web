@@ -29,6 +29,7 @@ window.Prototype = {
       'nav.ModelManage': '模型管理',
       'nav.ModelPriceManage': '模型定价',
       'nav.UserManage': '用户管理',
+      'nav.OperationLogManage': '操作日志',
     },
     en: {
       'login.gateway': 'Rainway AI Gateway',
@@ -55,6 +56,7 @@ window.Prototype = {
       'nav.ModelManage': 'Model Manage',
       'nav.ModelPriceManage': 'Model Pricing',
       'nav.UserManage': 'User Manage',
+      'nav.OperationLogManage': 'Operation Logs',
     },
   },
 
@@ -424,9 +426,11 @@ window.Prototype = {
 
   sortRows(rows, sortKey, sortOrder, getValue) {
     if (!sortKey || !sortOrder) return (rows || []).slice();
-    var getter = getValue || function (row, key) {
-      return Prototype.cellText(row, key);
-    };
+    var getter =
+      getValue ||
+      function (row, key) {
+        return Prototype.cellText(row, key);
+      };
     return (rows || []).slice().sort(function (a, b) {
       var av = String(getter(a, sortKey) || '').toUpperCase();
       var bv = String(getter(b, sortKey) || '').toUpperCase();
@@ -471,7 +475,11 @@ window.Prototype = {
     container.querySelectorAll('th[data-sort-key]').forEach(function (th) {
       th.style.cursor = 'pointer';
       th.addEventListener('click', function (event) {
-        if (event.target.closest && event.target.closest('input, select, button, a')) return;
+        if (
+          event.target.closest &&
+          event.target.closest('input, select, button, a')
+        )
+          return;
         Prototype.cycleSort(state, th.getAttribute('data-sort-key'));
         rerender();
       });

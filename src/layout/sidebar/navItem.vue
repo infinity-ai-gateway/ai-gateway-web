@@ -98,6 +98,8 @@ export default {
                 'RouteTableManage': 'iconfont icon-zhuanfa',
 
                 'ModelPrice.list': 'ivu-icon-logo-yen',
+
+                'OperationLog.list': 'ivu-icon-md-list-box',
             }
         };
     },

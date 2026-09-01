@@ -11,6 +11,7 @@ var NAV_ICONS = {
   'route.admin.list': 'ivu-icon ivu-icon-ios-cube',
   'resource.admin.list': 'ivu-icon ivu-icon-md-appstore',
   'ModelPrice.list': 'ivu-icon ivu-icon-logo-yen',
+  'OperationLog.list': 'ivu-icon ivu-icon-md-list-box',
 };
 
 function navIcon(id, fallback) {
@@ -97,6 +98,13 @@ window.PrototypeNav = [
     page: 'user.html',
     text: '用户管理',
     icon: navIcon('user.list'),
+  },
+  {
+    id: 'OperationLog.list',
+    i18n: 'OperationLogManage',
+    page: 'operation-logs.html',
+    text: '操作日志',
+    icon: navIcon('OperationLog.list'),
   },
 ];
 
