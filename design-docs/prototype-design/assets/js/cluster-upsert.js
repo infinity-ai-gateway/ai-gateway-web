@@ -364,6 +364,22 @@ window.ClusterUpsert = (function () {
     var providerModels = (provider && provider.models) || [];
     var providerKeys = (provider && provider.keys) || [];
 
+    function availableProviderKeys(index) {
+      var keys = llm.keys || [];
+      var current = String((keys[index] && keys[index].name) || '').trim();
+      var taken = {};
+      keys.forEach(function (item, i) {
+        if (i === index) return;
+        var name = String((item && item.name) || '').trim();
+        if (name) taken[name] = true;
+      });
+      return providerKeys.filter(function (item) {
+        var name = item && item.name;
+        if (!name) return false;
+        return name === current || !taken[name];
+      });
+    }
+
     function helpIcon(tip) {
       return (
         '<span class="form-help-icon" title="' +
@@ -524,7 +540,8 @@ window.ClusterUpsert = (function () {
           '" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;"' +
           (provider ? '' : ' disabled') +
           '>' +
-          providerKeys
+          '<option value="">请选择 Key</option>' +
+          availableProviderKeys(index)
             .map(function (item) {
               return (
                 '<option value="' +
@@ -1382,6 +1399,28 @@ window.ClusterUpsert = (function () {
             render();
           });
         });
+
+      bodyEl.querySelectorAll('.proto-mapping-value').forEach(function (select) {
+        select.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          var index = parseInt(select.getAttribute('data-index'), 10);
+          var mapping =
+            (state.data.llmConfigData.model_mappings || [])[index];
+          if (!mapping) return;
+          mapping.target_model = select.value;
+          if (!String(mapping.source_model || '').trim() && select.value) {
+            mapping.source_model = select.value;
+          }
+          render();
+        });
+      });
+
+      bodyEl.querySelectorAll('.proto-key-name').forEach(function (select) {
+        select.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          render();
+        });
+      });
 
       var stripPrefixSwitch = bodyEl.querySelector(
         '#proto-strip-prefix-switch',

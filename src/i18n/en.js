@@ -912,10 +912,16 @@ export default {
     models: 'Models',
     modelList: 'Model List',
     syncModels: 'Fetch',
+    batchAddModels: 'Batch add',
+    batchModelsPlaceholder:
+      'One model name per line, or separate with commas, semicolons, or whitespace',
+    batchModelsAdded: 'Added {count} models',
+    batchModelsNoNew: 'No new models added',
+    batchModelsEmpty: 'Enter at least one model name',
     modelsPlaceholder:
-      'Click Fetch to pull upstream models, or type a model name and press Enter to add',
+      'Click Fetch to pull upstream models, type a name and press Enter, or use Batch add',
     modelsListTip:
-      'Fill in the model protocol, instance pool, endpoint, and keys (if needed) above first. Fetch pulls models from upstream into the list; the button stays disabled until required fields are set. You can also type a model name and press Enter to add it manually.',
+      'Fill in the model protocol, instance pool, endpoint, and keys (if needed) above first. Fetch pulls models from upstream into the list; the button stays disabled until required fields are set. You can also type a model name and press Enter, or click Batch add to paste multiple names (merged into the current list, not replaced).',
     discoverNeedInstance:
       'Configure at least one instance before fetching models',
     discoverNeedProtocol:
@@ -1000,9 +1006,15 @@ export default {
     selectFile: 'Select File',
     privateKeyFile: 'PrivateKey File',
     globalDefaultCert: 'Global Default Certificate',
+    isDefault: 'Set as Default',
 
     tipCertNameRule:
-      'Special characters are not allowed in certificate file name',
+      'Certificate name must be 2-64 characters, allow letters, digits, _, -, ., and cannot start or end with _, -, or .',
+    tipDescriptionRule: 'Description must be 2-256 characters and cannot contain control characters',
+    tipCannotDeleteDefault: 'Default certificate cannot be deleted',
+    tipExpiredDateAuto: 'Parsed automatically from the uploaded certificate for preview only',
+    tipExpiredDatePending: 'Parsed automatically after uploading the certificate file',
+    tipCertParseFailed: 'Failed to parse certificate expiration date. Please check the certificate file format',
     tipSumitCertFile: 'Config the certificate ',
     tipCofigDefault: ' as Global Default Certificate',
   },

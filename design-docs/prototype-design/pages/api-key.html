@@ -283,32 +283,19 @@
             var reasonInput = document.getElementById('modal-reset-quota-reason');
             if (quotaInput) quotaInput.value = plan && plan.quota != null ? plan.quota : 0;
             if (reasonInput) reasonInput.value = '';
+            ApiKeyUpsert.applyQuotaInputLimits(quotaInput, plan && plan.unit === 'RMB');
             Prototype.openModal('modal-api-reset-quota');
           }
 
           function confirmResetQuota() {
             var quotaInput = document.getElementById('modal-reset-quota-total');
-            var newQuota = quotaInput ? Number(quotaInput.value) : NaN;
-            if (!quotaInput || quotaInput.value === '' || isNaN(newQuota)) {
-              Prototype.toast('请输入配额总量');
-              return;
-            }
-            if (newQuota < 0) {
-              Prototype.toast('配额总量不能为负数');
-              return;
-            }
             var isRMB = state.currentRow && state.currentRow.quota_plan && state.currentRow.quota_plan.unit === 'RMB';
-            if (!isRMB && !Number.isInteger(newQuota)) {
-              Prototype.toast('total_token 配额必须为整数');
+            var quotaErr = ApiKeyUpsert.validateQuotaValue(quotaInput && quotaInput.value, isRMB);
+            if (quotaErr) {
+              Prototype.toast(quotaErr);
               return;
             }
-            if (isRMB) {
-              var dec = (String(newQuota).split('.')[1] || '').length;
-              if (dec > 4) {
-                Prototype.toast('RMB 配额最多保留 4 位小数');
-                return;
-              }
-            }
+            var newQuota = Number(quotaInput.value);
             if (!state.currentRow) return;
             if (!state.currentRow.quota_plan) state.currentRow.quota_plan = {};
             state.currentRow.quota_plan.quota = newQuota;

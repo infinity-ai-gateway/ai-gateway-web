@@ -870,9 +870,16 @@ export default {
     models: '模型',
     modelList: '模型列表',
     syncModels: '获取',
-    modelsPlaceholder: '点击「获取」拉取上游模型列表，或输入模型名回车添加',
+    batchAddModels: '批量添加',
+    batchModelsPlaceholder:
+      '每行一个模型名，也可用逗号、中文逗号、分号或空白分隔',
+    batchModelsAdded: '已添加 {count} 个模型',
+    batchModelsNoNew: '没有新增模型',
+    batchModelsEmpty: '请输入至少一个模型名称',
+    modelsPlaceholder:
+      '点击「获取」拉取上游模型列表，输入模型名回车添加，或使用「批量添加」',
     modelsListTip:
-      '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。也可直接输入模型名称，按回车添加到列表。',
+      '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。也可直接输入模型名称按回车添加，或点击「批量添加」粘贴多行/分隔的模型名（合并进现有列表，不覆盖）。',
     discoverNeedInstance: '请先配置至少一个实例后再获取模型',
     discoverNeedProtocol: '请先选择至少一种模型协议后再获取模型',
     syncModelsConfirm:
@@ -952,8 +959,14 @@ export default {
     selectFile: '选择文件',
     privateKeyFile: '私钥文件',
     globalDefaultCert: '全局缺省证书',
+    isDefault: '设为默认',
 
-    tipCertNameRule: '证书名称不可以包含特殊字符，请重新输入',
+    tipCertNameRule: '证书名称长度 2-64 字符，仅允许字母、数字、_、-、.，且不能以 _、-、. 开头或结尾',
+    tipDescriptionRule: '描述长度 2-256 字符，不能包含控制字符',
+    tipCannotDeleteDefault: '默认证书不可删除',
+    tipExpiredDateAuto: '由上传的证书文件自动解析，仅供参考',
+    tipExpiredDatePending: '上传证书文件后自动解析',
+    tipCertParseFailed: '无法解析证书过期时间，请确认证书文件格式正确',
     tipSumitCertFile: '是否将证书',
     tipCofigDefault: '设置为默认',
   },

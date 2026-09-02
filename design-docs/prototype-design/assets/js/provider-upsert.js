@@ -1,9 +1,10 @@
 window.ProviderUpsert = (function () {
   var PROTOCOL_OPTIONS = ['openai', 'anthropic'];
   var MODEL_LIST_TIP =
-    '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。也可直接输入模型名称，按回车添加到列表。';
+    '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。也可直接输入模型名称按回车添加，或点击「批量添加」粘贴多行/分隔的模型名（合并进现有列表，不覆盖）。';
   var MODEL_LIST_PLACEHOLDER =
-    '点击「获取」拉取上游模型列表，或输入模型名回车添加';
+    '点击「获取」拉取上游模型列表，输入模型名回车添加，或使用「批量添加」';
+  var BATCH_MODAL_ID = 'modal-provider-batch-models';
 
   function helpIcon(tip) {
     return (
@@ -29,6 +30,73 @@ window.ProviderUpsert = (function () {
       '" id="provider-discover-models"' +
       (enabled ? '' : ' disabled') +
       '><span>获取</span></button>'
+    );
+  }
+
+  function parseModelNames(text) {
+    var seen = {};
+    var result = [];
+    String(text || '')
+      .split(/[\s,，;；]+/)
+      .forEach(function (item) {
+        var name = item.trim();
+        if (!name || seen[name]) return;
+        seen[name] = true;
+        result.push(name);
+      });
+    return result;
+  }
+
+  function mergeModels(data, names) {
+    var incoming = Array.isArray(names) ? names : parseModelNames(names);
+    var current = data.models || [];
+    var existing = {};
+    current.forEach(function (item) {
+      existing[item] = true;
+    });
+    var added = [];
+    incoming.forEach(function (name) {
+      if (!existing[name]) {
+        existing[name] = true;
+        added.push(name);
+      }
+    });
+    if (added.length) {
+      data.models = current.concat(added);
+    }
+    return added.length;
+  }
+
+  function notifyModelsMerged(added) {
+    if (added) {
+      Prototype.toast('已添加 ' + added + ' 个模型', 'success');
+    } else {
+      Prototype.toast('没有新增模型', 'info');
+    }
+  }
+
+  function ensureBatchModelsModal() {
+    if (document.getElementById(BATCH_MODAL_ID)) return;
+    var footer =
+      IvuUI.btn(
+        '取消',
+        'default',
+        '',
+        '',
+        'data-close-modal="' + BATCH_MODAL_ID + '"',
+      ) +
+      IvuUI.btn(
+        '确定',
+        'primary',
+        '',
+        '',
+        'id="provider-batch-models-confirm"',
+      );
+    var body =
+      '<textarea id="provider-batch-models-text" class="ivu-input" rows="8" placeholder="每行一个模型名，也可用逗号、中文逗号、分号或空白分隔"></textarea>';
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      IvuUI.modal(BATCH_MODAL_ID, '批量添加', body, footer, '520px'),
     );
   }
 
@@ -618,7 +686,12 @@ window.ProviderUpsert = (function () {
         inputHtml +
         placeholderHtml +
         '</div></div>' +
-        (isView ? '' : renderDiscoverButton(data)) +
+        (isView
+          ? ''
+          : '<span style="display:flex;gap:8px;flex-shrink:0;">' +
+            '<button type="button" class="ivu-btn ivu-btn-default" id="provider-batch-add-models"><span>批量添加</span></button>' +
+            renderDiscoverButton(data) +
+            '</span>') +
         '</div></div></div>'
       );
     }
@@ -807,6 +880,7 @@ window.ProviderUpsert = (function () {
 
   function mount(bodyEl, footerEl, options) {
     options = options || {};
+    ensureBatchModelsModal();
     var state = {
       isAdd: options.isAdd !== false,
       isView: !!options.isView,
@@ -1062,6 +1136,33 @@ window.ProviderUpsert = (function () {
       }
       refreshDiscoverButton();
 
+      var batchAddBtn = bodyEl.querySelector('#provider-batch-add-models');
+      if (batchAddBtn) {
+        batchAddBtn.addEventListener('click', function () {
+          var textarea = document.getElementById('provider-batch-models-text');
+          if (textarea) textarea.value = '';
+          Prototype.openModal(BATCH_MODAL_ID);
+        });
+      }
+      var batchConfirmBtn = document.getElementById(
+        'provider-batch-models-confirm',
+      );
+      if (batchConfirmBtn) {
+        batchConfirmBtn.onclick = function () {
+          syncFromDom(bodyEl, state.data);
+          var textarea = document.getElementById('provider-batch-models-text');
+          var parsed = parseModelNames(textarea && textarea.value);
+          if (!parsed.length) {
+            Prototype.toast('请输入至少一个模型名称', 'info');
+            return;
+          }
+          var added = mergeModels(state.data, parsed);
+          Prototype.closeModal(BATCH_MODAL_ID);
+          notifyModelsMerged(added);
+          render();
+        };
+      }
+
       bodyEl.querySelectorAll('.proto-model-remove').forEach(function (icon) {
         icon.addEventListener('click', function (e) {
           e.stopPropagation();
@@ -1097,6 +1198,21 @@ window.ProviderUpsert = (function () {
             state.data.models = list;
             render();
           }
+        });
+        modelInput.addEventListener('paste', function (e) {
+          var clipboard =
+            e.clipboardData ||
+            (e.originalEvent && e.originalEvent.clipboardData);
+          var text = clipboard
+            ? clipboard.getData('text') || clipboard.getData('text/plain') || ''
+            : '';
+          var parsed = parseModelNames(text);
+          if (parsed.length < 2) return;
+          e.preventDefault();
+          syncFromDom(bodyEl, state.data);
+          var added = mergeModels(state.data, parsed);
+          notifyModelsMerged(added);
+          render();
         });
       }
 

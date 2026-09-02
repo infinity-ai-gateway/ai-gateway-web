@@ -4,8 +4,48 @@ window.ApiKeyUpsert = {
   WINDOW_MIN_MINUTES: 1,
   WINDOW_MAX_MINUTES: 360,
   RMB_QUOTA_MAX: 90000000,
+  TOKEN_QUOTA_MAX: 9999999999,
   INT64_MAX: 9223372036854775807,
   RATE_LIMIT_NAME_RE: /^[a-zA-Z0-9_-]{1,128}$/,
+
+  quotaMax(isRMB) {
+    return isRMB ? ApiKeyUpsert.RMB_QUOTA_MAX : ApiKeyUpsert.TOKEN_QUOTA_MAX;
+  },
+
+  quotaInputAttrs(isRMB) {
+    return (
+      (isRMB ? 'step="0.0001" ' : 'step="1" ') +
+      'min="0" max="' +
+      ApiKeyUpsert.quotaMax(isRMB) +
+      '"'
+    );
+  },
+
+  applyQuotaInputLimits(input, isRMB) {
+    if (!input) return;
+    input.step = isRMB ? '0.0001' : '1';
+    input.min = '0';
+    input.max = String(ApiKeyUpsert.quotaMax(isRMB));
+    var num = Number(input.value);
+    if (Number.isFinite(num) && num > ApiKeyUpsert.quotaMax(isRMB)) {
+      input.value = ApiKeyUpsert.quotaMax(isRMB);
+    }
+  },
+
+  validateQuotaValue(value, isRMB) {
+    if (value === '' || value == null) return '请输入配额总量';
+    var num = Number(value);
+    if (!Number.isFinite(num) || num < 0) return '配额总量不能为负数';
+    if (isRMB) {
+      if (num > ApiKeyUpsert.RMB_QUOTA_MAX) return '配额总量超出允许范围';
+      var dec = (String(value).split('.')[1] || '').length;
+      if (dec > 4) return 'RMB 配额最多保留 4 位小数';
+      return null;
+    }
+    if (!Number.isInteger(num)) return 'total_token 配额必须为整数';
+    if (num > ApiKeyUpsert.TOKEN_QUOTA_MAX) return '配额总量超出允许范围';
+    return null;
+  },
 
   validateRateLimitRuleName(name) {
     var val = String(name || '').trim();
@@ -385,7 +425,6 @@ window.ApiKeyUpsert = {
     plan = plan || {};
     var isRMB = plan.unit === 'RMB';
     var quotaValue = plan.quota != null ? plan.quota : 1000000;
-    var quotaStep = isRMB ? 'step="0.0001"' : '';
     return (
       '<div id="api-quota-details"' +
       (visible ? '' : ' class="proto-hidden-inline"') +
@@ -407,7 +446,8 @@ window.ApiKeyUpsert = {
               '配额总量',
               IvuUI.inputNumber(
                 quotaValue,
-                'id="api-quota-total" style="width:100%" ' + quotaStep,
+                'id="api-quota-total" style="width:100%" ' +
+                  ApiKeyUpsert.quotaInputAttrs(isRMB),
               ),
             ),
           ),
@@ -689,16 +729,10 @@ window.ApiKeyUpsert = {
     var quotaTotalInput = document.getElementById('api-quota-total');
     if (quotaUnitSelect && quotaTotalInput) {
       quotaUnitSelect.addEventListener('change', function () {
-        var isRMB = quotaUnitSelect.value === 'RMB';
-        quotaTotalInput.step = isRMB ? '0.0001' : '1';
-        if (isRMB) {
-          if (
-            !quotaTotalInput.value ||
-            Number(quotaTotalInput.value) > ApiKeyUpsert.RMB_QUOTA_MAX
-          ) {
-            quotaTotalInput.value = ApiKeyUpsert.RMB_QUOTA_MAX;
-          }
-        }
+        ApiKeyUpsert.applyQuotaInputLimits(
+          quotaTotalInput,
+          quotaUnitSelect.value === 'RMB',
+        );
       });
     }
 
@@ -1403,7 +1437,11 @@ window.ApiKeyUpsert = {
       '<div class="ivu-modal-body">' +
       '<div class="modal-form-item">' +
       '<div class="modal-label">新配额总量</div>' +
-      IvuUI.inputNumber(0, 'id="modal-reset-quota-total" style="width:100%"') +
+      IvuUI.inputNumber(
+        0,
+        'id="modal-reset-quota-total" style="width:100%" ' +
+          ApiKeyUpsert.quotaInputAttrs(false),
+      ) +
       '</div>' +
       '<p class="form-tip">设置后将重置已使用量为0，配额总量为新设置的值</p>' +
       '<div class="modal-form-item" style="margin-top:16px;">' +

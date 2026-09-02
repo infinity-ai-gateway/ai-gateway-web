@@ -125,8 +125,7 @@ specific language governing permissions and * limitations under the License. */
               >
                 <td>
                   <Input
-                    :value="model.source_model"
-                    @on-change="e => changeMappingSource(index, e.target.value)"
+                    v-model="model.source_model"
                     :placeholder="$t('gatewayConfig.enterOriginalModelName')"
                   />
                 </td>
@@ -200,7 +199,7 @@ specific language governing permissions and * limitations under the License. */
                       @on-change="validateKeysState"
                     >
                       <Option
-                        v-for="item in providerKeys"
+                        v-for="item in availableProviderKeys(index)"
                         :key="item.name"
                         :value="item.name"
                         >{{ item.name }}</Option
@@ -760,11 +759,21 @@ export default {
             }
             this.loadProviderDetail(name);
         },
-        changeMappingSource(index, value) {
-            this.formData.model_mappings[index].source_model = value;
-        },
         changeMappingTarget(index, value) {
-            this.formData.model_mappings[index].target_model = value;
+            const mapping = this.formData.model_mappings[index];
+            if (!mapping) {
+                return;
+            }
+            mapping.target_model = value;
+            // 左侧为空时自动带出同名，已填写则不覆盖，保持可改
+            if (!String(mapping.source_model || '').trim() && value) {
+                mapping.source_model = value;
+            }
+            this.$nextTick(() => {
+                if (this.$refs.formData) {
+                    this.$refs.formData.validateField('model_mappings');
+                }
+            });
         },
         addModelRedirect() {
             this.formData.model_mappings.push({ source_model: '', target_model: '' });
@@ -779,6 +788,28 @@ export default {
             this.formData.keys.push({ name: '', weight: 0 });
             this.$nextTick(() => {
                 this.validateKeysState();
+            });
+        },
+        availableProviderKeys(index) {
+            const current = String(
+                (this.formData.keys[index] && this.formData.keys[index].name) || ''
+            ).trim();
+            const taken = {};
+            (this.formData.keys || []).forEach((item, i) => {
+                if (i === index) {
+                    return;
+                }
+                const name = String((item && item.name) || '').trim();
+                if (name) {
+                    taken[name] = true;
+                }
+            });
+            return (this.providerKeys || []).filter(item => {
+                const name = item && item.name;
+                if (!name) {
+                    return false;
+                }
+                return name === current || !taken[name];
             });
         },
         removeKey(index) {

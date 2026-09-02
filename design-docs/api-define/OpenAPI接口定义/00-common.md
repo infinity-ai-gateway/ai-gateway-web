@@ -191,7 +191,7 @@
 |------|------|------|------|------------|
 | `unlimited` | bool | N | 是否无限配额 | 默认 `true` |
 | `pass_when_no_enough_quota` | bool | N | 配额不足时是否放行 | 默认 `false` |
-| `quota` | number | N | 配额总量 | 非负数；`unit=total_token` 时必须为整数；`unit=RMB` 时取值范围 0 ~ 90000000.00（9000 万元），内部最多保留 8 位小数，对外统一按 4 位小数展示 |
+| `quota` | number | N | 配额总量 | 非负数；`unit=total_token` 时必须为整数，取值范围 0 ~ 9999999999（与库表 `DECIMAL(18,8)` 整数部分上限一致）；`unit=RMB` 时取值范围 0 ~ 90000000.00（9000 万元），内部最多保留 8 位小数，对外统一按 4 位小数展示 |
 | `unit` | string | N | 配额单位 | 默认 `total_token`；可选值：`total_token`、`RMB` |
 | `reset_period` | string | N | 配额重置周期 | 默认 `never`；可选值：`never`、`weekly`、`monthly` |
 | `balance` | object | N | 余额状态（只读），包含 `used` 和 `remaining` | 作为输入时无需传入 |
@@ -206,6 +206,10 @@
 > **关于 RMB 配额 9000 万元上限的说明**
 >
 > RMB 配额在 Redis 中以定点整数存储，精度为 **1e-8 元**（即 1 单位 = 0.00000001 元）。当前 Lua 脚本使用单 Key 定点数方案，Lua number 为 IEEE 754 double，整数精确表示上限约为 **2^53 ≈ 9.007 × 10^15**。按 1e-8 元换算，理论余额上限约为 9007.20 万元；业务上统一限定为 **9000 万元（90,000,000.00 元）**，以保证所有场景下余额计算均无精度损失。若后续业务需要更大余额，需改用 Hash 拆分整数部分与小数部分的存储方案。
+>
+> **关于 total_token 配额上限的说明**
+>
+> `quota_plans.quota` 列为 `DECIMAL(18,8)`，整数部分最多 10 位。`unit=total_token` 时配额为整数，前端与接口合法性条件统一为 **0 ~ 9,999,999,999**，避免超限值写入时触发数据库 `Out of range`。
 
 示例（Token 配额）：
 

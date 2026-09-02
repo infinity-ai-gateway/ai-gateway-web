@@ -283,7 +283,7 @@
         <InputNumber
           v-model="newQuota"
           :min="0"
-          :max="isRMB ? RMB_QUOTA_MAX : INT64_MAX"
+          :max="quotaInputMax"
           :precision="isRMB ? 4 : 0"
           :step="isRMB ? 0.0001 : 1"
           style="width: 100%;"
@@ -315,8 +315,7 @@
 </template>
 
 <script>
-const INT64_MAX = 9223372036854775807;
-const RMB_QUOTA_MAX = 90000000;
+import { TOKEN_QUOTA_MAX, RMB_QUOTA_MAX } from '@/utils/const';
 
 export default {
     props: {
@@ -329,7 +328,7 @@ export default {
     },
     data() {
         return {
-            INT64_MAX,
+            TOKEN_QUOTA_MAX,
             RMB_QUOTA_MAX,
             resetModalVisible: false,
             newQuota: 0,
@@ -387,6 +386,9 @@ export default {
         },
         isRMB() {
             return this.quotaPlanUnit === 'RMB';
+        },
+        quotaInputMax() {
+            return this.isRMB ? RMB_QUOTA_MAX : TOKEN_QUOTA_MAX;
         },
         quotaPlanQuota() {
             return this.displayData.quota_plan ? this.displayData.quota_plan.quota || 0 : 0;
@@ -523,7 +525,7 @@ export default {
                 this.$Message.error(this.$t('apiKey.quotaRmbMaxError') || 'RMB 配额不能超过 9000 万元');
                 return;
             }
-            if (value > INT64_MAX) {
+            if (!this.isRMB && value > TOKEN_QUOTA_MAX) {
                 this.$Message.error(this.$t('apiKey.quotaMaxError'));
                 return;
             }

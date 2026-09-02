@@ -38,6 +38,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [v0.0.9] - 2026-09-01
+
+### Added
+
+- Certificate management re-enabled: route `certs.list` at `/cert` with list (name, default tag, expiry), global default certificate selector, create drawer (PEM upload + client-side expiry preview), and delete guard for the default certificate
+- Operation logs module: new `OperationLogs` at `/operation-logs` with time-range filter, server-side pagination, column search, and 720px detail drawer with change summary (`vue-json-viewer` for before/after JSON)
+- `utils/cert.js`: `parseCertExpiredDate` parses `notAfter` from the first PEM certificate block for create-form preview
+- User manual (zh-cn): chapters 11 (certificates) and 12 (operation logs) with screenshots; chapter order places both immediately after route management
+- sys-design: new per-module docs for certificate management and operation logs; updated routing, module overview, OpenAPI mapping, overall design, i18n design, `summary.md`, and `design-docs/README.md`
+
+### Changed
+
+- Certificate create form aligned with OpenAPI: removed manual `expired_date` input; submit body includes `cert_name`, `description`, `is_default`, `cert_file_content`, and `key_file_content` only
+- Certificate default switch uses `PATCH /certificates/{cert_name}/default` (replacing legacy PUT usage in docs)
+- Certificate name/description validation aligned with API rules (`CertNameRegCheck`, `CertDescriptionRegCheck`); first certificate auto-set as default when none exists
+- Expanded i18n coverage for `cert`, `operationLogs`, and navigation labels (en/zh)
+
 ## [v0.0.8] - 2026-08-30
 
 ### Added
@@ -226,6 +243,7 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
+[v0.0.9]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.9
 [v0.0.8]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.8
 [v0.0.7]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.7
 [v0.0.6]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.6

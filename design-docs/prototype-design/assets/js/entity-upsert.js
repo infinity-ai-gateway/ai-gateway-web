@@ -1,5 +1,46 @@
 window.EntityUpsert = {
   ENTITY_NAME_RE: /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/,
+  RMB_QUOTA_MAX: 90000000,
+  TOKEN_QUOTA_MAX: 9999999999,
+
+  quotaMax(isRMB) {
+    return isRMB ? EntityUpsert.RMB_QUOTA_MAX : EntityUpsert.TOKEN_QUOTA_MAX;
+  },
+
+  quotaInputAttrs(isRMB) {
+    return (
+      (isRMB ? 'step="0.0001" ' : 'step="1" ') +
+      'min="0" max="' +
+      EntityUpsert.quotaMax(isRMB) +
+      '"'
+    );
+  },
+
+  applyQuotaInputLimits(input, isRMB) {
+    if (!input) return;
+    input.step = isRMB ? '0.0001' : '1';
+    input.min = '0';
+    input.max = String(EntityUpsert.quotaMax(isRMB));
+    var num = Number(input.value);
+    if (Number.isFinite(num) && num > EntityUpsert.quotaMax(isRMB)) {
+      input.value = EntityUpsert.quotaMax(isRMB);
+    }
+  },
+
+  validateQuotaValue(value, isRMB) {
+    if (value === '' || value == null) return '请输入有效的配额总量';
+    var num = Number(value);
+    if (!Number.isFinite(num) || num < 0) return '请输入有效的配额总量';
+    if (isRMB) {
+      if (num > EntityUpsert.RMB_QUOTA_MAX) return '配额总量超出允许范围';
+      var dec = (String(value).split('.')[1] || '').length;
+      if (dec > 4) return 'RMB 配额最多保留 4 位小数';
+      return null;
+    }
+    if (!Number.isInteger(num)) return 'total_token 配额必须为整数';
+    if (num > EntityUpsert.TOKEN_QUOTA_MAX) return '配额总量超出允许范围';
+    return null;
+  },
 
   validateEntityName(value) {
     var val = String(value || '');
@@ -101,7 +142,8 @@ window.EntityUpsert = {
               '配额总量',
               IvuUI.inputNumber(
                 plan.quota || 1000000,
-                'id="entity-quota-total" style="width:100%"',
+                'id="entity-quota-total" style="width:100%" ' +
+                  EntityUpsert.quotaInputAttrs(plan.unit === 'RMB'),
               ),
             ),
           ),
@@ -530,6 +572,17 @@ window.EntityUpsert = {
       syncQuota();
     }
 
+    var quotaUnitSelect = document.getElementById('entity-quota-unit');
+    var quotaTotalInput = document.getElementById('entity-quota-total');
+    if (quotaUnitSelect && quotaTotalInput) {
+      quotaUnitSelect.addEventListener('change', function () {
+        EntityUpsert.applyQuotaInputLimits(
+          quotaTotalInput,
+          quotaUnitSelect.value === 'RMB',
+        );
+      });
+    }
+
     // 启用限流切换
     var rateSelect = document.getElementById('entity-rate-enabled');
     if (rateSelect) {
@@ -796,7 +849,8 @@ window.EntityUpsert = {
       '<div class="modal-label">新配额总量</div>' +
       IvuUI.inputNumber(
         0,
-        'id="modal-entity-reset-quota-total" style="width:100%"',
+        'id="modal-entity-reset-quota-total" style="width:100%" ' +
+          EntityUpsert.quotaInputAttrs(false),
       ) +
       '</div>' +
       '<p class="form-tip">设置后将重置已使用量为0，配额总量为新设置的值</p>' +

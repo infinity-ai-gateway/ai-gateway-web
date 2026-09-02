@@ -23,8 +23,10 @@
 │       ├── 08-entity.md           // Entity 组织
 │       ├── 09-api-key.md          // API Key 管理
 │       ├── 10-route.md            // 路由管理
-│       ├── 11-scenarios.md        // 场景实战
-│       ├── 12-appendix.md         // 附录
+│       ├── 11-certificates.md     // 证书管理
+│       ├── 12-operation-logs.md   // 操作日志
+│       ├── 13-scenarios.md        // 场景实战
+│       ├── 14-appendix.md         // 附录
 │       ├── deploy.md              // 部署说明
 │       ├── develop.md             // 开发说明（本文）
 │       └── images/                // 文档截图

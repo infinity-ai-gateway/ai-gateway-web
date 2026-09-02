@@ -10,9 +10,9 @@
 design-docs/
 ├── README.md                              # 本文件：变更方法论与目录索引
 ├── api-define/                            # 前端消费接口约定
-│   └── OpenAPI接口定义/                   # 按模块拆分的 OpenAPI 约定（含 model-prices、route-tables 等）
+│   └── OpenAPI接口定义/                   # 按模块拆分的 OpenAPI 约定（含 certificates、operation-logs、model-prices 等）
 ├── prototype-design/                      # 原型设计资产（可选参考）
-├── modifications/                         # 复杂变更的临时说明目录（按需创建）
+├── modifications/                         # 复杂变更的临时说明目录（按需创建，如 2026-09-02-ui-optimize/）
 └── sys-design/                            # 系统设计文档
     ├── summary.md                         # 系统设计文档索引（本目录导读）
     ├── 总体设计文档.md                     # 定位、技术栈、分层与数据流
@@ -26,11 +26,14 @@ design-docs/
     └── 各模块实现细节设计/                 # 模块细节设计（按 UI 模块展开）
         ├── 认证与用户.md
         ├── AI业务实例池.md
+        ├── 模型服务商.md
         ├── AI业务集群.md
         ├── 模型定价.md
         ├── 路由规则.md
         ├── APIKey管理.md
-        └── Entity管理.md
+        ├── Entity管理.md
+        ├── 证书管理.md
+        └── 操作日志.md
 ```
 
 ---
@@ -49,9 +52,12 @@ YYYYMMDD-<变更目的简述>
 
 | 文件 | 说明 |
 |------|------|
+| `ui-code-changes.md` | **常用**：UI 变更说明，含对照接口、需改文件、验收清单（如 `2026-09-02-ui-optimize/`、`2026-09-01-certificates/`）。 |
 | `change-summary.md` | 变更摘要：背景、目标、影响范围、关键决策。 |
 | `api-dependencies.md` | OpenAPI 依赖说明：引用 `ai-gateway-api` 相关端点。 |
 | `design-changes.md` | 设计变更说明：页面交互、组件接口、路由、状态变化。 |
+
+复杂 UI 变更至少应包含 `ui-code-changes.md`，并在 Step 3 同步更新 `sys-design/` 对应文档。
 
 ### Step 2：更新 api-define
 
@@ -120,7 +126,7 @@ YYYYMMDD-<变更目的简述>
   - [ ] 设计与 api-define 一致；
   - [ ] 页面、组件、路由、状态、i18n 描述准确；
   - [ ] 新增的细节文档已加入 `summary.md`。
-- [ ] `sys-design/summary.md` 索引已同步。
+- [ ] `sys-design/summary.md` 索引已同步（新增模块时补充「各模块实现细节设计」条目）。
 - [ ] `sys-design/各模块实现细节设计/<模块>.md` 已同步（如新增/调整模块）。
 - [ ] `sys-design/OpenAPI消费接口映射.md` 中的接口映射准确。
 - [ ] 代码已按设计文档实现并通过 `npm run lint`。
@@ -130,8 +136,9 @@ YYYYMMDD-<变更目的简述>
 
 ## 重要约定
 
-1. **OpenAPI 只消费不定义**：前端不重复定义 OpenAPI 接口，所有接口依赖引用 `ai-gateway-api` 的设计文档。
+1. **OpenAPI 只消费不定义**：前端不重复定义 OpenAPI 接口，所有接口依赖引用 `ai-gateway-api` 的设计文档；本地约定见 `api-define/OpenAPI接口定义/`（含 `certificates.md`、`operation-logs.md` 等）。
 2. **语言包集中管理**：界面文案全部走 i18n，不允许硬编码中文或英文。
 3. **模块自治**：每个业务模块独立目录，内部组件、逻辑不外泄。
 4. **单向数据流**：父子组件通过 `props` 和 `$emit` 通信，避免直接修改 props。
 5. **状态轻量**：不使用 Vuex，复杂状态提升到模块容器或 `store`。
+6. **索引同步**：`sys-design/各模块实现细节设计/` 与 `sys-design/summary.md`、本文件目录树三者保持一致。

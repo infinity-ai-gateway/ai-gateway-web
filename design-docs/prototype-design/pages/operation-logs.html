@@ -245,7 +245,7 @@
             ) +
             fieldRow(
               { label: '父级资源ID', value: row.resource_parent_id || '-' },
-              { label: '操作结果', value: statusTag(row.status) }
+              { label: '结果', value: statusTag(row.status) }
             ) +
             (row.error_msg ?
               '<div style="margin-bottom:16px;"><p style="color:#808695;margin-bottom:4px;font-size:12px;">错误信息</p><p style="color:#ed4014;">' + row.error_msg + '</p></div>' : '') +
@@ -274,7 +274,7 @@
           '<div style="position:absolute;inset:0;background:rgba(55,55,55,0.6);" id="detail-overlay-mask"></div>' +
           '<div style="position:relative;width:720px;max-width:90vw;height:100%;background:#fff;display:flex;flex-direction:column;box-shadow:-2px 0 8px rgba(0,0,0,0.15);">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e8eaec;">' +
-              '<span style="font-size:16px;font-weight:600;">日志详情 #' + row.id + '</span>' +
+              '<span style="font-size:16px;font-weight:600;">日志详情</span>' +
               '<a href="javascript:void(0)" id="detail-close-btn" style="font-size:22px;color:#808695;text-decoration:none;cursor:pointer;">×</a>' +
             '</div>' +
             '<div style="flex:1;overflow-y:auto;padding:16px 24px;">' + body + '</div>' +

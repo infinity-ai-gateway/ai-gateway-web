@@ -163,6 +163,7 @@
               allow-create
               default-first-option
               :placeholder="modelsSelectPlaceholder"
+              @paste.native="onModelsPaste"
             >
               <el-option
                 v-for="item in modelsList"
@@ -172,6 +173,9 @@
               />
             </el-select>
             <span class="discover-btn-wrap">
+              <Button @click="showBatchModelsModal">{{
+                $t('provider.batchAddModels')
+              }}</Button>
               <Button
                 type="primary"
                 :loading="discoverLoading"
@@ -184,6 +188,28 @@
         </FormItem>
       </Card>
     </Form>
+
+    <Modal
+      v-model="batchModelsVisible"
+      class-name="batch-models-modal"
+      :title="$t('provider.batchAddModels')"
+      :width="520"
+      :z-index="1100"
+      @on-cancel="closeBatchModelsModal"
+    >
+      <Input
+        v-model="batchModelsText"
+        type="textarea"
+        :rows="8"
+        :placeholder="$t('provider.batchModelsPlaceholder')"
+      />
+      <div slot="footer">
+        <Button @click="closeBatchModelsModal">{{ $t('com.cancel') }}</Button>
+        <Button type="primary" @click="confirmBatchModels">{{
+          $t('com.confirm')
+        }}</Button>
+      </div>
+    </Modal>
 
     <div class="com-btn-box drawer-footer">
       <Button
@@ -206,6 +232,15 @@ import InstancePool, {
 } from '@/modules/Clusters/components/InstancePool';
 
 const PROTOCOL_OPTIONS = ['openai', 'anthropic'];
+
+function parseModelNames(text) {
+    return Array.from(new Set(
+        String(text || '')
+            .split(/[\s,，;；]+/)
+            .map(item => item.trim())
+            .filter(Boolean)
+    ));
+}
 
 export default {
     name: 'ProviderUpsert',
@@ -322,6 +357,8 @@ export default {
         return {
             protocolOptions: PROTOCOL_OPTIONS,
             discoverLoading: false,
+            batchModelsVisible: false,
+            batchModelsText: '',
             instancePoolData: [],
             livePool: [],
             modelsList: [],
@@ -535,6 +572,66 @@ export default {
                 apikey: keys[0] || ''
             };
         },
+        mergeModels(names) {
+            const incoming = Array.isArray(names) ? names : parseModelNames(names);
+            const current = this.formData.models || [];
+            const existing = {};
+            current.forEach(item => {
+                existing[item] = true;
+            });
+            const added = [];
+            incoming.forEach(name => {
+                if (!existing[name]) {
+                    existing[name] = true;
+                    added.push(name);
+                }
+            });
+            if (added.length) {
+                this.formData.models = current.concat(added);
+                this.modelsList = Array.from(
+                    new Set((this.modelsList || []).concat(added))
+                );
+            }
+            return added.length;
+        },
+        notifyModelsMerged(added) {
+            if (added) {
+                this.$Message.success(this.$t('provider.batchModelsAdded', { count: added }));
+            } else {
+                this.$Message.info(this.$t('provider.batchModelsNoNew'));
+            }
+        },
+        showBatchModelsModal() {
+            this.batchModelsText = '';
+            this.batchModelsVisible = true;
+        },
+        closeBatchModelsModal() {
+            this.batchModelsVisible = false;
+            this.batchModelsText = '';
+        },
+        confirmBatchModels() {
+            const parsed = parseModelNames(this.batchModelsText);
+            if (!parsed.length) {
+                this.$Message.warning(this.$t('provider.batchModelsEmpty'));
+                return;
+            }
+            const added = this.mergeModels(parsed);
+            this.closeBatchModelsModal();
+            this.notifyModelsMerged(added);
+        },
+        onModelsPaste(e) {
+            const clipboard = e.clipboardData || (e.originalEvent && e.originalEvent.clipboardData);
+            const text = clipboard
+                ? (clipboard.getData('text') || clipboard.getData('text/plain') || '')
+                : '';
+            const parsed = parseModelNames(text);
+            if (parsed.length < 2) {
+                return;
+            }
+            e.preventDefault();
+            const added = this.mergeModels(parsed);
+            this.notifyModelsMerged(added);
+        },
         discoverModels() {
             if (!this.canDiscoverModels) {
                 this.$Message.warning(this.discoverDisabledTip);
@@ -716,7 +813,10 @@ export default {
 }
 
 .discover-btn-wrap {
-    display: inline-block;
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .keys-table {

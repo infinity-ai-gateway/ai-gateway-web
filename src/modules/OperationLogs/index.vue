@@ -22,8 +22,10 @@
           v-model="startTime"
           type="datetime"
           format="yyyy-MM-dd HH:mm:ss"
+          editable
           :placeholder="$t('operationLogs.startTime')"
           style="width: 200px;"
+          @on-change="onStartTimeChange"
         ></DatePicker>
       </div>
       <div class="filter-item">
@@ -32,8 +34,10 @@
           v-model="endTime"
           type="datetime"
           format="yyyy-MM-dd HH:mm:ss"
+          editable
           :placeholder="$t('operationLogs.endTime')"
           style="width: 200px;"
+          @on-change="onEndTimeChange"
         ></DatePicker>
       </div>
       <Button
@@ -390,7 +394,35 @@ export default {
 
         toUnixTimestamp(date) {
             if (!date) return '';
-            return Math.floor(new Date(date).getTime() / 1000);
+            if (date instanceof Date) {
+                const time = date.getTime();
+                return isNaN(time) ? '' : Math.floor(time / 1000);
+            }
+            if (typeof date === 'number') {
+                return Math.floor(date / 1000);
+            }
+            if (typeof date === 'string') {
+                const trimmed = date.trim();
+                const matched = trimmed.match(
+                    /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/
+                );
+                if (matched) {
+                    const parsed = new Date(
+                        Number(matched[1]),
+                        Number(matched[2]) - 1,
+                        Number(matched[3]),
+                        Number(matched[4]),
+                        Number(matched[5]),
+                        Number(matched[6])
+                    );
+                    const time = parsed.getTime();
+                    return isNaN(time) ? '' : Math.floor(time / 1000);
+                }
+                const parsed = new Date(trimmed);
+                const time = parsed.getTime();
+                return isNaN(time) ? '' : Math.floor(time / 1000);
+            }
+            return '';
         },
 
         actionColor(action) {
@@ -464,6 +496,14 @@ export default {
         onQuery() {
             this.page = 1;
             this.fetchData();
+        },
+
+        onStartTimeChange(value) {
+            this.startTime = value;
+        },
+
+        onEndTimeChange(value) {
+            this.endTime = value;
         },
 
         onSortChange() {
