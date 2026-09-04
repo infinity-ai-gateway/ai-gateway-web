@@ -12,7 +12,7 @@ design-docs/
 ├── api-define/                            # 前端消费接口约定
 │   └── OpenAPI接口定义/                   # 按模块拆分的 OpenAPI 约定（含 certificates、operation-logs、model-prices 等）
 ├── prototype-design/                      # 原型设计资产（可选参考）
-├── modifications/                         # 复杂变更的临时说明目录（按需创建，如 2026-09-02-ui-optimize/）
+├── modifications/                         # 复杂变更的临时说明目录（按需创建，如 2026-09-03-ui-optimize/）
 └── sys-design/                            # 系统设计文档
     ├── summary.md                         # 系统设计文档索引（本目录导读）
     ├── 总体设计文档.md                     # 定位、技术栈、分层与数据流
@@ -52,7 +52,7 @@ YYYYMMDD-<变更目的简述>
 
 | 文件 | 说明 |
 |------|------|
-| `ui-code-changes.md` | **常用**：UI 变更说明，含对照接口、需改文件、验收清单（如 `2026-09-02-ui-optimize/`、`2026-09-01-certificates/`）。 |
+| `ui-code-changes.md` | **常用**：UI 变更说明，含对照接口、需改文件、验收清单（如 `2026-09-03-ui-optimize/`、`2026-09-02-ui-optimize/`）。 |
 | `change-summary.md` | 变更摘要：背景、目标、影响范围、关键决策。 |
 | `api-dependencies.md` | OpenAPI 依赖说明：引用 `ai-gateway-api` 相关端点。 |
 | `design-changes.md` | 设计变更说明：页面交互、组件接口、路由、状态变化。 |

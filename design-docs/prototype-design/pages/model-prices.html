@@ -49,7 +49,7 @@
       }
 
       var routeQuery = parseRouteQuery();
-      var autoViewOnce = routeQuery.autoView === '1';
+      var notifyEmptyOnce = !!routeQuery.provider;
       if (routeQuery.provider) {
         state.searchParams.provider = routeQuery.provider;
       }
@@ -120,13 +120,9 @@
 
         bindTableEvents();
 
-        if (autoViewOnce) {
-          autoViewOnce = false;
-          if (state.filtered.length) {
-            ModelPriceUpsert.drawer(state.filtered[0], true, function () {
-              renderTable();
-            });
-          } else if (routeQuery.provider) {
+        if (notifyEmptyOnce) {
+          notifyEmptyOnce = false;
+          if (!state.filtered.length && routeQuery.provider) {
             Prototype.toast(
               '未找到提供商 ' + routeQuery.provider + ' 的模型定价',
               'error'

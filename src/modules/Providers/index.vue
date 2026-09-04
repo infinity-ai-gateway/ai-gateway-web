@@ -306,8 +306,7 @@ export default {
             this.$router.push({
                 name: 'ModelPrice.list',
                 query: {
-                    provider: row.name,
-                    autoView: '1'
+                    provider: row.name
                 }
             });
         },

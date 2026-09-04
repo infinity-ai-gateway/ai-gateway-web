@@ -39,7 +39,7 @@
 | `operator_id` | int64 | 操作者在对应表中的主键 ID | - |
 | `operator_name` | string | 操作者名称 | - |
 | `action` | string | 操作动作 | `create` / `update` / `delete` / `reset` / `import` / `bind` / `unbind` |
-| `resource_type` | string | 资源类型 | `entity` / `entity_type` / `api_key` / `provider` / `cluster` / `route` / `domain` / `certificate` / `quota_plan` / `rate_limit_policy` / `model_price` / `user` / `token` |
+| `resource_type` | string | 资源类型 | `entity` / `entity_type` / `api_key` / `provider` / `cluster` / `route` / `certificate` / `quota_plan` / `model_price` / `user` / `token` |
 | `resource_id` | string | 被操作资源业务 ID | - |
 | `resource_name` | string | 被操作资源名称 | - |
 | `resource_parent_id` | string | 资源父级业务 ID | 如 entity 层级中的父节点 |
@@ -198,10 +198,9 @@
 - `/providers` 的 POST / PUT / DELETE
 - `/clusters` 的 POST / PUT / DELETE
 - `/routes` 的 POST / PUT / DELETE
-- `/domains` 的 POST / PUT / DELETE
+- `/global-route-rules` 的 PUT
 - `/certificates` 的 POST / PUT / DELETE
 - `/quota-plans` 的 POST / PUT / DELETE / reset
-- `/rate-limit-policies` 的 POST / PUT / DELETE
 - `/model-prices` 的 POST / PUT / DELETE / import
 - `/auth/users` 的 POST / PUT / DELETE
 - `/auth/tokens` 的 POST / DELETE

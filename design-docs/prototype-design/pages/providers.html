@@ -191,8 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (action === 'prices') {
           window.location.href =
             '../pages/model-prices.html?provider=' +
-            encodeURIComponent(name) +
-            '&autoView=1';
+            encodeURIComponent(name);
         }
         else if (action === 'delete') handleDelete(name);
       });

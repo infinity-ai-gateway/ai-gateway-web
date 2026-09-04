@@ -225,8 +225,8 @@ const ACTION_OPTIONS = [
 
 const RESOURCE_TYPE_OPTIONS = [
     'entity', 'entity_type', 'api_key', 'provider', 'cluster',
-    'route', 'domain', 'certificate', 'quota_plan',
-    'rate_limit_policy', 'model_price', 'user', 'token'
+    'route', 'certificate', 'quota_plan',
+    'model_price', 'user', 'token'
 ];
 
 const ACTION_COLOR_MAP = {

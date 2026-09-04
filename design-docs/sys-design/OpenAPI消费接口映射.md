@@ -63,7 +63,7 @@
 | `Providers/components/ProviderUpsert.vue` | `PATCH` | `providers/{provider_name}` | 更新服务商；`keys`、`instance_pool` 全量替换。 |
 | `Providers/components/ProviderUpsert.vue` | `POST` | `providers/tools/discover-models` | 无状态模型发现（Body 传连接参数，回填 `models`）。 |
 
-列表「查询模型价格」为前端路由跳转 `ModelPrice.list?provider={name}&autoView=1`，不新增 API。
+列表「查询模型价格」为前端路由跳转 `ModelPrice.list?provider={name}`，不新增 API。
 
 服务商持有实例池、模型协议、模型发现端点与 Key 明文。集群通过 `llm_config.provider` 引用，不再消费 `model-provider-types`、`GET providers?page_size=1000` 全量列表或 `tools/get-models-from-provider`。
 
