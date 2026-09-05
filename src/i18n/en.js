@@ -687,11 +687,11 @@ export default {
     selectLevel: 'Please select level',
     levelTip: 'Value range 1-5, smaller number means higher level',
     enterName: 'Please enter Entity name',
-    namePlaceholder: 'Please enter Entity name',
+    namePlaceholder: 'e.g. user@project',
     nameRule:
-      '1–64 chars; lowercase letters, digits, _, - only; cannot start/end with _ or -',
+      '1–64 chars; lowercase letters, digits, _, -, @ (user@project); cannot start/end with _, -, or @',
     nameFormatError:
-      'Name must use lowercase letters, digits, underscores, or hyphens, and cannot start/end with _ or -',
+      'Name must use lowercase letters, digits, underscores, hyphens, or @ (e.g. user@project), and cannot start/end with _, -, or @',
     nameLeadingTrailingWhitespace:
       'Entity name cannot contain leading or trailing whitespace',
     nameLengthError: 'Entity name cannot exceed 64 characters',

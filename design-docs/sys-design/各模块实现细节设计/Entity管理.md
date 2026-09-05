@@ -44,7 +44,7 @@
 
 | 字段 | 校验 | 说明 |
 |------|------|------|
-| `name` | 必填；新建可编辑，编辑 disabled | Entity 名称。 |
+| `name` | 必填；EntityName：1–64，小写字母/数字/`_`/`-`/`@`，不能以 `_`、`-`、`@` 开头或结尾；新建可编辑，编辑 disabled | Entity 名称，支持 `用户名@项目名`。 |
 | `type` | 必填；编辑 disabled | 关联的 Entity Type。 |
 | `parent_id` | 可选；选项为 level 低于当前类型的 Entity，不可选自己 | 父级实体。 |
 | `allow_models` | 多选；`*` 与具体模型互斥 | 模型白名单。 |

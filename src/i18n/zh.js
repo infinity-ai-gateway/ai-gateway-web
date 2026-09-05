@@ -675,10 +675,10 @@ export default {
     selectLevel: '请选择级别',
     levelTip: '取值范围1-5，数字越小级别越高',
     enterName: '请输入Entity名称',
-    namePlaceholder: '请输入Entity名称',
-    nameRule: '1–64 字符；仅小写字母、数字、_、-；不能以 _ 或 - 开头/结尾',
+    namePlaceholder: 'user@project',
+    nameRule: '1–64 字符；仅小写字母、数字、_、-、@（支持 用户名@项目名）；不能以 _、- 或 @ 开头/结尾',
     nameFormatError:
-      '名称须为小写字母、数字、下划线或连字符，且不能以 _ 或 - 开头/结尾',
+      '名称须为小写字母、数字、下划线、连字符或 @（如 user@project），且不能以 _、- 或 @ 开头/结尾',
     nameLeadingTrailingWhitespace: 'Entity名称不能包含前导或尾随空格',
     nameLengthError: 'Entity名称长度不能超过64字符',
     nameControlCharsError: 'Entity名称不能包含控制字符',

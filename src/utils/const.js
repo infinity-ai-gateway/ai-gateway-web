@@ -67,7 +67,8 @@ export function ProviderNameRegCheck(value) {
 }
 
 export function EntityNameRegCheck(value) {
-  // EntityName: 1-64 chars; lowercase letters, digits, _, -; cannot start/end with _ or -
+  // EntityName: 1-64 chars; lowercase letters, digits, _, -, @ (user@project);
+  // cannot start/end with _, -, or @
   if (!value || typeof value !== 'string') {
     return false;
   }
@@ -77,7 +78,7 @@ export function EntityNameRegCheck(value) {
   if (value.length < 1 || value.length > 64) {
     return false;
   }
-  return /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/.test(value);
+  return /^[a-z0-9](?:[a-z0-9_@-]{0,62}[a-z0-9])?$/.test(value);
 }
 
 export function RateLimitRuleNameRegCheck(value) {

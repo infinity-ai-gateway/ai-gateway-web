@@ -1,5 +1,7 @@
 window.EntityUpsert = {
-  ENTITY_NAME_RE: /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/,
+  // EntityName: 1-64; lowercase letters, digits, _, -, @ (user@project);
+  // cannot start/end with _, -, or @
+  ENTITY_NAME_RE: /^[a-z0-9](?:[a-z0-9_@-]{0,62}[a-z0-9])?$/,
   RMB_QUOTA_MAX: 90000000,
   TOKEN_QUOTA_MAX: 9999999999,
 
@@ -48,7 +50,7 @@ window.EntityUpsert = {
     if (val.length !== val.trim().length) return '名称不能包含前后空白字符';
     if (val.length > 64) return '名称不能超过64个字符';
     if (!EntityUpsert.ENTITY_NAME_RE.test(val)) {
-      return '名称须为小写字母、数字、下划线或连字符，且不能以 _ 或 - 开头/结尾';
+      return '名称须为小写字母、数字、下划线、连字符或 @（如 user@project），且不能以 _、- 或 @ 开头/结尾';
     }
     return null;
   },
@@ -248,9 +250,9 @@ window.EntityUpsert = {
             (isAdd ? '' : ' readonly disabled') +
             ' maxlength="64" value="' +
             IvuUI.escapeHtml(data.name || '') +
-            '" placeholder="rd-dept" />' +
+            '" placeholder="user@project" />' +
             '</div>' +
-            '<p class="form-tip">1–64 字符；仅小写字母、数字、_、-；不能以 _ 或 - 开头/结尾</p>',
+            '<p class="form-tip">1–64 字符；仅小写字母、数字、_、-、@（支持 用户名@项目名）；不能以 _、- 或 @ 开头/结尾</p>',
           true,
         ) +
           EntityUpsert.rowSpan2(

@@ -105,6 +105,32 @@ window.MockData = {
         rules: [],
       },
     },
+    {
+      id: 4,
+      name: 'alice@default',
+      type: 'team',
+      parent_id: 1,
+      allow_models: ['*'],
+      block_models: [],
+      create_time: 1704844800,
+      update_time: 1735689600,
+      quota_plan: {
+        unlimited: true,
+        quota: 0,
+        balance: { used: 0 },
+        unit: 'total_token',
+        reset_period: 'never',
+        pass_when_no_enough_quota: false,
+      },
+      rate_limit_policy: {
+        enabled: false,
+        rules: { max_concurrency: -1, tpm: [], rpm: [] },
+      },
+      route_rules: {
+        enabled: false,
+        rules: [],
+      },
+    },
   ],
   entityTypes: [
     {
