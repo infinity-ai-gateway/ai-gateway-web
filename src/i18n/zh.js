@@ -988,7 +988,7 @@ export default {
     tipNameRule:
       '长度1-64字符；仅允许字母、数字、下划线_、短横线-、点.；不能以点、短横线、下划线开头或结尾；不能包含空白字符',
     protocolRequired: '请至少选择一种模型协议',
-    protocolInvalid: '模型协议仅支持 openai、anthropic',
+    protocolInvalid: '模型协议仅支持 openai、anthropic、gemini',
     deleteFailed: '删除失败，该服务商可能仍被集群引用',
     viewModelPrices: '查询模型价格',
     pricingTiers: '分段计价配置',

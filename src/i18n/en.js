@@ -1038,7 +1038,8 @@ export default {
     tipNameRule:
       'Length 1-64 characters; only letters, digits, underscore, hyphen, and dot; cannot start or end with a dot, hyphen, or underscore; cannot contain whitespace',
     protocolRequired: 'Please select at least one model protocol',
-    protocolInvalid: 'Model protocol only supports openai and anthropic',
+    protocolInvalid:
+      'Model protocol only supports openai, anthropic and gemini',
     deleteFailed:
       'Delete failed. The provider may still be referenced by a cluster',
     viewModelPrices: 'View Model Pricing',

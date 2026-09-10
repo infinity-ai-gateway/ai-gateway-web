@@ -1,5 +1,5 @@
 window.ProviderUpsert = (function () {
-  var PROTOCOL_OPTIONS = ['openai', 'anthropic'];
+  var PROTOCOL_OPTIONS = ['openai', 'anthropic', 'gemini'];
   var MODEL_LIST_TIP =
     '须先填写上方的模型协议、实例池、模型列表接口与密钥（按需）；「获取」将从上游拉取可用模型并回填到列表，未完成必要配置时按钮置灰。也可直接输入模型名称按回车添加，或点击「批量添加」粘贴多行/分隔的模型名（合并进现有列表，不覆盖）。';
   var MODEL_LIST_PLACEHOLDER =
@@ -120,6 +120,9 @@ window.ProviderUpsert = (function () {
     if (protocol === 'anthropic') {
       return ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'];
     }
+    if (protocol === 'gemini') {
+      return ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    }
     if (payload.addr && String(payload.addr).indexOf('deepseek') !== -1) {
       return ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'];
     }
@@ -134,12 +137,15 @@ window.ProviderUpsert = (function () {
     var keys = (data.keys || []).filter(function (k) {
       return (k.key || '').trim();
     });
+    var modelProtocol = protocols[0] || '';
+    var defaultUri =
+      modelProtocol === 'gemini' ? '/v1beta/models' : '/v1/models';
     return {
-      model_protocol: protocols[0] || '',
+      model_protocol: modelProtocol,
       schema: (data.model_endpoint && data.model_endpoint.schema) || 'https',
       addr: addr,
       port: port,
-      uri: (data.model_endpoint && data.model_endpoint.uri) || '/v1/models',
+      uri: (data.model_endpoint && data.model_endpoint.uri) || defaultUri,
       apikey: keys.length ? String(keys[0].key || '').trim() : '',
     };
   }
@@ -147,7 +153,7 @@ window.ProviderUpsert = (function () {
   function validateDiscoverPayload(payload) {
     if (!payload.model_protocol) return '请至少选择一个模型协议';
     if (PROTOCOL_OPTIONS.indexOf(payload.model_protocol) === -1) {
-      return 'model_protocol 须为 openai 或 anthropic';
+      return 'model_protocol 须为 openai、anthropic 或 gemini';
     }
     if (!payload.schema) return '请选择请求协议 schema';
     if (!payload.addr) return '请填写实例地址后再获取模型';
@@ -823,7 +829,7 @@ window.ProviderUpsert = (function () {
     for (var p = 0; p < data.model_protocols.length; p++) {
       var proto = data.model_protocols[p];
       if (PROTOCOL_OPTIONS.indexOf(proto) === -1) {
-        return '模型协议取值须为 openai 或 anthropic';
+        return '模型协议取值须为 openai、anthropic 或 gemini';
       }
       if (protocolSet[proto]) return '模型协议不能重复';
       protocolSet[proto] = true;

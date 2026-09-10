@@ -1,11 +1,18 @@
-/** * Copyright(c) 2026 The rainway-ai-gateway Authors. * * Licensed under the
-Apache License, Version 2.0 (the "License"); * you may not use this file except
-in compliance with the License. * You may obtain a copy of the License at * *
-http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
-law or agreed to in writing, software * distributed under the License is
-distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. * See the License for the specific language governing
-permissions and * limitations under the License. */
+/**
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 <template>
   <div class="model-price-upsert">
     <Form
@@ -395,10 +402,15 @@ const LIMIT_KEY_OPTIONS = [
 const PRICE_KEY_OPTIONS = [
     'input_cost_per_token', 'output_cost_per_token',
     'cache_read_input_token_cost', 'cache_creation_input_token_cost',
+    'cache_creation_input_token_cost_1h',
     'input_cost_per_token_above_200k_tokens', 'output_cost_per_token_above_200k_tokens',
-    'output_cost_per_image', 'output_cost_per_pixel',
+    'input_cost_per_token_above_256k_tokens', 'output_cost_per_token_above_256k_tokens',
+    'input_cost_per_token_above_272k_tokens', 'output_cost_per_token_above_272k_tokens',
+    'input_cost_per_token_above_512k_tokens', 'output_cost_per_token_above_512k_tokens',
+    'output_cost_per_image', 'input_cost_per_image_token', 'output_cost_per_pixel',
     'output_cost_per_image_low_quality', 'output_cost_per_image_high_quality',
-    'input_cost_per_audio_per_second', 'input_cost_per_video_per_second',
+    'input_cost_per_audio_per_second', 'input_cost_per_audio_token', 'output_cost_per_audio_token',
+    'input_cost_per_video_per_second',
     'output_cost_per_second',
     'input_cost_per_query', 'search_context_cost_per_query', 'ocr_cost_per_page',
     'output_cost_per_character', 'output_cost_per_image_hd', 'output_cost_per_video',

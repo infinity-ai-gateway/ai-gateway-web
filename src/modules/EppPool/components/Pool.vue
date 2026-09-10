@@ -1,15 +1,24 @@
+/**
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 <template>
   <div>
     <!-- 统计摘要 -->
     <div class="proto-epp-summary" style="margin-top:16px;margin-bottom:16px;">
       <span style="margin-right:24px;"
         >{{ $t('eppPool.poolName')
-
-
-
-
-
-
 
         }}：<strong>{{ poolData.name }}</strong></span
       >
@@ -52,7 +61,6 @@
       >
     </div>
 
-    <!-- 树形表格（编辑态单元格内嵌 FormItem 做行内校验） -->
     <Form ref="poolForm" :model="poolData">
       <Table
         ref="poolTable"
@@ -67,7 +75,6 @@
       />
     </Form>
 
-    <!-- 编辑模式下添加组 -->
     <div v-if="editing" style="margin-top:12px;">
       <Button type="primary" size="small" @click="addGroup">{{
         $t('eppPool.addGroup')
@@ -208,7 +215,6 @@ export default {
     getGroup(index) {
       return this.poolData.groups[index] || { name: '', instances: [] };
     },
-    // 组名可为空或重复，客户端为每个组分配 uid 用于行身份标识（保存时不下发）
     assignUids(groups) {
       (groups || []).forEach((g) => {
         if (g.uid == null) {
@@ -258,11 +264,6 @@ export default {
       this.editing = false;
       this.version++;
     },
-    // 按 OpenAPI 接口定义（epp-pool.md）做保存前校验：
-    // 组名非空且池内唯一；拒绝空组；实例 id 非空且池内全局唯一；
-    // host 为 Hostname 或 IP（IPv6 字面量不带括号）；port 为 1-65535 整数；
-    // (host, port) 组合池内全局唯一。
-    // 每组实例数由部署形态配置项在服务端控制，客户端不做硬校验。
     validatePool() {
       const groups = this.poolData.groups || [];
       if (!groups.length) {
@@ -320,8 +321,6 @@ export default {
       }
       return '';
     },
-    // Hostname（RFC 1123，标签仅字母/数字/连字符、不以连字符首尾、长度 2-63，总长 ≤255）
-    // 或 IPv4 / IPv6（IPv6 字面量不带括号）
     isValidHost(value) {
       const s = String(value || '').trim();
       if (!s || s.length > 255) {
@@ -363,12 +362,7 @@ export default {
       const right = parsePart(halves[1]);
       return left !== null && right !== null && left.length + right.length <= 7;
     },
-    // 跨字段约束（组名唯一、实例 id 唯一、host:port 唯一）变化时，
-    // 其他行字段的 FormItem 不会自动重校验，此处刷新所有处于错误态的字段，
-    // 避免错误提示残留或漏报
     refreshErrorFields() {
-      // 表格展开行内的 FormItem 可能未注册进 Form.fields，
-      // 直接按 DOM 上的组件实例刷新所有处于错误态的字段
       const items = this.$el.querySelectorAll('.ivu-form-item');
       Array.prototype.forEach.call(items, (el) => {
         const item = el.__vue__;
@@ -377,8 +371,6 @@ export default {
         }
       });
     },
-    // host 和 port 有跨字段校验（host:port 唯一），
-    // 编辑其中任一字段时需同时刷新两者的校验状态
     refreshHostPortFields(groupIndex, instIndex) {
       const targets = [
         `groups.${groupIndex}.instances.${instIndex}.host`,
@@ -392,7 +384,6 @@ export default {
         }
       });
     },
-    // 以下为 FormItem 行内校验规则（不设置 trigger，变更/失焦/保存全量校验均生效）
     groupNameRules(index) {
       return [
         {
@@ -507,7 +498,6 @@ export default {
         },
       ];
     },
-    // (host, port) 组合池内全局唯一
     hostPortDupError(groupIndex, index, host) {
       const port = this.getInstance(groupIndex, index).port;
       if (!host || !Number.isInteger(port)) {
@@ -528,7 +518,6 @@ export default {
         : '';
     },
     savePool() {
-      // 表单行内校验（仅覆盖已展开行）+ 数据级校验（覆盖收起行）双重把关
       this.$refs.poolForm.validate((valid) => {
         const errMsg = this.validatePool();
         if (!valid || errMsg) {
@@ -581,9 +570,6 @@ export default {
       this.version++;
     },
     handleExpand(row, status) {
-      // iview Table 深度监听 data，重建 objData 时以行数据 _expanded 字段恢复展开态，
-      // 因此需将展开状态回写到 poolData，否则输入触发重建后树会收起；
-      // on-expand 的 row 为行数据克隆，组名又可为空/重复，故按 uid 定位回写
       const idx = (this.poolData.groups || []).findIndex(
         (g) => g.uid === row.uid,
       );
@@ -637,7 +623,6 @@ export default {
           ),
         );
       } else {
-        // 实例编辑/展示表（原生 table，避免嵌套 iview Table 重建导致输入失焦）
         const headCells = [
           h('th', { style: thStyle }, this.$t('eppPool.instanceId')),
           h('th', { style: thStyle }, this.$t('eppPool.host')),
@@ -725,8 +710,6 @@ export default {
                       min: 1,
                       max: 65535,
                       size: 'small',
-                      // 默认失焦/回车才提交值，会导致键入过程中模型端口未更新、
-                      // 跨字段校验（host:port 唯一）提示不刷新；改为键入即提交
                       activeChange: true,
                     },
                     style: 'width:100%;',
@@ -781,7 +764,6 @@ export default {
         );
       }
 
-      // 编辑模式下添加实例按钮
       if (this.editing) {
         children.push(
           h('div', { style: 'margin-top:8px;' }, [
@@ -815,8 +797,6 @@ export default {
   font-size: 13px;
   color: #515a6e;
 }
-/* 表格单元格内嵌表单：去掉 FormItem 默认下边距，错误提示改为流内布局，
-   避免被单元格 overflow:hidden 裁剪或绝对定位遮挡相邻行 */
 .epp-pool-table /deep/ .ivu-form-item {
   margin-bottom: 0;
 }
@@ -840,7 +820,6 @@ export default {
   cursor: pointer;
   user-select: none;
 }
-/* iview 展开时会对图标旋转 90deg，此处已用 ::before 切换为 ▼，需取消旋转否则图标歪斜 */
 .epp-pool-table /deep/ .ivu-table-cell-expand-expanded {
   transform: none;
 }

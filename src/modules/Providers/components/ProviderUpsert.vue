@@ -231,7 +231,7 @@ import InstancePool, {
     syncInstancePoolPortBySchema
 } from '@/modules/Clusters/components/InstancePool';
 
-const PROTOCOL_OPTIONS = ['openai', 'anthropic'];
+const PROTOCOL_OPTIONS = ['openai', 'anthropic', 'gemini'];
 
 function parseModelNames(text) {
     return Array.from(new Set(
@@ -563,12 +563,14 @@ export default {
                 .map(item => this.resolveKeyValue(item))
                 .map(key => String(key || '').trim())
                 .filter(Boolean);
+            const modelProtocol = (this.formData.model_protocols || [])[0];
+            const defaultUri = modelProtocol === 'gemini' ? '/v1beta/models' : '/v1/models';
             return {
-                model_protocol: (this.formData.model_protocols || [])[0],
+                model_protocol: modelProtocol,
                 schema,
                 addr: first.addr,
                 port: first.port,
-                uri: (this.formData.model_endpoint && this.formData.model_endpoint.uri) || '/v1/models',
+                uri: (this.formData.model_endpoint && this.formData.model_endpoint.uri) || defaultUri,
                 apikey: keys[0] || ''
             };
         },
