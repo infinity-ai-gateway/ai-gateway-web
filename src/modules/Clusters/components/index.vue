@@ -1,110 +1,98 @@
-/**
-* Copyright(c) 2026 The rainway-ai-gateway Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http: //www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-/**
-* Copyright (c) 2021 The BFE Authors.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/** * Copyright(c) 2026 The rainway-ai-gateway Authors. * * Licensed under the
+Apache License, Version 2.0 (the "License"); * you may not use this file except
+in compliance with the License. * You may obtain a copy of the License at * *
+http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
+law or agreed to in writing, software * distributed under the License is
+distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied. * See the License for the specific language governing
+permissions and * limitations under the License. */ /** * Copyright (c) 2021 The
+BFE Authors. * * Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License. * You may
+obtain a copy of the License at * * http://www.apache.org/licenses/LICENSE-2.0 *
+* Unless required by applicable law or agreed to in writing, software *
+distributed under the License is distributed on an "AS IS" BASIS, * WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. * See the
+License for the specific language governing permissions and * limitations under
+the License. */
 <template>
-    <div class="newClusters">
-        <BaseConfig
-            v-show="currentStepIndex === 0"
-            :baseConfigData="baseConfigData"
-            :reportFlag="baseSubmitFlag"
-            :isAdd="isAdd"
-            :clusterNames="clusterNames"
-            @submitData="acceptDataHandler"
-        />
-        <Timeout
-            v-show="currentStepIndex === 1"
-            :baseConfigData="baseConfigData"
-            :reportFlag="timeoutSubmitFlag"
-            :isAdd="isAdd"
-            @submitData="acceptDataHandler"
-        />
-        <PassiveHealthCheck
-            v-show="currentStepIndex === 2"
-            :passiveHealthData="passiveHealthData"
-            :reportFlag="passiveHealthSubmitFlag"
-            :isAdd="isAdd"
-            :submitName="submitName"
-            @submitData="acceptDataHandler"
-        />
-        <GatewayConfig
-            v-show="currentStepIndex === 3"
-            :llmConfigData="llmConfigData"
-            :isAdd="isAdd"
-            :stepsCurrentState="currentStepIndex"
-            :reportFlag="llmConfigFlag"
-            @submitData="acceptDataHandler"
-        />
+  <div class="newClusters">
+    <BaseConfig
+      v-show="currentStepIndex === 0"
+      :baseConfigData="baseConfigData"
+      :reportFlag="baseSubmitFlag"
+      :isAdd="isAdd"
+      :clusterNames="clusterNames"
+      @submitData="acceptDataHandler"
+    />
+    <Timeout
+      v-show="currentStepIndex === 1"
+      :baseConfigData="baseConfigData"
+      :reportFlag="timeoutSubmitFlag"
+      :isAdd="isAdd"
+      @submitData="acceptDataHandler"
+    />
+    <PassiveHealthCheck
+      v-show="currentStepIndex === 2"
+      :passiveHealthData="passiveHealthData"
+      :reportFlag="passiveHealthSubmitFlag"
+      :isAdd="isAdd"
+      :submitName="submitName"
+      @submitData="acceptDataHandler"
+    />
+    <GatewayConfig
+      v-show="currentStepIndex === 3"
+      :llmConfigData="llmConfigData"
+      :isAdd="isAdd"
+      :balanceModeData="balanceModeData"
+      :stepsCurrentState="currentStepIndex"
+      :reportFlag="llmConfigFlag"
+      @submitData="acceptDataHandler"
+    />
 
-        <Review
-            v-show="currentStepIndex === reviewStepIndex"
-            :baseConfigData="baseConfigData"
-            :passiveHealthData="passiveHealthData"
-            :llmConfigData="llmConfigData"
-            :isAdd="isAdd"
-            :reportFlag="reviewSubmitFlag"
-            v-on="$listeners"
-            @submitData="submit"
-        />
-        <footer>
-            <Steps :current="currentStepIndex">
-                <Step
-                    v-for="(step, index) in visibleSteps"
-                    :key="index"
-                    :title="StepsTitle(index)"
-                    :content="step.content"
-                ></Step>
-            </Steps>
-        </footer>
-        <div class="com-btn-box drawer-footer">
-            <Button
-                v-show="currentStepIndex === reviewStepIndex"
-                size="small"
-                type="primary"
-                @click="submitNextSteps"
-            >
-                {{ $t('com.submit') }}
-            </Button>
-            <Button
-                v-show="currentStepIndex !== reviewStepIndex"
-                size="small"
-                :disabled="disabled"
-                @click="submitNextSteps"
-                type="primary"
-            >
-                {{ $t('com.nextStep') }}
-            </Button>
-            <Button v-show="currentStepIndex !== 0" @click="back" size="small">{{
+    <Review
+      v-show="currentStepIndex === reviewStepIndex"
+      :baseConfigData="baseConfigData"
+      :passiveHealthData="passiveHealthData"
+      :llmConfigData="llmConfigData"
+      :balanceModeData="balanceModeData"
+      :isAdd="isAdd"
+      :reportFlag="reviewSubmitFlag"
+      v-on="$listeners"
+      @submitData="submit"
+    />
+    <footer>
+      <Steps :current="currentStepIndex">
+        <Step
+          v-for="(step, index) in visibleSteps"
+          :key="index"
+          :title="StepsTitle(index)"
+          :content="step.content"
+        ></Step>
+      </Steps>
+    </footer>
+    <div class="com-btn-box drawer-footer">
+      <Button
+        v-show="currentStepIndex === reviewStepIndex"
+        size="small"
+        type="primary"
+        @click="submitNextSteps"
+      >
+        {{ $t('com.submit') }}
+      </Button>
+      <Button
+        v-show="currentStepIndex !== reviewStepIndex"
+        size="small"
+        :disabled="disabled"
+        @click="submitNextSteps"
+        type="primary"
+      >
+        {{ $t('com.nextStep') }}
+      </Button>
+      <Button v-show="currentStepIndex !== 0" @click="back" size="small">{{
                 $t('com.lastStep')
-            }}</Button>
-        </div>
+      }}</Button>
     </div>
+  </div>
 </template>
 
 <script>
@@ -297,20 +285,15 @@ export default {
         }
     },
 
-    mounted() {
-        if (!this.isAdd) {
-            this.changeData();
-        }
-    },
-
     watch: {
         currentCluster: {
-            handler() {
+            handler(data) {
                 if (!this.isAdd) {
-                    this.changeData();
+                    this.changeData(data);
                 }
             },
-            deep: true
+            deep: true,
+            immediate: true
         }
     },
 
@@ -321,6 +304,7 @@ export default {
             baseConfigData: {},
             llmConfigData: {},
             passiveHealthData: {},
+            balanceModeData: null,
             baseSubmitFlag: false,
             timeoutSubmitFlag: false,
             passiveHealthSubmitFlag: false,
@@ -379,7 +363,15 @@ export default {
             }
         },
         acceptDataHandler(data) {
-            this[data.topic] = data.data;
+            if (data.topic === 'llmConfigData') {
+                this.balanceModeData = {
+                    balance_mode: data.data.balance_mode,
+                    epp_config: data.data.epp_config
+                };
+                this.llmConfigData = data.data;
+            } else {
+                this[data.topic] = data.data;
+            }
             this.submitName = this.baseConfigData.name;
 
             if (this.currentStepIndex < this.reviewStepIndex) {
@@ -395,6 +387,12 @@ export default {
                 passive_health_check: formatPassiveHealthCheckForApi(this.passiveHealthData),
                 llm_config: formatLlmConfigForApi(this.llmConfigData)
             };
+            if (this.balanceModeData) {
+                data.balance_mode = this.balanceModeData.balance_mode || 'WRR';
+                if (this.balanceModeData.epp_config) {
+                    data.epp_config = this.balanceModeData.epp_config;
+                }
+            }
             this.changeObj(data);
             return data;
         },
@@ -432,8 +430,8 @@ export default {
                     this.reviewSubmitFlag = !this.reviewSubmitFlag;
             }
         },
-        changeData() {
-            const tmpData = cloneDeep(this.currentCluster);
+        changeData(data) {
+            const tmpData = cloneDeep(data);
             const retries = tmpData.basic.retries || {};
             this.baseConfigData = {
                 name: tmpData.name,
@@ -454,7 +452,13 @@ export default {
                     String(this.baseConfigData.connection.cancel_on_client_close);
             }
             this.passiveHealthData = tmpData.passive_health_check || {};
-            this.llmConfigData = tmpData.llm_config || {};
+            this.llmConfigData = {
+                ...(tmpData.llm_config || {})
+            };
+            this.balanceModeData = {
+                balance_mode: tmpData.balance_mode,
+                epp_config: tmpData.epp_config || null
+            };
         },
         back() {
             if (this.currentStepIndex > 0) {

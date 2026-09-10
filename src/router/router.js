@@ -124,6 +124,16 @@ export default [
         component: (r) =>
           require.ensure(
             [],
+            () => r(require('../modules/EppPool')),
+            'EppPool.list',
+          ),
+        path: 'epp',
+        name: 'EppPool.list',
+      },
+      {
+        component: (r) =>
+          require.ensure(
+            [],
             () => r(require('../modules/ModelPrices')),
             'ModelPrice.list',
           ),

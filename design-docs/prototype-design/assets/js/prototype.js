@@ -30,6 +30,7 @@ window.Prototype = {
       'nav.ModelPriceManage': '模型定价',
       'nav.UserManage': '用户管理',
       'nav.OperationLogManage': '操作日志',
+      'nav.EppPoolManage': 'EPP调度',
     },
     en: {
       'login.gateway': 'Rainway AI Gateway',
@@ -57,6 +58,7 @@ window.Prototype = {
       'nav.ModelPriceManage': 'Model Pricing',
       'nav.UserManage': 'User Manage',
       'nav.OperationLogManage': 'Operation Logs',
+      'nav.EppPoolManage': 'EPP Scheduling',
     },
   },
 

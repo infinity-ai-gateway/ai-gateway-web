@@ -156,6 +156,8 @@ language governing permissions and * limitations under the License. */
 </template>
 
 <script>
+import { formatPriceDisplay } from '@/utils/price';
+
 export default {
     name: 'ModelPriceView',
 
@@ -203,15 +205,7 @@ export default {
             return date.toLocaleString('zh-CN');
         },
         formatPrice(value) {
-            if (value === null || value === undefined || value === '') return '-';
-            const num = Number(value);
-            if (Number.isNaN(num)) return '-';
-            if (num === 0) return '0';
-            let str = num.toString();
-            if (/[eE]/.test(str)) {
-                str = num.toFixed(20).replace(/\.?0+$/, '');
-            }
-            return str;
+            return formatPriceDisplay(value);
         }
     }
 };

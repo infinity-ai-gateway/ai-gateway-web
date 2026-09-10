@@ -298,9 +298,94 @@ window.MockData = {
   ],
   modelProtocols: ['openai', 'anthropic'],
   clusters: [
-    { name: 'test', description: '', provider: 'deepseek' },
-    { name: 'cluster-test1', description: '测试更新', provider: 'openai' },
+    { name: 'test', description: '', provider: 'deepseek', balance_mode: 'WRR', epp_config: null },
+    { name: 'cluster-test1', description: '测试更新', provider: 'openai', balance_mode: 'WRR', epp_config: null },
+    {
+      name: 'epp-cluster-a',
+      description: 'EPP调度集群',
+      provider: 'deepseek',
+      balance_mode: 'EPP',
+      epp_config: {
+        scheduling_profile: 'balanced',
+        cache_affinity: 'medium',
+        prefix_cache_affinity: true,
+        session_affinity_enabled: true,
+        session_affinity_header: 'x-session-id',
+        kv_cache_utilization_max: 0.9,
+        flow_control: {
+          max_requests: 1000,
+          queue_ttl: 30,
+          no_endpoint_queue_ttl: 600,
+          enable_eviction: false,
+        },
+      },
+    },
+    {
+      name: 'epp-cluster-b',
+      description: 'EPP低延迟集群',
+      provider: 'openai',
+      balance_mode: 'EPP',
+      epp_config: {
+        scheduling_profile: 'latency-first',
+        cache_affinity: 'medium',
+        prefix_cache_affinity: true,
+        session_affinity_enabled: false,
+        session_affinity_header: '',
+        kv_cache_utilization_max: 0.85,
+        flow_control: {
+          max_requests: 500,
+          queue_ttl: 60,
+          no_endpoint_queue_ttl: 600,
+          enable_eviction: true,
+        },
+      },
+    },
   ],
+  eppPool: {
+    name: 'EPP.pool',
+    groups: [
+      {
+        name: 'g1',
+        instances: [
+          { id: 'epp-a', host: '10.0.0.1', port: 9002 },
+          { id: 'epp-b', host: '10.0.0.2', port: 9002 },
+        ],
+      },
+      {
+        name: 'g2',
+        instances: [
+          { id: 'epp-c', host: '10.0.0.3', port: 9002 },
+          { id: 'epp-d', host: '10.0.0.4', port: 9002 },
+        ],
+      },
+      {
+        name: 'g3',
+        instances: [
+          { id: 'epp-e', host: '10.0.0.5', port: 9002 },
+        ],
+      },
+    ],
+  },
+  eppAssignments: {
+    clusters: [
+      {
+        cluster: 'epp-cluster-a',
+        group: 'g1',
+        primary: { id: 'epp-a', host: '10.0.0.1', port: 9002 },
+        standby: { id: 'epp-b', host: '10.0.0.2', port: 9002 },
+        degraded: false,
+      },
+      {
+        cluster: 'epp-cluster-b',
+        group: 'g2',
+        primary: { id: 'epp-c', host: '10.0.0.3', port: 9002 },
+        standby: { id: 'epp-d', host: '10.0.0.4', port: 9002 },
+        degraded: false,
+      },
+    ],
+    unassigned_clusters: [],
+    idle_groups: ['g3'],
+  },
   routeTables: [
     { type: 'global', owner: 'global', enabled: true },
     { type: 'entity', owner: 1, enabled: false },
@@ -512,15 +597,15 @@ window.MockData = {
         max_output_tokens: 8192,
       },
       prices: {
-        input_cost_per_token: 0.00000027,
-        output_cost_per_token: 0.0000011,
-        cache_read_input_token_cost: 0.00000007,
+        input_cost_per_token: 2.7e-7,
+        output_cost_per_token: 1.1e-6,
+        cache_read_input_token_cost: 7e-8,
       },
       tier_prices: {
         peak: {
-          input_cost_per_token: 0.00000054,
-          output_cost_per_token: 0.0000022,
-          cache_read_input_token_cost: 0.00000014,
+          input_cost_per_token: 5.4e-7,
+          output_cost_per_token: 2.2e-6,
+          cache_read_input_token_cost: 1.4e-7,
         },
       },
       metadata: {
@@ -570,6 +655,29 @@ window.MockData = {
       },
       create_time: 1704067200,
       update_time: 1717209600,
+    },
+    {
+      id: 7,
+      provider: 'qwen',
+      model: 'Qwen3-8B',
+      base_model: 'qwen3-8b',
+      mode: 'chat',
+      capabilities: ['chat', 'tools', 'function_calling'],
+      supported_parameters: ['temperature', 'top_p', 'max_tokens'],
+      limits: {
+        context_window: 131072,
+        max_output_tokens: 8192,
+      },
+      prices: {
+        input_cost_per_token: 4.141631732e-6,
+        output_cost_per_token: 7.6234102728e-8,
+      },
+      metadata: {
+        source: 'model-list.yaml',
+        notes: '目录导入示例：12 位小数科学计数法价格（1.5e-6 与 0.0000015 等价）',
+      },
+      create_time: 1725148800,
+      update_time: 1725148800,
     },
   ],
   getModelPriceProviders: function () {

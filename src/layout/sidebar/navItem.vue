@@ -97,6 +97,7 @@ export default {
                 'AdvanceRouteRuleManage': 'iconfont icon-zhuanfa',
                 'RouteTableManage': 'iconfont icon-zhuanfa',
 
+                'EppPool.list': 'iconfont icon-jiqun',
                 'ModelPrice.list': 'ivu-icon-logo-yen',
 
                 'OperationLog.list': 'ivu-icon-md-list-box',
