@@ -1,6 +1,6 @@
 # 02 概览：控制台布局与导航
 
-登录成功后进入控制台，整体布局为「左侧导航 + 右侧内容区」。首次使用建议先浏览本章，再跟做 [11 场景实战](11-scenarios.md)。
+登录成功后进入控制台，整体布局为「左侧导航 + 右侧内容区」。首次使用建议先浏览本章，再跟做 [14 场景实战](14-scenarios.md)。
 
 ## 2.1 导航结构
 
@@ -10,13 +10,15 @@ AI 网关
 │   ├─ AI 网关实例池      数据面转发引擎地址登记
 │   ├─ 模型服务商          实例池、协议、模型与 Keys
 │   ├─ AI 业务集群        引用服务商，配置转发策略
-│   └─ 模型定价           模型价格维护与费用核算
+│   ├─ 模型定价           模型价格维护与费用核算
+│   └─ 证书管理          HTTPS 证书上传与全局缺省证书
 ├─ 消费者管理
 │   ├─ Entity 管理       类型 / 组织（配额、限流、模型访问控制）
 │   └─ API Key 管理      调用凭证签发与治理
 ├─ 路由管理
 │   └─ 路由表            Global / Entity / API-Key 路由规则
-└─ 用户管理              控制台账号与 Token（管理员）
+├─ 用户管理              控制台账号与 Token（管理员）
+└─ 操作日志              写操作审计查询（管理员）
 ```
 
 ## 2.2 通用交互约定
@@ -28,9 +30,9 @@ AI 网关
 
 ## 2.3 三级路由优先级
 
-请求进入数据面后按 **API-Key > Entity > Global** 顺序匹配路由表：先查该 Key 的专属表，未命中再查 Key 挂载组织的表，最后回落 Global。详见 [10 章](10-route.md)。
+请求进入数据面后按 **API-Key > Entity > Global** 顺序匹配路由表：先查该 Key 的专属表，未命中再查 Key 挂载组织的表，最后回落 Global。详见 [11 章](11-route.md)。
 
 ## 2.4 下一步
 
-- 首次配置请跟做 [11 场景实战](11-scenarios.md)；
-- 字段级说明见各模块章节：[实例池](03-ai-gateway-pool.md)、[模型服务商](04-model-provider.md)、[业务集群](05-ai-business-cluster.md)、[模型定价](06-model-prices.md)、[Entity 组织](08-entity.md)、[API Key](09-api-key.md)、[路由管理](10-route.md)。
+- 首次配置请跟做 [14 场景实战](14-scenarios.md)；
+- 字段级说明见各模块章节：[实例池](03-ai-gateway-pool.md)、[模型服务商](04-model-provider.md)、[业务集群](05-ai-business-cluster.md)、[EPP 调度](06-epp-schedule.md)、[模型定价](07-model-prices.md)、[Entity 组织](09-entity.md)、[API Key](10-api-key.md)、[路由管理](11-route.md)、[证书管理](12-certificates.md)、[操作日志](13-operation-logs.md)。

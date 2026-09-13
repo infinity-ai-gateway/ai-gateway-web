@@ -1,19 +1,33 @@
-/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors. * *
-Licensed under the Apache License, Version 2.0 (the "License"); * you may not
-use this file except in compliance with the License. * You may obtain a copy of
-the License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless
-required by applicable law or agreed to in writing, software * distributed under
-the License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied. * See the License for the
-specific language governing permissions and * limitations under the License. */
-/** * Copyright (c) 2021 The BFE Authors. * * Licensed under the Apache License,
-Version 2.0 (the "License"); * you may not use this file except in compliance
-with the License. * You may obtain a copy of the License at * *
-http://www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable law
-or agreed to in writing, software * distributed under the License is distributed
-on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-express or implied. * See the License for the specific language governing
-permissions and * limitations under the License. */
+/**
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+/**
+* Copyright (c) 2021 The BFE Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 <template>
   <div class="Review">
     <div class="panel">
@@ -353,6 +367,109 @@ permissions and * limitations under the License. */
         </ul>
       </div>
     </div>
+
+    <div class="panel" v-if="balanceModeData">
+      <div class="panel-header">
+        {{ $t('gatewayConfig.balanceModeConfig') }}
+      </div>
+      <div class="panel-body">
+        <ul class="clearFloat">
+          <li class="title">{{ $t('gatewayConfig.balanceMode') }}:</li>
+          <li class="value">
+            <Tag
+              :color="balanceModeData.balance_mode === 'EPP' ? 'blue' : 'default'"
+            >
+              {{ balanceModeData.balance_mode === 'EPP' ? $t('gatewayConfig.epp') : $t('gatewayConfig.wrr') }}
+            </Tag>
+          </li>
+        </ul>
+        <template
+          v-if="balanceModeData.balance_mode === 'EPP' && balanceModeData.epp_config"
+        >
+          <ul class="clearFloat">
+            <li class="title">{{ $t('gatewayConfig.schedulingProfile') }}:</li>
+            <li class="value">{{ displayEppSchedulingProfile }}</li>
+          </ul>
+          <ul class="clearFloat">
+            <li class="title">{{ $t('gatewayConfig.cacheAffinity') }}:</li>
+            <li class="value">{{ displayEppCacheAffinity }}</li>
+          </ul>
+          <ul class="clearFloat">
+            <li class="title">
+              {{ $t('gatewayConfig.prefixCacheAffinity') }}:
+            </li>
+            <li class="value">{{ displayEppPrefixCacheAffinity }}</li>
+          </ul>
+          <ul class="clearFloat">
+            <li class="title">{{ $t('gatewayConfig.sessionAffinity') }}:</li>
+            <li class="value">{{ displayEppSessionAffinity }}</li>
+          </ul>
+          <ul v-if="displayEppSessionAffinityHeader" class="clearFloat">
+            <li class="title">
+              {{ $t('gatewayConfig.sessionAffinityHeader') }}:
+            </li>
+            <li class="value">{{ displayEppSessionAffinityHeader }}</li>
+          </ul>
+          <ul class="clearFloat">
+            <li class="title">
+              {{ $t('gatewayConfig.kvCacheUtilizationMax') }}:
+            </li>
+            <li class="value">{{ displayEppKvCacheUtilizationMax }}</li>
+          </ul>
+          <ul class="clearFloat detail-row-block policy-row">
+            <li class="title">{{ $t('gatewayConfig.flowControl') }}:</li>
+            <li class="value">
+              <Card class="policy-card">
+                <Row :gutter="24" class="review-row">
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.maxRequests') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayEppFlowControl.max_requests !== -1 ? displayEppFlowControl.max_requests : $t('gatewayConfig.maxRequestsUnlimited') }}
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.queueTtl') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayEppFlowControl.queue_ttl }}s
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+                <Row :gutter="24">
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.noEndpointQueueTtl') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayEppFlowControl.no_endpoint_queue_ttl }}s
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span="12">
+                    <div class="review-item">
+                      <div class="review-label">
+                        {{ $t('gatewayConfig.enableEviction') }}:
+                      </div>
+                      <div class="review-value">
+                        {{ displayEppFlowControl.enable_eviction ? $t('com.enable') : $t('com.deactivate') }}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </Card>
+            </li>
+          </ul>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -371,6 +488,10 @@ export default {
         },
         llmConfigData: {
             type: Object
+        },
+        balanceModeData: {
+            type: Object,
+            default: null
         },
         showFooter: {
             type: Boolean,
@@ -491,6 +612,59 @@ export default {
                 ttl: getValue('ttl'),
                 redis_prefix: getValue('redis_prefix'),
                 penalty_enable: isTrue(getValue('penalty_enable'))
+            };
+        },
+        displayEppSchedulingProfile() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp) return '-';
+            const profile = epp.scheduling_profile || 'balanced';
+            const map = {
+                'latency-first': this.$t('gatewayConfig.schedulingProfileLatencyFirst'),
+                balanced: this.$t('gatewayConfig.schedulingProfileBalanced'),
+                'throughput-first': this.$t('gatewayConfig.schedulingProfileThroughputFirst')
+            };
+            return map[profile] || profile;
+        },
+        displayEppCacheAffinity() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp) return '-';
+            const affinity = epp.cache_affinity || 'medium';
+            const map = {
+                low: this.$t('gatewayConfig.cacheAffinityLow'),
+                medium: this.$t('gatewayConfig.cacheAffinityMedium'),
+                high: this.$t('gatewayConfig.cacheAffinityHigh')
+            };
+            return map[affinity] || affinity;
+        },
+        displayEppPrefixCacheAffinity() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp) return '-';
+            return epp.prefix_cache_affinity !== false ? this.$t('com.enable') : this.$t('com.deactivate');
+        },
+        displayEppSessionAffinity() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp) return '-';
+            return epp.session_affinity_enabled ? this.$t('com.enable') : this.$t('com.deactivate');
+        },
+        displayEppSessionAffinityHeader() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp || !epp.session_affinity_enabled) return null;
+            return epp.session_affinity_header || '';
+        },
+        displayEppKvCacheUtilizationMax() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp) return '-';
+            return epp.kv_cache_utilization_max != null ? epp.kv_cache_utilization_max : 0.9;
+        },
+        displayEppFlowControl() {
+            const epp = this.balanceModeData && this.balanceModeData.epp_config;
+            if (!epp) return null;
+            return {
+                max_requests: -1,
+                queue_ttl: 60,
+                no_endpoint_queue_ttl: 60,
+                enable_eviction: false,
+                ...(epp.flow_control || {})
             };
         }
     },

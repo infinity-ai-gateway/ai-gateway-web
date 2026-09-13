@@ -982,11 +982,11 @@ body {
 /* i-switch 开关样式（模拟 Element UI el-switch） */
 .ivu-switch {
   display: inline-block !important;
-  width: 40px !important;
-  min-width: 40px !important;
-  height: 20px !important;
-  line-height: 18px;
-  border-radius: 10px;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 22px !important;
+  line-height: 20px;
+  border-radius: 11px;
   vertical-align: middle;
   border: none;
   background-color: #dcdfe6;
@@ -1000,19 +1000,23 @@ body {
 .ivu-switch-checked {
   background-color: #409eff;
 }
-.ivu-switch-inner {
+/* 禁用 iView 框架的 ::after 伪元素滑块，避免与 .ivu-switch-inner 冲突 */
+.ivu-switch::after {
+  display: none !important;
+}
+.ivu-switch .ivu-switch-inner {
   position: absolute;
-  left: 2px;
-  top: 2px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
   background-color: #fff;
   transition: all 0.2s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  left: 3px;
+  top: 3px;
 }
 .ivu-switch-checked .ivu-switch-inner {
-  left: 22px !important;
+  left: 25px !important;
 }
 
 /* 修复原型中 switch 所在表单项 content 宽度被挤压导致截断的问题 */
@@ -2379,10 +2383,11 @@ body {
   font-weight: 600;
   color: #515a6e;
 }
-.proto-pricing-tiers-tip {
+.proto-price-hint {
   margin: 0 0 12px;
   color: #808695;
   font-size: 12px;
+  line-height: 1.6;
 }
 .proto-tier-readonly {
   display: inline-block;

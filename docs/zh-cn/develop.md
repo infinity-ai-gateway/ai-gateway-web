@@ -18,13 +18,16 @@
 │       ├── 03-ai-gateway-pool.md  // AI 网关实例池
 │       ├── 04-model-provider.md   // 模型服务商
 │       ├── 05-ai-business-cluster.md // AI 业务集群
-│       ├── 06-model-prices.md     // 模型定价
-│       ├── 07-entity-type.md      // Entity 类型
-│       ├── 08-entity.md           // Entity 组织
-│       ├── 09-api-key.md          // API Key 管理
-│       ├── 10-route.md            // 路由管理
-│       ├── 11-scenarios.md        // 场景实战
-│       ├── 12-appendix.md         // 附录
+│       ├── 06-epp-schedule.md     // EPP 调度
+│       ├── 07-model-prices.md     // 模型定价
+│       ├── 08-entity-type.md      // Entity 类型
+│       ├── 09-entity.md           // Entity 组织
+│       ├── 10-api-key.md          // API Key 管理
+│       ├── 11-route.md            // 路由管理
+│       ├── 12-certificates.md     // 证书管理
+│       ├── 13-operation-logs.md   // 操作日志
+│       ├── 14-scenarios.md        // 场景实战
+│       ├── 15-appendix.md         // 附录
 │       ├── deploy.md              // 部署说明
 │       ├── develop.md             // 开发说明（本文）
 │       └── images/                // 文档截图

@@ -106,6 +106,78 @@ window.ModelPriceUpsert = {
     return obj;
   },
 
+  formatPrice: function (value, empty) {
+    if (empty === undefined) empty = '-';
+    if (value === null || value === undefined || value === '') return empty;
+    var num = Number(String(value).trim());
+    if (!isFinite(num) || num < 0) return empty;
+    if (num === 0) return '0';
+    var abs = Math.abs(num);
+    if (abs < 1e-4 || abs >= 1e6) {
+      return num
+        .toExponential()
+        .replace(/(\.\d*?)0+([eE])/g, '$1$2')
+        .replace(/\.([eE])/g, '$1');
+    }
+    return num.toLocaleString('en-US', {
+      useGrouping: false,
+      maximumSignificantDigits: 15,
+    });
+  },
+
+  formatPriceForInput: function (value) {
+    if (value === null || value === undefined) return '';
+    var text = String(value).trim();
+    if (text === '') return '';
+    var num = Number(text);
+    if (!isFinite(num) || num < 0) return text;
+    return this.formatPrice(num, '');
+  },
+
+  isPriceOverflow: function (value) {
+    return Math.abs(Number(value) * 1e8) >= Math.pow(2, 53);
+  },
+
+  mergePriceMap: function (dst, src) {
+    var merged = {};
+    Object.keys(dst || {}).forEach(function (key) {
+      merged[key] = dst[key];
+    });
+    Object.keys(src || {}).forEach(function (key) {
+      merged[key] = src[key];
+    });
+    return merged;
+  },
+
+  mergeTierPriceMap: function (dst, src) {
+    var self = this;
+    var merged = {};
+    Object.keys(dst || {}).forEach(function (tier) {
+      merged[tier] = self.mergePriceMap(dst[tier], null);
+    });
+    Object.keys(src || {}).forEach(function (tier) {
+      if (merged[tier]) {
+        merged[tier] = self.mergePriceMap(merged[tier], src[tier]);
+      } else {
+        merged[tier] = src[tier];
+      }
+    });
+    return merged;
+  },
+
+  renderPriceHint: function (isEdit) {
+    var lines = [
+      '可输入 1.5e-6 或 0.0000015，失焦后按量级自动格式化（小于 1e-4 或 ≥ 1e6 用科学计数法）。',
+      '单价格折算 价格×1e8 不得超过 2^53（约 9e15）。',
+    ];
+    if (isEdit) {
+      lines.push(
+        '编辑提交时 prices / tier_prices 为键级合并：表单中的键覆盖原值，未出现的键保留（删除某行不会清除后端已有键）。',
+      );
+    }
+    return '<p class="proto-price-hint">' + lines.join('<br>') + '</p>';
+  },
+
   renderBody: function () {
     this.initTierPricesData();
     var d = this.data;
@@ -171,8 +243,8 @@ window.ModelPriceUpsert = {
           priceKeys,
           d.prices,
           '价格项',
-          '价格',
-          8,
+          '如 1.5e-6 或 0.0000015',
+          'price',
         );
     var tierPricesHtml = isView
       ? this.renderViewTierPricesAll(d.tier_prices_map)
@@ -181,8 +253,8 @@ window.ModelPriceUpsert = {
           priceKeys,
           d.tier_prices_active || [],
           '价格项',
-          '价格',
-          8,
+          '如 1.5e-6 或 0.0000015',
+          'price',
         );
     var tierSelectorHtml = this.renderTierSelector(d.active_tier || 'peak');
 
@@ -363,15 +435,17 @@ window.ModelPriceUpsert = {
       '<div class="proto-price-config-block">' +
       '<div class="proto-price-config-header">' +
       '<span class="proto-price-config-title is-required">默认价格</span>' +
+      '<span class="proto-price-config-help" title="科学计数法与十进制等价合法（如 1.5e-6 与 0.0000015）。编辑时未提交的价格键保留原值。">?</span>' +
       '</div>' +
       '<div class="proto-price-config-body">' +
+      this.renderPriceHint(!!d.id) +
       pricesHtml +
       pricesError +
       '</div></div>' +
       '<div class="proto-price-config-block">' +
       '<div class="proto-price-config-header">' +
       '<span class="proto-price-config-title">分时段价格' +
-      '<span class="proto-price-config-help" title="分时段价格配置专属的价格；不在这些时段内时将使用默认价格，可选填。">?</span>' +
+      '<span class="proto-price-config-help" title="分时段价格配置专属的价格；不在这些时段内时将使用默认价格，可选填。科学计数法与十进制等价合法。">?</span>' +
       '</span></div>' +
       '<div class="proto-price-config-body">' +
       '<div class="proto-tier-meta-row">' +
@@ -492,9 +566,10 @@ window.ModelPriceUpsert = {
     items,
     keyPlaceholder,
     valuePlaceholder,
-    precision,
+    valueMode,
   ) {
-    precision = precision || 0;
+    var self = this;
+    var isPrice = valueMode === 'price' || valueMode === 8;
     var rowsHtml = items
       .map(function (item, index) {
         var selectOptions = keyOptions
@@ -510,7 +585,35 @@ window.ModelPriceUpsert = {
             );
           })
           .join('');
-        var step = precision ? '0.00000001' : '1';
+        var displayValue = isPrice
+          ? self.formatPriceForInput(item.value)
+          : item.value != null && item.value !== ''
+          ? item.value
+          : 0;
+        var valueInput = isPrice
+          ? '<div class="ivu-input-wrapper ivu-input-type-text" style="width:100%;">' +
+            '<input type="text" class="ivu-input proto-dynamic-value" data-field="' +
+            field +
+            '" data-index="' +
+            index +
+            '" value="' +
+            IvuUI.escapeHtml(String(displayValue)) +
+            '" placeholder="' +
+            IvuUI.escapeHtml(valuePlaceholder) +
+            '" />' +
+            '</div>'
+          : '<div class="ivu-input-number ivu-input-number-default" style="width:100%;">' +
+            '<div class="ivu-input-number-input-wrap">' +
+            '<input type="number" class="ivu-input-number-input proto-dynamic-value" data-field="' +
+            field +
+            '" data-index="' +
+            index +
+            '" value="' +
+            displayValue +
+            '" placeholder="' +
+            IvuUI.escapeHtml(valuePlaceholder) +
+            '" min="0" step="1" />' +
+            '</div></div>';
         return (
           '<div class="proto-dynamic-row" data-row-index="' +
           index +
@@ -533,21 +636,7 @@ window.ModelPriceUpsert = {
           '</div></div>' +
           '</div>' +
           '<div class="ivu-col ivu-col-span-10" style="padding:0 4px;">' +
-          '<div class="ivu-input-number ivu-input-number-default" style="width:100%;">' +
-          '<div class="ivu-input-number-input-wrap">' +
-          '<input type="number" class="ivu-input-number-input proto-dynamic-value" data-field="' +
-          field +
-          '" data-index="' +
-          index +
-          '" value="' +
-          (item.value != null ? item.value : 0) +
-          '" placeholder="' +
-          valuePlaceholder +
-          '" min="0" step="' +
-          step +
-          '" />' +
-          '</div>' +
-          '</div>' +
+          valueInput +
           '</div>' +
           '<div class="ivu-col ivu-col-span-4" style="padding:0 4px;">' +
           '<button type="button" class="ivu-btn ivu-btn-error ivu-btn-small proto-dynamic-delete" data-field="' +
@@ -605,6 +694,7 @@ window.ModelPriceUpsert = {
 
   renderViewPriceTable: function (items) {
     if (!items || !items.length) return '-';
+    var self = this;
     var rows = items
       .map(function (item) {
         return (
@@ -613,7 +703,7 @@ window.ModelPriceUpsert = {
           item.key +
           '</td>' +
           '<td style="padding:8px 16px;border:1px solid #e7e9f0;word-break:break-all;">¥' +
-          item.value +
+          self.formatPrice(item.value) +
           '</td>' +
           '</tr>'
         );
@@ -684,12 +774,22 @@ window.ModelPriceUpsert = {
       });
       if (valueInvalid) {
         tierMsg = tierLabel + ' 的分时段价格的值必须为非负数';
+        return;
+      }
+      var overflow = list.some(function (item) {
+        if (!item.key) return false;
+        return self.isPriceOverflow(item.value);
+      });
+      if (overflow) {
+        tierMsg =
+          tierLabel + ' 的分时段价格过大：价格 × 1e8 不得超过 2^53（约 9e15）';
       }
     });
     return tierMsg;
   },
 
   validateDynamicKeys: function () {
+    var self = this;
     var limitsDuplicates = this.getDuplicateKeys(this.data.limits);
     var pricesDuplicates = this.getDuplicateKeys(this.data.prices);
     var limitsMsg = '';
@@ -703,7 +803,7 @@ window.ModelPriceUpsert = {
       pricesMsg = '默认价格存在重复的键';
     }
 
-    // limits 值须为非负整数；prices 值须为非负数
+    // limits 值须为非负整数；prices 值须为非负数，且不超过 float64 计费上限
     var limitsValueInvalid = this.data.limits.some(function (item) {
       if (!item.key) return false;
       var value = Number(item.value);
@@ -714,12 +814,21 @@ window.ModelPriceUpsert = {
       var value = Number(item.value);
       return isNaN(value) || value < 0;
     });
+    var pricesOverflow = this.data.prices.some(function (item) {
+      if (!item.key) return false;
+      var value = Number(item.value);
+      if (isNaN(value) || value < 0) return false;
+      return self.isPriceOverflow(value);
+    });
 
     if (!limitsMsg && limitsValueInvalid) {
       limitsMsg = '限制对象的值必须为非负整数';
     }
     if (!pricesMsg && pricesValueInvalid) {
       pricesMsg = '默认价格的值必须为非负数';
+    }
+    if (!pricesMsg && pricesOverflow) {
+      pricesMsg = '默认价格过大：价格 × 1e8 不得超过 2^53（约 9e15）';
     }
 
     this.errors.limits = limitsMsg;
@@ -812,7 +921,10 @@ window.ModelPriceUpsert = {
     drawer.querySelectorAll('.proto-dynamic-add').forEach(function (btn) {
       btn.onclick = function () {
         var field = btn.getAttribute('data-field');
-        self.data[field].push({ key: '', value: 0 });
+        self.data[field].push({
+          key: '',
+          value: field === 'limits' ? 0 : '',
+        });
         self.refreshBody();
       };
     });
@@ -836,14 +948,27 @@ window.ModelPriceUpsert = {
       };
     });
 
-    // 动态列表value变化
+    // 动态列表value变化：价格保留原始文本（支持 1.5e-6），限制对象仍按数字解析
     drawer.querySelectorAll('.proto-dynamic-value').forEach(function (input) {
+      var field = input.getAttribute('data-field');
+      var index = parseInt(input.getAttribute('data-index'), 10);
+      var isPriceField =
+        field === 'prices' || field === 'tier_prices_active';
       input.oninput = function () {
-        var field = input.getAttribute('data-field');
-        var index = parseInt(input.getAttribute('data-index'), 10);
+        if (isPriceField) {
+          self.data[field][index].value = input.value;
+          return;
+        }
         var val = parseFloat(input.value);
         self.data[field][index].value = isNaN(val) ? 0 : val;
       };
+      if (isPriceField) {
+        input.onblur = function () {
+          var formatted = self.formatPriceForInput(input.value);
+          self.data[field][index].value = formatted;
+          input.value = formatted;
+        };
+      }
     });
 
     // 多选下拉展开/收起
@@ -1046,14 +1171,23 @@ window.ModelPriceUpsert = {
     }
 
     if (d.id) {
-      // 编辑
       var idx = MockData.modelPrices.findIndex(function (p) {
         return p.id === d.id;
       });
       if (idx >= 0) {
+        var existing = MockData.modelPrices[idx];
         payload.id = d.id;
-        payload.create_time = MockData.modelPrices[idx].create_time;
+        payload.create_time = existing.create_time;
         payload.update_time = Math.floor(Date.now() / 1000);
+        payload.prices = self.mergePriceMap(existing.prices, priceObj);
+        if (payload.tier_prices) {
+          payload.tier_prices = self.mergeTierPriceMap(
+            existing.tier_prices,
+            payload.tier_prices,
+          );
+        } else {
+          payload.tier_prices = existing.tier_prices;
+        }
         MockData.modelPrices[idx] = payload;
       }
       Prototype.toast('编辑成功!');

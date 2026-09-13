@@ -79,6 +79,10 @@ window.ClusterUpsert = (function () {
     var providerName = row.provider || '';
     var provider = getProviderByName(providerName);
     return {
+      balance_mode: row.balance_mode || 'WRR',
+      epp_config: row.epp_config
+        ? JSON.parse(JSON.stringify(row.epp_config))
+        : null,
       baseConfigData: {
         name: row.name || '',
         description: row.description || '',
@@ -364,6 +368,22 @@ window.ClusterUpsert = (function () {
     var providerModels = (provider && provider.models) || [];
     var providerKeys = (provider && provider.keys) || [];
 
+    function availableProviderKeys(index) {
+      var keys = llm.keys || [];
+      var current = String((keys[index] && keys[index].name) || '').trim();
+      var taken = {};
+      keys.forEach(function (item, i) {
+        if (i === index) return;
+        var name = String((item && item.name) || '').trim();
+        if (name) taken[name] = true;
+      });
+      return providerKeys.filter(function (item) {
+        var name = item && item.name;
+        if (!name) return false;
+        return name === current || !taken[name];
+      });
+    }
+
     function helpIcon(tip) {
       return (
         '<span class="form-help-icon" title="' +
@@ -524,7 +544,8 @@ window.ClusterUpsert = (function () {
           '" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;"' +
           (provider ? '' : ' disabled') +
           '>' +
-          providerKeys
+          '<option value="">请选择 Key</option>' +
+          availableProviderKeys(index)
             .map(function (item) {
               return (
                 '<option value="' +
@@ -734,8 +755,176 @@ window.ClusterUpsert = (function () {
       '<div class="llm-card"><div class="llm-card-body">' +
       keyAffinityHtml +
       '</div></div>' +
+      '<div class="llm-card"><div class="llm-card-title">均衡模式配置</div><div class="llm-card-body">' +
+      IvuUI.formTop(
+        IvuUI.formTopItem(
+          '负载均衡模式' + helpIcon('WRR: 加权轮询; EPP: EPP 调度'),
+          '<select class="proto-field from-item-inp" data-field="epp.balance_mode" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;">' +
+            '<option value="WRR"' +
+            (data.balance_mode === 'WRR' ? ' selected' : '') +
+            '>WRR（加权轮询）</option>' +
+            '<option value="EPP"' +
+            (data.balance_mode === 'EPP' ? ' selected' : '') +
+            '>EPP（EPP 调度）</option>' +
+            '</select>',
+          true,
+        ),
+      ) +
+      renderEppConfig(data) +
+      '</div></div>' +
       '</div>'
     );
+  }
+
+  // ============ 调度配置（EPP 相关） ============
+  function renderEppConfig(data) {
+    var epp = data;
+    var ec = epp.epp_config || {};
+    var fc = ec.flow_control || {};
+    var isEpp = epp.balance_mode === 'EPP';
+
+    function helpIcon(tip) {
+      return (
+        '<span class="form-help-icon" title="' +
+        IvuUI.escapeHtml(tip || '') +
+        '">?</span>'
+      );
+    }
+
+    var eppConfigHtml = '';
+    if (isEpp) {
+      var schedulingProfileHtml = IvuUI.formTopItem(
+        '调度策略' +
+          helpIcon(
+            'latency-first: 延迟优先; balanced: 均衡; throughput-first: 吞吐优先',
+          ),
+        '<select class="proto-field from-item-inp" data-field="epp.epp_config.scheduling_profile" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;">' +
+          '<option value="latency-first"' +
+          (ec.scheduling_profile === 'latency-first' ? ' selected' : '') +
+          '>latency-first（延迟优先）</option>' +
+          '<option value="balanced"' +
+          (ec.scheduling_profile === 'balanced' ? ' selected' : '') +
+          '>balanced（均衡）</option>' +
+          '<option value="throughput-first"' +
+          (ec.scheduling_profile === 'throughput-first' ? ' selected' : '') +
+          '>throughput-first（吞吐优先）</option>' +
+          '</select>',
+        true,
+      );
+
+      var cacheAffinityHtml = IvuUI.formTopItem(
+        '缓存亲和性' + helpIcon('默认 medium 表示跟随调度策略'),
+        '<select class="proto-field from-item-inp" data-field="epp.epp_config.cache_affinity" style="width:100%;height:32px;border:1px solid #dcdee2;border-radius:4px;padding:0 8px;">' +
+          '<option value="low"' +
+          (ec.cache_affinity === 'low' ? ' selected' : '') +
+          '>low</option>' +
+          '<option value="medium"' +
+          (ec.cache_affinity === 'medium' ? ' selected' : '') +
+          '>medium（跟随调度策略）</option>' +
+          '<option value="high"' +
+          (ec.cache_affinity === 'high' ? ' selected' : '') +
+          '>high</option>' +
+          '</select>',
+        true,
+      );
+
+      var prefixCacheSwitchHtml =
+        '<div class="ivu-switch' +
+        (ec.prefix_cache_affinity ? ' ivu-switch-checked' : '') +
+        '" id="proto-epp-prefix-cache-switch">' +
+        '<span class="ivu-switch-inner"></span></div>';
+
+      var prefixCacheHtml = IvuUI.formTopItem(
+        '前缀缓存亲和性' + helpIcon('开启后优先复用已有前缀缓存'),
+        prefixCacheSwitchHtml,
+      );
+
+      var sessionAffinitySwitchHtml =
+        '<div class="ivu-switch' +
+        (ec.session_affinity_enabled ? ' ivu-switch-checked' : '') +
+        '" id="proto-epp-session-affinity-switch">' +
+        '<span class="ivu-switch-inner"></span></div>';
+
+      var sessionAffinityHtml = IvuUI.formTopItem(
+        '会话亲和性' + helpIcon('开启后同一会话的请求将绑定到同一端点'),
+        sessionAffinitySwitchHtml,
+        true,
+      );
+
+      var sessionAffinityHeaderHtml = ec.session_affinity_enabled
+        ? IvuUI.formTopItem(
+            '会话亲和性 Header',
+            '<div class="ivu-input-wrapper ivu-input-type-text"><input type="text" class="ivu-input proto-field" data-field="epp.epp_config.session_affinity_header" value="' +
+              IvuUI.escapeHtml(ec.session_affinity_header || '') +
+              '" placeholder="会话亲和性启用时必填" /></div>',
+            true,
+          )
+        : '';
+
+      var kvCacheHtml = IvuUI.formTopItem(
+        'KV 缓存利用率上限' + helpIcon('范围 (0, 1]，步长 0.01'),
+        IvuUI.inputNumber(
+          ec.kv_cache_utilization_max != null
+            ? ec.kv_cache_utilization_max
+            : 0.9,
+          'class="proto-field" data-field="epp.epp_config.kv_cache_utilization_max" min="0" max="1" step="0.01"',
+        ),
+        true,
+      );
+
+      var enableEvictionSwitchHtml =
+        '<div class="ivu-switch' +
+        (fc.enable_eviction ? ' ivu-switch-checked' : '') +
+        '" id="proto-epp-enable-eviction-switch">' +
+        '<span class="ivu-switch-inner"></span></div>';
+
+      var flowControlHtml =
+        '<div class="llm-card"><div class="llm-card-title" id="proto-epp-flow-control-toggle" style="cursor:pointer;">流控配置 ▾</div><div class="llm-card-body" id="proto-epp-flow-control-body">' +
+        IvuUI.formTop(
+          IvuUI.formTopItem(
+            '最大请求数' + helpIcon('大于 0 的整数或 -1 表示不限制'),
+            '<div class="ivu-input-wrapper ivu-input-type-text"><input type="number" class="ivu-input proto-field" data-field="epp.epp_config.flow_control.max_requests" value="' +
+              (fc.max_requests != null && fc.max_requests !== ''
+                ? fc.max_requests
+                : '') +
+              '" placeholder="-1 表示不限制" /></div>',
+            true,
+          ) +
+            IvuUI.formTopItem(
+              '队列 TTL（秒）',
+              '<div class="ivu-input-wrapper ivu-input-type-text"><input type="number" class="ivu-input proto-field" data-field="epp.epp_config.flow_control.queue_ttl" value="' +
+                (fc.queue_ttl != null && fc.queue_ttl !== ''
+                  ? fc.queue_ttl
+                  : '') +
+                '" min="0" /></div>',
+              true,
+            ) +
+            IvuUI.formTopItem(
+              '无端点队列 TTL（秒）',
+              '<div class="ivu-input-wrapper ivu-input-type-text"><input type="number" class="ivu-input proto-field" data-field="epp.epp_config.flow_control.no_endpoint_queue_ttl" value="' +
+                (fc.no_endpoint_queue_ttl != null &&
+                fc.no_endpoint_queue_ttl !== ''
+                  ? fc.no_endpoint_queue_ttl
+                  : '') +
+                '" min="0" /></div>',
+              true,
+            ) +
+            IvuUI.formTopItem('启用驱逐', enableEvictionSwitchHtml, true),
+        ) +
+        '</div></div>';
+
+      eppConfigHtml =
+        IvuUI.formTop(
+          schedulingProfileHtml +
+            cacheAffinityHtml +
+            prefixCacheHtml +
+            sessionAffinityHtml +
+            sessionAffinityHeaderHtml +
+            kvCacheHtml,
+        ) + flowControlHtml;
+    }
+
+    return '<div class="epp-config">' + eppConfigHtml + '</div>';
   }
 
   function renderReviewPanel(title, rowsHtml) {
@@ -764,6 +953,10 @@ window.ClusterUpsert = (function () {
     var h = data.passiveHealthData;
     var llm = data.llmConfigData;
     var provider = getProviderByName(llm.provider);
+    var balanceMode = data.balance_mode || 'WRR';
+    var ec = data.epp_config || {};
+    var fc = ec.flow_control || {};
+    var isEpp = balanceMode === 'EPP';
     var stickyEnabled =
       b.sticky_sessions && b.sticky_sessions.enabled === 'true';
 
@@ -909,12 +1102,46 @@ window.ClusterUpsert = (function () {
       keyPolicyHtml +
       keyAffinityHtml;
 
+    var eppConfigRows = '';
+    if (isEpp) {
+      eppConfigRows =
+        reviewRow('负载均衡模式', balanceMode) +
+        reviewRow('调度策略', ec.scheduling_profile || 'balanced') +
+        reviewRow('缓存亲和性', ec.cache_affinity || 'medium') +
+        reviewRow(
+          '前缀缓存亲和性',
+          ec.prefix_cache_affinity ? '开启' : '关闭',
+        ) +
+        reviewRow('会话亲和性', ec.session_affinity_enabled ? '开启' : '关闭') +
+        (ec.session_affinity_enabled
+          ? reviewRow('会话亲和性 Header', ec.session_affinity_header || '-')
+          : '') +
+        reviewRow(
+          'KV 缓存利用率上限',
+          ec.kv_cache_utilization_max != null
+            ? ec.kv_cache_utilization_max
+            : '0.9',
+        ) +
+        (fc.max_requests != null && fc.max_requests !== ''
+          ? reviewRow('流控-最大请求数', fc.max_requests)
+          : '') +
+        (fc.queue_ttl != null && fc.queue_ttl !== ''
+          ? reviewRow('流控-队列 TTL（秒）', fc.queue_ttl)
+          : '') +
+        (fc.no_endpoint_queue_ttl != null && fc.no_endpoint_queue_ttl !== ''
+          ? reviewRow('流控-无端点队列 TTL（秒）', fc.no_endpoint_queue_ttl)
+          : '') +
+        reviewRow('流控-启用驱逐', fc.enable_eviction ? '开启' : '关闭');
+    } else {
+      eppConfigRows = reviewRow('负载均衡模式', balanceMode);
+    }
+
     return (
       '<div class="Review">' +
       renderReviewPanel('基本配置', basicRows) +
       renderReviewPanel('超时和重传', timeoutRows) +
       renderReviewPanel('被动健康检查', healthRows) +
-      renderReviewPanel('大模型配置', llmRows) +
+      renderReviewPanel('大模型配置', llmRows + eppConfigRows) +
       '</div>'
     );
   }
@@ -945,7 +1172,19 @@ window.ClusterUpsert = (function () {
         setNestedValue(data.baseConfigData, path.slice(5), value);
       else if (path.indexOf('health.') === 0)
         data.passiveHealthData[path.slice(7)] = value;
-      else if (path.indexOf('llm.') === 0) {
+      else if (path.indexOf('epp.') === 0) {
+        var eppKey = path.slice(4);
+        if (eppKey === 'balance_mode') {
+          data.balance_mode = value;
+        } else if (eppKey.indexOf('epp_config.') === 0) {
+          if (!data.epp_config) data.epp_config = {};
+          setNestedValue(data.epp_config, eppKey.slice(11), value);
+        } else if (eppKey.indexOf('epp_config.flow_control.') === 0) {
+          if (!data.epp_config) data.epp_config = {};
+          if (!data.epp_config.flow_control) data.epp_config.flow_control = {};
+          setNestedValue(data.epp_config.flow_control, eppKey.slice(21), value);
+        }
+      } else if (path.indexOf('llm.') === 0) {
         var key = path.slice(4);
         if (key.indexOf('key_policy.') === 0) {
           if (!data.llmConfigData.key_policy)
@@ -1131,6 +1370,25 @@ window.ClusterUpsert = (function () {
     return null;
   }
 
+  function validateEpp(data) {
+    if (data.balance_mode !== 'EPP') return null;
+    var ec = data.epp_config || {};
+    if (
+      ec.session_affinity_enabled &&
+      !(ec.session_affinity_header || '').trim()
+    ) {
+      return '会话亲和性启用时，会话亲和性 Header 必填';
+    }
+    var kvCache = Number(ec.kv_cache_utilization_max);
+    if (
+      ec.kv_cache_utilization_max != null &&
+      (!Number.isFinite(kvCache) || kvCache <= 0 || kvCache > 1)
+    ) {
+      return 'KV 缓存利用率上限须在 (0, 1] 范围内';
+    }
+    return null;
+  }
+
   function renderActionButtons(currentStep, reviewStepIndex) {
     return (
       (currentStep === reviewStepIndex
@@ -1227,6 +1485,8 @@ window.ClusterUpsert = (function () {
             err = validateHealth(state.data);
           } else if (state.currentStep === 3) {
             err = validateGateway(state.data);
+          } else if (state.currentStep === 4) {
+            err = validateEpp(state.data);
           }
           if (err) {
             Prototype.toast(err, 'error');
@@ -1267,6 +1527,32 @@ window.ClusterUpsert = (function () {
       if (hashStrategySelect)
         hashStrategySelect.addEventListener('change', function () {
           syncFromDom(bodyEl, state.data);
+          render();
+        });
+
+      var balanceModeSelect = bodyEl.querySelector(
+        '[data-field="epp.balance_mode"]',
+      );
+      if (balanceModeSelect)
+        balanceModeSelect.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          // 切换 WRR/EPP 时，若为 EPP 模式但无 epp_config 则初始化默认值
+          if (state.data.balance_mode === 'EPP' && !state.data.epp_config) {
+            state.data.epp_config = {
+              scheduling_profile: 'balanced',
+              cache_affinity: 'medium',
+              prefix_cache_affinity: true,
+              session_affinity_enabled: false,
+              session_affinity_header: '',
+              kv_cache_utilization_max: 0.9,
+              flow_control: {
+                max_requests: null,
+                queue_ttl: null,
+                no_endpoint_queue_ttl: null,
+                enable_eviction: false,
+              },
+            };
+          }
           render();
         });
 
@@ -1383,6 +1669,31 @@ window.ClusterUpsert = (function () {
           });
         });
 
+      bodyEl
+        .querySelectorAll('.proto-mapping-value')
+        .forEach(function (select) {
+          select.addEventListener('change', function () {
+            syncFromDom(bodyEl, state.data);
+            var index = parseInt(select.getAttribute('data-index'), 10);
+            var mapping = (state.data.llmConfigData.model_mappings || [])[
+              index
+            ];
+            if (!mapping) return;
+            mapping.target_model = select.value;
+            if (!String(mapping.source_model || '').trim() && select.value) {
+              mapping.source_model = select.value;
+            }
+            render();
+          });
+        });
+
+      bodyEl.querySelectorAll('.proto-key-name').forEach(function (select) {
+        select.addEventListener('change', function () {
+          syncFromDom(bodyEl, state.data);
+          render();
+        });
+      });
+
       var stripPrefixSwitch = bodyEl.querySelector(
         '#proto-strip-prefix-switch',
       );
@@ -1393,6 +1704,48 @@ window.ClusterUpsert = (function () {
           if (!state.data.llmConfigData.strip_prefix) {
             state.data.llmConfigData.match_prefix = '';
           }
+          render();
+        });
+
+      // EPP 开关事件绑定
+      var eppPrefixCacheSwitch = bodyEl.querySelector(
+        '#proto-epp-prefix-cache-switch',
+      );
+      if (eppPrefixCacheSwitch)
+        eppPrefixCacheSwitch.addEventListener('click', function () {
+          syncFromDom(bodyEl, state.data);
+          if (!state.data.epp_config) state.data.epp_config = {};
+          state.data.epp_config.prefix_cache_affinity =
+            !state.data.epp_config.prefix_cache_affinity;
+          render();
+        });
+
+      var eppSessionAffinitySwitch = bodyEl.querySelector(
+        '#proto-epp-session-affinity-switch',
+      );
+      if (eppSessionAffinitySwitch)
+        eppSessionAffinitySwitch.addEventListener('click', function () {
+          syncFromDom(bodyEl, state.data);
+          if (!state.data.epp_config) state.data.epp_config = {};
+          state.data.epp_config.session_affinity_enabled =
+            !state.data.epp_config.session_affinity_enabled;
+          if (!state.data.epp_config.session_affinity_enabled) {
+            state.data.epp_config.session_affinity_header = '';
+          }
+          render();
+        });
+
+      var eppEnableEvictionSwitch = bodyEl.querySelector(
+        '#proto-epp-enable-eviction-switch',
+      );
+      if (eppEnableEvictionSwitch)
+        eppEnableEvictionSwitch.addEventListener('click', function () {
+          syncFromDom(bodyEl, state.data);
+          if (!state.data.epp_config) state.data.epp_config = {};
+          if (!state.data.epp_config.flow_control)
+            state.data.epp_config.flow_control = {};
+          state.data.epp_config.flow_control.enable_eviction =
+            !state.data.epp_config.flow_control.enable_eviction;
           render();
         });
 
