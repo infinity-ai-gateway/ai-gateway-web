@@ -44,12 +44,12 @@
 
 | 字段 | 校验 | 说明 |
 |------|------|------|
-| `name` | 必填；新建可编辑，编辑 disabled | Entity 名称。 |
+| `name` | 必填；EntityName：1–64，小写字母/数字/`_`/`-`/`@`，不能以 `_`、`-`、`@` 开头或结尾；新建可编辑，编辑 disabled | Entity 名称，支持 `用户名@项目名`。 |
 | `type` | 必填；编辑 disabled | 关联的 Entity Type。 |
 | `parent_id` | 可选；选项为 level 低于当前类型的 Entity，不可选自己 | 父级实体。 |
 | `allow_models` | 多选；`*` 与具体模型互斥 | 模型白名单。 |
 | `block_models` | 多选；空时提交为 `['*']` | 模型黑名单。 |
-| `quota_plan` / `rate_limit` | 与 API Key 类似；`quota_plan.unit` 支持 `total_token` / `RMB` | 配额与限流。RMB 上限 90,000,000.00，4 位小数。 |
+| `quota_plan` / `rate_limit` | 与 API Key 类似；`quota_plan.unit` 支持 `total_token` / `RMB` | 配额与限流。`total_token` 上限 9,999,999,999；RMB 上限 90,000,000.00，4 位小数。 |
 
 ### 5.2 EntityTypeUpsert
 
@@ -90,7 +90,7 @@ Entity/index.vue (Tab 容器)
 | `EntityTypeList.vue` | `PATCH` | `entity-types/{id}` | 更新类型。 |
 | `EntityTypeList.vue` | `DELETE` | `entity-types/{id}` | 删除类型。 |
 
-配额重置弹窗按当前 `unit` 限制精度与上限。
+配额重置弹窗按当前 `unit` 限制精度与上限（`total_token` ≤ 9,999,999,999；RMB 4 位小数 / 9000 万元）。
 
 ## 8. 边界情况
 

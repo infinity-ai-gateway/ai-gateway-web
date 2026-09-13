@@ -1,11 +1,18 @@
-/** * Copyright(c) 2026 The rainway-ai-gateway Authors. * * Licensed under the
-Apache License, Version 2.0 (the "License"); * you may not use this file except
-in compliance with the License. * You may obtain a copy of the License at * *
-http: //www.apache.org/licenses/LICENSE-2.0 * * Unless required by applicable
-law or agreed to in writing, software * distributed under the License is
-distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. * See the License for the specific language governing
-permissions and * limitations under the License. */
+/**
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 <template>
   <div class="model-price-upsert">
     <Form
@@ -156,12 +163,24 @@ permissions and * limitations under the License. */
         <div class="price-config-group">
           <div class="price-config-block">
             <div class="price-config-header">
-              <span
-                class="price-config-title is-required"
-                >{{ $t('modelPrices.priceObject') }}</span
-              >
+              <span class="price-config-title is-required">
+                {{ $t('modelPrices.priceObject') }}
+                <Tooltip placement="top" transfer max-width="360">
+                  <div slot="content" class="price-config-tip">
+                    {{ $t('modelPrices.priceDefaultTip') }}
+                  </div>
+                  <Icon
+                    type="ios-help-circle-outline"
+                    class="price-config-help-icon"
+                  />
+                </Tooltip>
+              </span>
             </div>
             <div class="price-config-body">
+              <p class="price-hint">{{ $t('modelPrices.priceHint') }}</p>
+              <p v-if="isEdit" class="price-hint">
+                {{ $t('modelPrices.priceMergeHint') }}
+              </p>
               <table v-if="pricesList.length" class="kv-table">
                 <thead>
                   <tr>
@@ -193,14 +212,10 @@ permissions and * limitations under the License. */
                       </el-select>
                     </td>
                     <td>
-                      <el-input-number
+                      <Input
                         v-model="entry.value"
-                        style="width: 100%;"
-                        size="small"
-                        :min="0"
-                        :precision="8"
-                        :controls="false"
                         :placeholder="$t('modelPrices.priceItemValuePlaceholder')"
+                        @on-blur="onPriceBlur(entry)"
                       />
                     </td>
                     <td>
@@ -229,6 +244,9 @@ permissions and * limitations under the License. */
               </p>
               <p v-if="pricesValueError" class="error-text">
                 {{ $t('modelPrices.pricesValueInvalid') }}
+              </p>
+              <p v-if="pricesOverflowError" class="error-text">
+                {{ $t('modelPrices.pricesOverflow') }}
               </p>
             </div>
           </div>
@@ -290,14 +308,10 @@ permissions and * limitations under the License. */
                       </el-select>
                     </td>
                     <td>
-                      <el-input-number
+                      <Input
                         v-model="entry.value"
-                        style="width: 100%;"
-                        size="small"
-                        :min="0"
-                        :precision="8"
-                        :controls="false"
                         :placeholder="$t('modelPrices.priceItemValuePlaceholder')"
+                        @on-blur="onPriceBlur(entry)"
                       />
                     </td>
                     <td>
@@ -323,6 +337,9 @@ permissions and * limitations under the License. */
               </p>
               <p v-if="tierValueError" class="error-text">
                 {{ $t('modelPrices.tierValueInvalid', { tier: $t('modelPrices.tierPeakLabel') }) }}
+              </p>
+              <p v-if="tierOverflowError" class="error-text">
+                {{ $t('modelPrices.tierOverflow', { tier: $t('modelPrices.tierPeakLabel') }) }}
               </p>
             </div>
           </div>
@@ -357,6 +374,7 @@ permissions and * limitations under the License. */
 
 <script>
 import { cloneDeep } from 'lodash';
+import { formatPriceForInput, isPriceOverflow } from '@/utils/price';
 
 const MODE_OPTIONS = [
     'chat', 'completion', 'responses', 'image_generation', 'image_edit',
@@ -384,10 +402,15 @@ const LIMIT_KEY_OPTIONS = [
 const PRICE_KEY_OPTIONS = [
     'input_cost_per_token', 'output_cost_per_token',
     'cache_read_input_token_cost', 'cache_creation_input_token_cost',
+    'cache_creation_input_token_cost_1h',
     'input_cost_per_token_above_200k_tokens', 'output_cost_per_token_above_200k_tokens',
-    'output_cost_per_image', 'output_cost_per_pixel',
+    'input_cost_per_token_above_256k_tokens', 'output_cost_per_token_above_256k_tokens',
+    'input_cost_per_token_above_272k_tokens', 'output_cost_per_token_above_272k_tokens',
+    'input_cost_per_token_above_512k_tokens', 'output_cost_per_token_above_512k_tokens',
+    'output_cost_per_image', 'input_cost_per_image_token', 'output_cost_per_pixel',
     'output_cost_per_image_low_quality', 'output_cost_per_image_high_quality',
-    'input_cost_per_audio_per_second', 'input_cost_per_video_per_second',
+    'input_cost_per_audio_per_second', 'input_cost_per_audio_token', 'output_cost_per_audio_token',
+    'input_cost_per_video_per_second',
     'output_cost_per_second',
     'input_cost_per_query', 'search_context_cost_per_query', 'ocr_cost_per_page',
     'output_cost_per_character', 'output_cost_per_image_hd', 'output_cost_per_video',
@@ -421,8 +444,10 @@ export default {
             pricesDuplicateError: false,
             limitsValueError: false,
             pricesValueError: false,
+            pricesOverflowError: false,
             tierDuplicateError: false,
             tierValueError: false,
+            tierOverflowError: false,
             submitting: false,
             formData: {
                 provider: '',
@@ -479,6 +504,9 @@ export default {
     },
 
     computed: {
+        isEdit() {
+            return !!(this.currentData && this.currentData.id);
+        },
         displayProviderOptions() {
             const text = this.providerFilterText.trim().toLowerCase();
             if (!text) {
@@ -495,9 +523,17 @@ export default {
             handler(data) {
                 if (data && data.id) {
                     this.formData = cloneDeep(data);
-                    this.limitsList = this.objectToList(this.formData.limits || {});
-                    this.pricesList = this.objectToList(this.formData.prices || {});
-                    this.tierPricesPeakList = this.objectToList(
+                    this.formData.capabilities = this.formData.capabilities || [];
+                    this.formData.supported_parameters = this.formData.supported_parameters || [];
+                    this.formData.limits = this.formData.limits || {};
+                    this.formData.prices = this.formData.prices || {};
+                    this.formData.metadata = {
+                        source: (this.formData.metadata && this.formData.metadata.source) || '',
+                        notes: (this.formData.metadata && this.formData.metadata.notes) || ''
+                    };
+                    this.limitsList = this.objectToList(this.formData.limits);
+                    this.pricesList = this.objectToPriceList(this.formData.prices);
+                    this.tierPricesPeakList = this.objectToPriceList(
                         (this.formData.tier_prices && this.formData.tier_prices.peak) || {}
                     );
                 } else {
@@ -560,12 +596,25 @@ export default {
             this.pricesDuplicateError = false;
             this.limitsValueError = false;
             this.pricesValueError = false;
+            this.pricesOverflowError = false;
             this.tierDuplicateError = false;
             this.tierValueError = false;
+            this.tierOverflowError = false;
         },
 
         objectToList(obj) {
             return Object.keys(obj || {}).map(key => ({ key, value: obj[key] }));
+        },
+
+        objectToPriceList(obj) {
+            return Object.keys(obj || {}).map(key => ({
+                key,
+                value: formatPriceForInput(obj[key])
+            }));
+        },
+
+        onPriceBlur(entry) {
+            entry.value = formatPriceForInput(entry.value);
         },
 
         listToObject(list) {
@@ -612,15 +661,27 @@ export default {
                 const value = Number(item.value);
                 return Number.isNaN(value) || value < 0;
             });
+            this.pricesOverflowError = this.pricesList.some(item => {
+                if (!item.key) return false;
+                const value = Number(item.value);
+                if (Number.isNaN(value) || value < 0) return false;
+                return isPriceOverflow(value);
+            });
             this.tierValueError = this.tierPricesPeakList.some(item => {
                 if (!item.key) return false;
                 const value = Number(item.value);
                 return Number.isNaN(value) || value < 0;
             });
+            this.tierOverflowError = this.tierPricesPeakList.some(item => {
+                if (!item.key) return false;
+                const value = Number(item.value);
+                if (Number.isNaN(value) || value < 0) return false;
+                return isPriceOverflow(value);
+            });
 
             return !this.limitsDuplicateError && !this.pricesDuplicateError
-                && !this.limitsValueError && !this.pricesValueError
-                && !this.tierDuplicateError && !this.tierValueError;
+                && !this.limitsValueError && !this.pricesValueError && !this.pricesOverflowError
+                && !this.tierDuplicateError && !this.tierValueError && !this.tierOverflowError;
         },
 
         addLimit() {
@@ -632,7 +693,7 @@ export default {
         },
 
         addPrice() {
-            this.pricesList.push({ key: '', value: 0 });
+            this.pricesList.push({ key: '', value: '' });
         },
 
         removePrice(index) {
@@ -640,7 +701,7 @@ export default {
         },
 
         addTierPrice() {
-            this.tierPricesPeakList.push({ key: '', value: 0 });
+            this.tierPricesPeakList.push({ key: '', value: '' });
         },
 
         removeTierPrice(index) {
@@ -851,6 +912,13 @@ export default {
 
     .price-config-body {
         padding: 16px;
+    }
+
+    .price-hint {
+        margin: 0 0 12px;
+        color: #808695;
+        font-size: 12px;
+        line-height: 1.6;
     }
 
     .tier-meta-row {

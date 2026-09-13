@@ -166,12 +166,14 @@
                 <InputNumber
                   v-model="formData.quota_plan.quota"
                   :min="0"
-                  :max="isRMB ? RMB_QUOTA_MAX : INT64_MAX"
+                  :max="quotaInputMax"
                   :precision="quotaPrecision"
                   :step="quotaStep"
                   :formatter="isRMB ? null : formatNumberInput"
                   :parser="isRMB ? null : parseNumberInput"
                   style="width: 100%"
+                  @on-change="validateQuotaField"
+                  @on-blur="validateQuotaField"
                 ></InputNumber>
               </FormItem>
             </Col>
@@ -532,11 +534,10 @@
 <script>
 import { cloneDeep } from "lodash";
 import moment from "moment";
-import { isCidr, isCidrEqual, isCidrContained, RateLimitRuleNameRegCheck } from "@/utils/const";
+import { isCidr, isCidrEqual, isCidrContained, RateLimitRuleNameRegCheck, TOKEN_QUOTA_MAX, RMB_QUOTA_MAX } from "@/utils/const";
 import { getModelGroupsFromServices } from "@/utils/model";
 
 const INT64_MAX = 9223372036854775807;
-const RMB_QUOTA_MAX = 90000000;
 const INT_MAX = 2147483647;
 const DESCRIPTION_MAX_LENGTH = 512;
 
@@ -607,7 +608,7 @@ export default {
           callback(new Error(this.$t("apiKey.quotaRmbMaxError") || 'RMB 配额不能超过 9000 万元'));
           return;
         }
-        if (value > INT64_MAX) {
+        if (!isRMB && value > TOKEN_QUOTA_MAX) {
           callback(new Error(this.$t("apiKey.quotaMaxError")));
           return;
         }
@@ -720,6 +721,7 @@ export default {
 
     return {
       INT64_MAX,
+      TOKEN_QUOTA_MAX,
       RMB_QUOTA_MAX,
       INT_MAX,
       DESCRIPTION_MAX_LENGTH,
@@ -780,6 +782,7 @@ export default {
         "quota_plan.quota": [
           {
             validator: validateQuota,
+            trigger: "change",
           },
         ],
         "rate_limit_policy.enabled": [
@@ -805,6 +808,9 @@ export default {
     },
     quotaStep() {
       return this.isRMB ? 0.0001 : 1;
+    },
+    quotaInputMax() {
+      return this.isRMB ? RMB_QUOTA_MAX : TOKEN_QUOTA_MAX;
     },
     maxConcurrencyCustomRules() {
       return [
@@ -1440,11 +1446,43 @@ export default {
       }
     },
 
+    validateQuotaField() {
+      this.$nextTick(() => {
+        if (this.$refs.formData) {
+          this.$refs.formData.validateField("quota_plan.quota");
+        }
+      });
+    },
+
+    isLimitedQuotaInvalid(value) {
+      if (this.formData.quota_plan.unlimited !== "false") {
+        return false;
+      }
+      if (value === null || value === undefined || value === "") {
+        return true;
+      }
+      const num = Number(value);
+      if (!Number.isFinite(num) || num < 0) {
+        return true;
+      }
+      if (this.isRMB) {
+        return num > RMB_QUOTA_MAX;
+      }
+      return !Number.isInteger(num) || num > TOKEN_QUOTA_MAX;
+    },
+
     handleSubmit(name) {
       this.$nextTick(() => {
-        this.$refs[name].validate((valid) => {
-          if (valid) {
-            const submitData = cloneDeep(this.formData);
+        const form = this.$refs[name];
+        form.validate((valid) => {
+          if (this.formData.quota_plan.unlimited === "false") {
+            form.validateField("quota_plan.quota");
+          }
+          if (!valid || this.isLimitedQuotaInvalid(this.formData.quota_plan.quota)) {
+            this.$Message.error(this.$t("com.tipValidateError"));
+            return;
+          }
+          const submitData = cloneDeep(this.formData);
 
             // Handle expired time
             if (this.neverExpire) {
@@ -1491,9 +1529,6 @@ export default {
             }
 
             this.$emit("submit", submitData);
-          } else {
-            this.$Message.error(this.$t("com.tipValidateError"));
-          }
         });
       });
     },

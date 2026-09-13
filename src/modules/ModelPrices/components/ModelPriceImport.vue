@@ -153,10 +153,15 @@ export default {
             }
         },
 
-        onUploadError(error) {
+        onUploadError(error, response) {
             this.$emit('error');
-            console.error('YAML 导入失败:', error);
-            this.$Message.error(this.$t('modelPrices.importFailed'));
+            console.error('YAML 导入失败:', error, response);
+            const msg = response && response.ErrMsg ? response.ErrMsg : this.$t('modelPrices.importFailed');
+            this.$Message.error({
+                content: msg,
+                duration: 8,
+                closable: true
+            });
         },
 
         submitImport() {

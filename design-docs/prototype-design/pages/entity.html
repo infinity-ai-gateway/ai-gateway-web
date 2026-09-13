@@ -419,16 +419,19 @@
                     var reasonInput = document.getElementById('modal-entity-reset-quota-reason');
                     if (quotaInput) quotaInput.value = plan && plan.quota != null ? plan.quota : 0;
                     if (reasonInput) reasonInput.value = '';
+                    EntityUpsert.applyQuotaInputLimits(quotaInput, plan && plan.unit === 'RMB');
                     Prototype.openModal('modal-entity-reset-quota');
                   }
 
                   function confirmEntityResetQuota() {
                     var quotaInput = document.getElementById('modal-entity-reset-quota-total');
-                    var newQuota = quotaInput ? parseInt(quotaInput.value, 10) : NaN;
-                    if (!quotaInput || quotaInput.value === '' || isNaN(newQuota) || newQuota < 0) {
-                      Prototype.toast('请输入有效的配额总量');
+                    var isRMB = entityState.currentRow && entityState.currentRow.quota_plan && entityState.currentRow.quota_plan.unit === 'RMB';
+                    var quotaErr = EntityUpsert.validateQuotaValue(quotaInput && quotaInput.value, isRMB);
+                    if (quotaErr) {
+                      Prototype.toast(quotaErr);
                       return;
                     }
+                    var newQuota = Number(quotaInput.value);
                     if (!entityState.currentRow) return;
                     if (!entityState.currentRow.quota_plan) entityState.currentRow.quota_plan = {};
                     entityState.currentRow.quota_plan.quota = newQuota;

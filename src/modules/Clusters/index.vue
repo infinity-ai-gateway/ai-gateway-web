@@ -64,6 +64,7 @@
         :baseConfigData="baseConfigData"
         :passiveHealthData="passiveHealthData"
         :llmConfigData="llmConfigData"
+        :balanceModeData="balanceModeData"
       />
     </Drawer>
 
@@ -204,6 +205,7 @@ export default {
             baseConfigData: {},
             passiveHealthData: {},
             llmConfigData: {},
+            balanceModeData: null,
             deleteErrorVisible: false,
             deleteErrorCluster: '',
             deleteErrorRefs: []
@@ -292,6 +294,10 @@ export default {
             }
             this.passiveHealthData = tmpData.passive_health_check || {};
             this.llmConfigData = tmpData.llm_config || {};
+            this.balanceModeData = {
+                balance_mode: tmpData.balance_mode || 'WRR',
+                epp_config: tmpData.epp_config || null
+            };
             this.infoVisible = true;
         },
         onDel(params) {

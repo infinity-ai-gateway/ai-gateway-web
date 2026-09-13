@@ -28,6 +28,12 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+// quota_plans.quota is DECIMAL(18,8): 10 integer digits + 8 fractional digits.
+// total_token is stored as integer, so the max that can persist is 9,999,999,999.
+export const TOKEN_QUOTA_MAX = 9999999999;
+// RMB cap aligned with Redis Lua IEEE-754 integer precision (see OpenAPI QuotaPlan).
+export const RMB_QUOTA_MAX = 90000000;
+
 /**
 * 检查集群名称是否符合规范
 * @param {string} value - 需要检查的集群名称
@@ -61,7 +67,8 @@ export function ProviderNameRegCheck(value) {
 }
 
 export function EntityNameRegCheck(value) {
-  // EntityName: 1-64 chars; lowercase letters, digits, _, -; cannot start/end with _ or -
+  // EntityName: 1-64 chars; lowercase letters, digits, _, -, @ (user@project);
+  // cannot start/end with _, -, or @
   if (!value || typeof value !== 'string') {
     return false;
   }
@@ -71,7 +78,7 @@ export function EntityNameRegCheck(value) {
   if (value.length < 1 || value.length > 64) {
     return false;
   }
-  return /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/.test(value);
+  return /^[a-z0-9](?:[a-z0-9_@-]{0,62}[a-z0-9])?$/.test(value);
 }
 
 export function RateLimitRuleNameRegCheck(value) {
@@ -278,15 +285,30 @@ export function NumThreeRegCheck(value) {
   return reg.test(value);
 }
 /**
- * 检查证书名称是否包含特殊字符
+ * 检查证书名称是否不符合 API 命名规范
  * @param {string} value - 需要检查的证书名称
- * @returns {boolean} - 如果包含特殊字符返回true，否则返回false
+ * @returns {boolean} - 不合法返回 true，合法返回 false
  */
 export function CertNameRegCheck(value) {
-  // Define regex to match strings containing special characters (excluding dot)
-  const reg = /^(?=.*[\'\"-+=,~`!@#\$%\^&\*\(\);:])/;
-  // Test input with regex and return result
-  return reg.test(value);
+  if (!value || value.length < 2 || value.length > 64) {
+    return true;
+  }
+  if (/\s/.test(value)) {
+    return true;
+  }
+  return !/^[A-Za-z0-9]([A-Za-z0-9_.-]*[A-Za-z0-9])?$/.test(value);
+}
+
+/**
+ * 检查证书描述是否不符合 API 规范
+ * @param {string} value - 需要检查的描述
+ * @returns {boolean} - 不合法返回 true，合法返回 false
+ */
+export function CertDescriptionRegCheck(value) {
+  if (!value || value.length < 2 || value.length > 256) {
+    return true;
+  }
+  return /[\x00-\x1f\x7f]/.test(value);
 }
 /**
  * 检查输入值是否符合描述的正则表达式要求

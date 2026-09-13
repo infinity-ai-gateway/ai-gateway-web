@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>操作日志 - AI网关</title>
+    <link rel="stylesheet" href="../assets/static/css/app.css" />
+    <link rel="stylesheet" href="../assets/font/iconfont.css" />
+    <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+  </head>
+  <body>
+    <script src="../assets/static/js/vendors.js"></script>
+    <script src="../assets/static/js/app.js"></script>
+    <script src="../assets/js/mock-data.js"></script>
+    <script src="../assets/js/prototype.js"></script>
+    <script src="../assets/js/ivu-ui.js"></script>
+    <script src="../assets/js/layout.js"></script>
+    <script>
+      var root = Layout.render({ pageId: 'OperationLog.list', breadcrumb: '操作日志', basePath: '../' });
+
+      var state = {
+        page: 1,
+        pageSize: 20,
+        searchParams: {},
+        filtered: [],
+        sortKey: '',
+        sortOrder: '',
+        currentData: null,
+        drawerVisible: false
+      };
+
+      function formatTime(ts) {
+        if (!ts) return '-';
+        var d = new Date(ts * 1000);
+        var pad = function (n) { return n < 10 ? '0' + n : n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }
+
+      function statusTag(status) {
+        if (status === 1) {
+          return '<span class="ivu-tag ivu-tag-green"><span class="ivu-tag-text">成功</span></span>';
+        }
+        return '<span class="ivu-tag ivu-tag-red"><span class="ivu-tag-text">失败</span></span>';
+      }
+
+      function actionTag(action) {
+        var colorMap = {
+          create: 'green',
+          update: 'blue',
+          delete: 'red',
+          reset: 'orange',
+          import: 'purple',
+          bind: 'cyan',
+          unbind: 'volcano'
+        };
+        var color = colorMap[action] || 'default';
+        return '<span class="ivu-tag ivu-tag-' + color + '"><span class="ivu-tag-text">' + action + '</span></span>';
+      }
+
+      function methodTag(method) {
+        var colorMap = {
+          GET: 'blue',
+          POST: 'green',
+          PUT: 'orange',
+          PATCH: 'gold',
+          DELETE: 'red'
+        };
+        var color = colorMap[method] || 'default';
+        return '<span class="ivu-tag ivu-tag-' + color + '"><span class="ivu-tag-text">' + method + '</span></span>';
+      }
+
+      function operatorTypeLabel(type) {
+        return type === 0 ? '用户' : 'Token';
+      }
+
+      function applyFilter() {
+        var sp = state.searchParams;
+        var allLogs = (MockData.operationLogs || []).concat(MockData.operationLogExtraData || []);
+        state.filtered = allLogs.filter(function (item) {
+          if (sp.operator_name && item.operator_name.toLowerCase().indexOf(sp.operator_name.toLowerCase()) === -1) return false;
+          if (sp.action && item.action !== sp.action) return false;
+          if (sp.resource_type && item.resource_type !== sp.resource_type) return false;
+          if (sp.resource_name && item.resource_name.toLowerCase().indexOf(sp.resource_name.toLowerCase()) === -1) return false;
+          if (sp.status && item.status !== parseInt(sp.status, 10)) return false;
+          if (sp.start_time && item.created_at < parseInt(sp.start_time, 10)) return false;
+          if (sp.end_time && item.created_at > parseInt(sp.end_time, 10)) return false;
+          return true;
+        });
+        state.filtered = Prototype.sortRows(state.filtered, state.sortKey, state.sortOrder);
+      }
+
+      function getPageData() {
+        var start = (state.page - 1) * state.pageSize;
+        return state.filtered.slice(start, start + state.pageSize);
+      }
+
+      function renderTable() {
+        applyFilter();
+        var data = getPageData();
+
+        var actionOptions = MockData.operationLogActions.map(function (a) { return { value: a, label: a }; });
+        var resourceTypeOptions = MockData.operationLogResourceTypes.map(function (r) { return { value: r, label: r }; });
+        var statusOptions = MockData.operationLogStatusOptions.map(function (s) { return { value: s.value, label: s.label }; });
+
+        var columns = [
+          {
+            key: 'operator_name', title: '操作人', sortable: true, searchable: true,
+            searchPlaceholder: '输入操作人查询'
+          },
+          {
+            key: 'action', title: '操作动作', sortable: true, searchable: true, searchType: 'select',
+            searchFilters: actionOptions, width: 120,
+            render: function (row) { return actionTag(row.action); }
+          },
+          {
+            key: 'resource_type', title: '资源类型', sortable: true, searchable: true, searchType: 'select',
+            searchFilters: resourceTypeOptions, width: 140
+          },
+          { key: 'resource_name', title: '资源名称', sortable: true, searchable: true, searchPlaceholder: '输入资源名称查询' },
+          {
+            key: 'status', title: '结果', sortable: true, searchable: true, searchType: 'select',
+            searchFilters: statusOptions, width: 80,
+            render: function (row) { return statusTag(row.status); }
+          },
+          {
+            key: 'created_at', title: '操作时间', sortable: true, width: 180,
+            render: function (row) { return '<span>' + formatTime(row.created_at) + '</span>'; }
+          },
+          {
+            key: 'operation', title: '操作', width: 80,
+            render: function (row) {
+              return '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" data-action="detail" data-id="' + row.id + '">详情</button>';
+            }
+          }
+        ];
+
+        function toUnix(dateStr) {
+          if (!dateStr) return '';
+          var d = new Date(dateStr);
+          return Math.floor(d.getTime() / 1000);
+        }
+
+        function unixToInput(unix) {
+          if (!unix) return '';
+          var d = new Date(unix * 1000);
+          var pad = function (n) { return n < 10 ? '0' + n : n; };
+          return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        var startTimeVal = state.searchParams.start_time ? unixToInput(state.searchParams.start_time) : '';
+        var endTimeVal = state.searchParams.end_time ? unixToInput(state.searchParams.end_time) : '';
+
+        var filterBarHtml =
+          '<div class="operation-log-filter-bar" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<label style="white-space:nowrap;">起始时间</label>' +
+              '<input type="datetime-local" id="filter-start-time" value="' + startTimeVal + '" style="width:200px;height:32px;padding:0 8px;border:1px solid #dcdee2;border-radius:4px;" />' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<label style="white-space:nowrap;">结束时间</label>' +
+              '<input type="datetime-local" id="filter-end-time" value="' + endTimeVal + '" style="width:200px;height:32px;padding:0 8px;border:1px solid #dcdee2;border-radius:4px;" />' +
+            '</div>' +
+            '<button type="button" class="ivu-btn ivu-btn-primary ivu-btn-small" id="btn-query">查询</button>' +
+          '</div>';
+
+        var tableHtml = IvuUI.pageTable({
+          columns: columns,
+          rows: data,
+          pageSize: state.pageSize,
+          currentPage: state.page,
+          total: state.filtered.length,
+          searchValues: state.searchParams,
+          tableId: 'operation-log-table'
+        });
+
+        root.innerHTML =
+          '<div class="operation-logs-page">' +
+            filterBarHtml +
+            tableHtml +
+          '</div>';
+
+        bindTableEvents();
+
+        var queryBtn = document.getElementById('btn-query');
+        if (queryBtn) {
+          queryBtn.onclick = function () {
+            var startInput = document.getElementById('filter-start-time');
+            var endInput = document.getElementById('filter-end-time');
+            state.searchParams.start_time = startInput && startInput.value ? toUnix(startInput.value) : '';
+            state.searchParams.end_time = endInput && endInput.value ? toUnix(endInput.value) : '';
+            state.page = 1;
+            renderTable();
+          };
+        }
+      }
+
+      function detailDrawer(row) {
+        var changeSummaryHtml = '';
+        if (row.change_summary) {
+          var cs = row.change_summary;
+          var beforeStr = cs.before ? JSON.stringify(cs.before, null, 2) : '-';
+          var afterStr = cs.after ? JSON.stringify(cs.after, null, 2) : '-';
+          var diffStr = cs.diff_keys ? cs.diff_keys.join(', ') : '-';
+          changeSummaryHtml =
+            '<div style="margin-bottom:16px;">' +
+              '<p style="font-weight:600;margin-bottom:8px;">变更摘要</p>' +
+              '<details style="margin-bottom:8px;border:1px solid #e8eaec;border-radius:4px;padding:0;">' +
+                '<summary style="padding:8px 12px;cursor:pointer;font-size:13px;color:#2d8cf0;user-select:none;">变更前</summary>' +
+                '<pre style="background:#f5f7fa;padding:8px 12px;border-top:1px solid #e8eaec;border-radius:0 0 4px 4px;font-size:12px;white-space:pre-wrap;max-height:400px;overflow-y:auto;">' + beforeStr + '</pre>' +
+              '</details>' +
+              '<details style="margin-bottom:8px;border:1px solid #e8eaec;border-radius:4px;padding:0;">' +
+                '<summary style="padding:8px 12px;cursor:pointer;font-size:13px;color:#2d8cf0;user-select:none;">变更后</summary>' +
+                '<pre style="background:#f5f7fa;padding:8px 12px;border-top:1px solid #e8eaec;border-radius:0 0 4px 4px;font-size:12px;white-space:pre-wrap;max-height:400px;overflow-y:auto;">' + afterStr + '</pre>' +
+              '</details>' +
+              '<p style="margin-top:4px;">差异字段: <span style="color:#2d8cf0;">' + diffStr + '</span></p>' +
+            '</div>';
+        }
+
+        function fieldRow(item1, item2) {
+          function cell(item) {
+            return '<div style="flex:1;min-width:0;padding-right:12px;">' +
+              '<p style="color:#808695;margin-bottom:4px;font-size:12px;">' + item.label + '</p>' +
+              '<p style="margin-bottom:0;word-break:break-all;">' + item.value + '</p>' +
+            '</div>';
+          }
+          return '<div style="display:flex;margin-bottom:16px;">' +
+            cell(item1) + cell(item2) +
+          '</div>';
+        }
+
+        var body =
+          '<div style="padding:0 8px;">' +
+            fieldRow(
+              { label: '操作者类型', value: operatorTypeLabel(row.operator_type) },
+              { label: '操作人', value: row.operator_name || '-' }
+            ) +
+            fieldRow(
+              { label: '操作动作', value: actionTag(row.action) },
+              { label: '资源类型', value: row.resource_type || '-' }
+            ) +
+            fieldRow(
+              { label: '资源ID', value: row.resource_id || '-' },
+              { label: '资源名称', value: row.resource_name || '-' }
+            ) +
+            fieldRow(
+              { label: '父级资源ID', value: row.resource_parent_id || '-' },
+              { label: '结果', value: statusTag(row.status) }
+            ) +
+            (row.error_msg ?
+              '<div style="margin-bottom:16px;"><p style="color:#808695;margin-bottom:4px;font-size:12px;">错误信息</p><p style="color:#ed4014;">' + row.error_msg + '</p></div>' : '') +
+            changeSummaryHtml +
+            fieldRow(
+              { label: '请求路径', value: '<span style="font-size:12px;">' + (row.request_path || '-') + '</span>' },
+              { label: '请求方式', value: methodTag(row.request_method) }
+            ) +
+            fieldRow(
+              { label: '客户端IP', value: row.client_ip || '-' },
+              { label: 'User-Agent', value: '<span style="font-size:12px;word-break:break-all;">' + (row.user_agent || '-') + '</span>' }
+            ) +
+            fieldRow(
+              { label: '操作时间', value: formatTime(row.created_at) },
+              { label: '', value: '' }
+            ) +
+          '</div>';
+
+        var oldOverlay = document.getElementById('operation-log-detail-overlay');
+        if (oldOverlay) oldOverlay.remove();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'operation-log-detail-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;justify-content:flex-end;';
+        overlay.innerHTML =
+          '<div style="position:absolute;inset:0;background:rgba(55,55,55,0.6);" id="detail-overlay-mask"></div>' +
+          '<div style="position:relative;width:720px;max-width:90vw;height:100%;background:#fff;display:flex;flex-direction:column;box-shadow:-2px 0 8px rgba(0,0,0,0.15);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e8eaec;">' +
+              '<span style="font-size:16px;font-weight:600;">日志详情</span>' +
+              '<a href="javascript:void(0)" id="detail-close-btn" style="font-size:22px;color:#808695;text-decoration:none;cursor:pointer;">×</a>' +
+            '</div>' +
+            '<div style="flex:1;overflow-y:auto;padding:16px 24px;">' + body + '</div>' +
+            '<div style="padding:12px 24px;border-top:1px solid #e8eaec;text-align:right;">' +
+              '<button type="button" class="ivu-btn" id="detail-close-btn-footer">关闭</button>' +
+            '</div>' +
+          '</div>';
+
+        document.body.appendChild(overlay);
+
+        function closeOverlay() {
+          var el = document.getElementById('operation-log-detail-overlay');
+          if (el) el.remove();
+        }
+
+        document.getElementById('detail-overlay-mask').onclick = closeOverlay;
+        document.getElementById('detail-close-btn').onclick = closeOverlay;
+        document.getElementById('detail-close-btn-footer').onclick = closeOverlay;
+      }
+
+      function bindTableEvents() {
+        root.querySelectorAll('[data-action="detail"]').forEach(function (btn) {
+          btn.onclick = function (e) {
+            e.stopPropagation();
+            var id = parseInt(btn.getAttribute('data-id'), 10);
+            var allLogs = (MockData.operationLogs || []).concat(MockData.operationLogExtraData || []);
+            var item = allLogs.find(function (p) { return p.id === id; });
+            if (!item) return;
+            detailDrawer(item);
+          };
+        });
+
+        Prototype.bindPageTableSearch(root, function (key, value) {
+          state.searchParams[key] = value;
+          state.page = 1;
+          renderTable();
+        });
+        Prototype.bindPageTableSort(root, state, renderTable);
+
+        root.querySelectorAll('.proto-page-size').forEach(function (sel) {
+          sel.onchange = function () {
+            state.pageSize = parseInt(sel.value, 10);
+            state.page = 1;
+            renderTable();
+          };
+        });
+
+        root.querySelectorAll('.proto-page-prev').forEach(function (btn) {
+          btn.onclick = function () {
+            if (state.page > 1) { state.page -= 1; renderTable(); }
+          };
+        });
+
+        root.querySelectorAll('.proto-page-next').forEach(function (btn) {
+          btn.onclick = function () {
+            var totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+            if (state.page < totalPages) { state.page += 1; renderTable(); }
+          };
+        });
+
+        root.querySelectorAll('[data-page]').forEach(function (li) {
+          li.onclick = function () {
+            state.page = parseInt(li.getAttribute('data-page'), 10);
+            renderTable();
+          };
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        renderTable();
+      });
+    </script>
+  </body>
+</html>

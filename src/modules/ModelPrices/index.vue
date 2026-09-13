@@ -122,7 +122,7 @@ export default {
             importLoading: false,
             searchParams: {},
             filterProvider: null,
-            autoViewAfterFetch: false,
+            notifyEmptyAfterFetch: false,
             providerOptions: [],
             modeOptions: MODE_OPTIONS.map(m => ({ label: m, value: m }))
         };
@@ -235,7 +235,7 @@ export default {
                     const data = res.data.Data || {};
                     this.tableData = data.list || [];
                     this.total = (data.pagination && data.pagination.total) || 0;
-                    this.handleAutoViewAfterFetch();
+                    this.handleEmptyProviderHint();
                 } else {
                     this.$Message.error(this.$t('modelPrices.loadFailed'));
                 }
@@ -255,27 +255,20 @@ export default {
             this.filterProvider = provider;
             this.searchParams = { provider };
             this.page = 1;
-            this.autoViewAfterFetch = this.$route.query.autoView === '1';
+            this.notifyEmptyAfterFetch = true;
             this.fetchData();
         },
 
-        handleAutoViewAfterFetch() {
-            if (!this.autoViewAfterFetch) {
+        handleEmptyProviderHint() {
+            if (!this.notifyEmptyAfterFetch) {
                 return;
             }
-            this.autoViewAfterFetch = false;
+            this.notifyEmptyAfterFetch = false;
             const provider = this.filterProvider || this.$route.query.provider;
-            if (this.tableData.length) {
-                this.onView(this.tableData[0]);
-            } else if (provider) {
+            if (!this.tableData.length && provider) {
                 this.$Message.warning(
                     this.$t('modelPrices.noPricingForProvider', { provider })
                 );
-            }
-            if (this.$route.query.autoView) {
-                const query = { ...this.$route.query };
-                delete query.autoView;
-                this.$router.replace({ name: 'ModelPrice.list', query });
             }
         },
 

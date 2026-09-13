@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../assets/static/css/app.css" />
+    <link rel="stylesheet" href="../assets/static/css/cluster.list.css" />
+    <link rel="stylesheet" href="../assets/font/iconfont.css" />
+    <link rel="stylesheet" href="../assets/css/prototype-overrides.css" />
+    <script src="../assets/js/mock-data.js"></script>
+    <script src="../assets/js/ivu-ui.js"></script>
+    <script src="../assets/js/layout.js"></script>
+    <script src="../assets/js/prototype.js"></script>
+  </head>
+  <body>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var root = Layout.render({ pageId: 'EppPool.list', basePath: '../' });
+
+        var activeTab = 'pool';
+
+        var poolData = MockData.eppPool
+          ? JSON.parse(JSON.stringify(MockData.eppPool))
+          : { name: 'EPP.pool', groups: [] };
+        var assignmentData = MockData.eppAssignments
+          ? JSON.parse(JSON.stringify(MockData.eppAssignments))
+          : { clusters: [], unassigned_clusters: [], idle_groups: [] };
+        var eppPoolRef = MockData.eppPool
+          ? JSON.parse(JSON.stringify(MockData.eppPool))
+          : { groups: [] };
+
+        var state = {
+          allRows: cloneRows(assignmentData.clusters || []),
+          filteredRows: cloneRows(assignmentData.clusters || []),
+          search: {},
+          pageSize: 20,
+          currentPage: 1,
+          sortKey: '',
+          sortOrder: ''
+        };
+
+        function cloneRows(list) {
+          return JSON.parse(JSON.stringify(list || []));
+        }
+
+        root.innerHTML =
+          '<div class="clusters">' +
+            '<div class="ivu-tabs">' +
+              '<div class="ivu-tabs-bar">' +
+                '<div class="ivu-tabs-nav-container">' +
+                  '<div class="ivu-tabs-nav-wrap">' +
+                    '<div class="ivu-tabs-nav-scroll">' +
+                      '<div class="ivu-tabs-nav">' +
+                        '<div class="ivu-tabs-tab" data-tab="pool">EPP 实例池</div>' +
+                        '<div class="ivu-tabs-tab" data-tab="assignment">EPP 调度分配</div>' +
+                      '</div>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div id="epp-tab-content"></div>' +
+            '</div>' +
+          '</div>' +
+          drawerOverride();
+
+        function renderAll() {
+          switchActiveTab(activeTab);
+          if (activeTab === 'pool') {
+            renderPool();
+          } else {
+            renderAssignments();
+          }
+        }
+
+        function switchActiveTab(tab) {
+          document.querySelectorAll('[data-tab]').forEach(function (el) {
+            el.classList.toggle('ivu-tabs-tab-active', el.getAttribute('data-tab') === tab);
+          });
+        }
+
+        function bindTabEvents() {
+          document.querySelectorAll('[data-tab]').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+              activeTab = tab.getAttribute('data-tab');
+              poolData = MockData.eppPool
+                ? JSON.parse(JSON.stringify(MockData.eppPool))
+                : { name: 'EPP.pool', groups: [] };
+              state.allRows = cloneRows(assignmentData.clusters || []);
+              state.currentPage = 1;
+              renderAll();
+            });
+          });
+        }
+
+        // ===== Tab 1: EPP 实例池（展开行树形表格）=====
+        var expandedGroups = {};
+        var editingPool = false;
+
+        function renderPool() {
+          var contentNode = document.getElementById('epp-tab-content');
+          var groups = poolData.groups || [];
+          var totalInstances = groups.reduce(function (sum, g) { return sum + (g.instances || []).length; }, 0);
+
+          var summary = '<div class="proto-epp-summary" style="margin-top:16px;margin-bottom:16px;">' +
+            '<span style="margin-right:24px;">池名称：<strong>' + IvuUI.escapeHtml(poolData.name) + '</strong></span>' +
+            '<span style="margin-right:24px;">实例组数：<strong>' + groups.length + '</strong></span>' +
+            '<span>实例总数：<strong>' + totalInstances + '</strong></span>' +
+            '</div>';
+
+          var toolbar;
+          if (editingPool) {
+            toolbar = '<div style="text-align:right;">' +
+              IvuUI.btn('保存', 'primary', 'small', '', 'id="btn-save-pool" style="margin-right:8px;"') +
+              IvuUI.btn('取消', 'default', 'small', '', 'id="btn-cancel-pool"') +
+              '</div>';
+          } else {
+            toolbar = '<div style="text-align:right;">' +
+              IvuUI.btn('编辑', 'primary', 'small', '', 'id="btn-edit-pool"') +
+              '</div>';
+          }
+
+          var tableHtml =
+            '<div class="ivu-table-wrapper" style="margin-top:12px;">' +
+            '<div class="ivu-table ivu-table-default ivu-table-border" style="width:100%;">' +
+            '<div class="ivu-table-body">' +
+            '<table cellspacing="0" cellpadding="0" border="0" style="width:100%;">' +
+            '<thead><tr>' +
+            '<th style="width:40px;"><div class="ivu-table-cell"></div></th>' +
+            '<th><div class="ivu-table-cell"><span>实例组</span></div></th>' +
+            '<th style="width:100px;"><div class="ivu-table-cell"><span>实例数</span></div></th>' +
+            '<th><div class="ivu-table-cell"><span>实例列表</span></div></th>' +
+            (editingPool ? '<th style="width:100px;"><div class="ivu-table-cell"><span>操作</span></div></th>' : '') +
+            '</tr></thead>' +
+            '<tbody id="epp-pool-tbody">';
+
+          if (!groups.length) {
+            var colSpan = editingPool ? 5 : 4;
+            tableHtml += '<tr><td colspan="' + colSpan + '" style="text-align:center;color:#c5c8ce;padding:24px 0;">暂无实例组</td></tr>';
+          } else {
+            groups.forEach(function (g, gi) {
+              var isExpanded = !!expandedGroups[gi];
+              var expandIcon = isExpanded ? '▼' : '▶';
+              var instSummary = (g.instances || []).map(function (inst) {
+                return IvuUI.escapeHtml(inst.id) + '(' + IvuUI.escapeHtml(inst.host) + ':' + IvuUI.escapeHtml(inst.port) + ')';
+              }).join(', ');
+
+              // 组主行
+              tableHtml += '<tr class="epp-group-row" data-group-index="' + gi + '">' +
+                '<td><div class="ivu-table-cell"><span class="epp-expand-icon" data-action="toggle-expand" data-group-index="' + gi + '" style="cursor:pointer;user-select:none;font-size:12px;color:#2d8cf0;">' + expandIcon + '</span></div></td>' +
+                '<td><div class="ivu-table-cell">';
+              if (editingPool) {
+                tableHtml += '<input type="text" class="ivu-input epp-group-name" value="' + IvuUI.escapeHtml(g.name) + '" placeholder="组名（池内唯一）" data-group-index="' + gi + '" style="width:100%;height:28px;font-size:12px;" />';
+              } else {
+                tableHtml += '<strong>' + IvuUI.escapeHtml(g.name) + '</strong>';
+              }
+              tableHtml += '</div></td>' +
+                '<td><div class="ivu-table-cell">' + (g.instances || []).length + '</div></td>' +
+                '<td><div class="ivu-table-cell" style="font-size:12px;color:#808695;">' + (instSummary || '-') + '</div></td>';
+              if (editingPool) {
+                tableHtml += '<td><div class="ivu-table-cell">' +
+                  IvuUI.btn('删除组', 'error', 'small', '', 'data-action="delete-group" data-group-index="' + gi + '"') +
+                  '</div></td>';
+              }
+              tableHtml += '</tr>';
+
+              // 展开子行
+              var tdColspan = editingPool ? 5 : 4;
+              tableHtml += '<tr class="epp-expand-row' + (isExpanded ? '' : ' proto-hidden') + '" data-group-index="' + gi + '">' +
+                '<td colspan="' + tdColspan + '" style="padding:12px 16px 16px 56px;background:#f8f8f9;">';
+
+              if (isExpanded) {
+                var insts = g.instances || [];
+                if (!insts.length) {
+                  tableHtml += '<span style="color:#c5c8ce;font-size:12px;">暂无实例</span>';
+                } else {
+                  tableHtml +=
+                    '<div class="ivu-table-wrapper" style="max-width:700px;">' +
+                    '<div class="ivu-table ivu-table-default ivu-table-border" style="width:100%;">' +
+                    '<div class="ivu-table-body">' +
+                    '<table cellspacing="0" cellpadding="0" border="0" style="width:100%;">' +
+                    '<thead><tr>' +
+                    '<th><div class="ivu-table-cell"><span>实例 ID</span></div></th>' +
+                    '<th><div class="ivu-table-cell"><span>主机</span></div></th>' +
+                    '<th style="width:100px;"><div class="ivu-table-cell"><span>端口</span></div></th>' +
+                    (editingPool ? '<th style="width:80px;"><div class="ivu-table-cell"><span>操作</span></div></th>' : '') +
+                    '</tr></thead>' +
+                    '<tbody class="ivu-table-tbody">';
+
+                  insts.forEach(function (inst, ii) {
+                    tableHtml += '<tr>';
+                    tableHtml += '<td><div class="ivu-table-cell">';
+                    if (editingPool) {
+                      tableHtml += '<input type="text" class="ivu-input inst-id" value="' + IvuUI.escapeHtml(inst.id) + '" placeholder="实例 ID" data-group-index="' + gi + '" data-inst-index="' + ii + '" style="width:100%;height:28px;font-size:12px;" />';
+                    } else {
+                      tableHtml += IvuUI.escapeHtml(inst.id);
+                    }
+                    tableHtml += '</div></td>';
+                    tableHtml += '<td><div class="ivu-table-cell">';
+                    if (editingPool) {
+                      tableHtml += '<input type="text" class="ivu-input inst-host" value="' + IvuUI.escapeHtml(inst.host) + '" placeholder="主机" data-group-index="' + gi + '" data-inst-index="' + ii + '" style="width:100%;height:28px;font-size:12px;" />';
+                    } else {
+                      tableHtml += IvuUI.escapeHtml(inst.host);
+                    }
+                    tableHtml += '</div></td>';
+                    tableHtml += '<td><div class="ivu-table-cell">';
+                    if (editingPool) {
+                      tableHtml += '<input type="number" class="ivu-input inst-port" value="' + IvuUI.escapeHtml(inst.port != null ? inst.port : 9002) + '" placeholder="端口" data-group-index="' + gi + '" data-inst-index="' + ii + '" style="width:100%;height:28px;font-size:12px;" />';
+                    } else {
+                      tableHtml += IvuUI.escapeHtml(inst.port);
+                    }
+                    tableHtml += '</div></td>';
+                    if (editingPool) {
+                      tableHtml += '<td><div class="ivu-table-cell">' +
+                        IvuUI.btn('删除', 'error', 'small', '', 'data-action="remove-inst" data-group-index="' + gi + '" data-inst-index="' + ii + '"') +
+                        '</div></td>';
+                    }
+                    tableHtml += '</tr>';
+                  });
+
+                  tableHtml += '</tbody></table></div></div></div>';
+                }
+
+                if (editingPool) {
+                  tableHtml += '<div style="margin-top:8px;">' +
+                    IvuUI.btn('+添加实例', 'primary', 'small', '', 'data-action="add-inst" data-group-index="' + gi + '"') +
+                    '</div>';
+                }
+              }
+
+              tableHtml += '</td></tr>';
+            });
+          }
+
+          tableHtml += '</tbody></table></div></div></div>';
+
+          // 编辑模式下「添加组」在表格下方
+          var afterTable = '';
+          if (editingPool) {
+            afterTable = '<div style="margin-top:12px;">' +
+              IvuUI.btn('+ 添加组', 'primary', 'small', '', 'id="btn-add-group"') +
+              '</div>';
+          }
+
+          var container = document.createElement('div');
+          container.innerHTML = summary + toolbar + tableHtml + afterTable;
+          contentNode.innerHTML = '';
+          contentNode.appendChild(container);
+
+          if (editingPool) {
+            bindPoolEditEvents(container);
+          } else {
+            bindPoolViewEvents(container);
+          }
+        }
+
+        function bindPoolViewEvents(container) {
+          document.getElementById('btn-edit-pool').addEventListener('click', function () {
+            editingPool = true;
+            renderPool();
+          });
+
+          container.querySelectorAll('[data-action="toggle-expand"]').forEach(function (icon) {
+            icon.addEventListener('click', function () {
+              var gi = parseInt(icon.getAttribute('data-group-index'), 10);
+              expandedGroups[gi] = !expandedGroups[gi];
+              renderPool();
+            });
+          });
+        }
+
+        function bindPoolEditEvents(container) {
+          // 保存
+          document.getElementById('btn-save-pool').addEventListener('click', function () {
+            if (!poolData.groups || !poolData.groups.length) {
+              Prototype.toast('至少需要一个实例组', 'error');
+              return;
+            }
+            editingPool = false;
+            Prototype.toast('EPP 实例池已保存！(PATCH /epp-pool 全量替换)');
+            renderPool();
+          });
+
+          // 取消 → 还原数据
+          document.getElementById('btn-cancel-pool').addEventListener('click', function () {
+            poolData = MockData.eppPool
+              ? JSON.parse(JSON.stringify(MockData.eppPool))
+              : { name: 'EPP.pool', groups: [] };
+            editingPool = false;
+            expandedGroups = {};
+            renderPool();
+          });
+
+          // 添加组
+          document.getElementById('btn-add-group').addEventListener('click', function () {
+            var name = '新组' + ((poolData.groups || []).length + 1);
+            poolData.groups.push({ name: name, instances: [] });
+            renderPool();
+          });
+
+          // 展开/收起
+          container.querySelectorAll('[data-action="toggle-expand"]').forEach(function (icon) {
+            icon.addEventListener('click', function () {
+              var gi = parseInt(icon.getAttribute('data-group-index'), 10);
+              expandedGroups[gi] = !expandedGroups[gi];
+              renderPool();
+            });
+          });
+
+          // 组名输入同步
+          container.querySelectorAll('.epp-group-name').forEach(function (input) {
+            input.addEventListener('change', function () {
+              var gi = parseInt(input.getAttribute('data-group-index'), 10);
+              if (poolData.groups[gi]) poolData.groups[gi].name = input.value.trim();
+            });
+          });
+
+          // 实例字段输入同步
+          container.querySelectorAll('.inst-id').forEach(function (input) {
+            input.addEventListener('change', function () {
+              var gi = parseInt(input.getAttribute('data-group-index'), 10);
+              var ii = parseInt(input.getAttribute('data-inst-index'), 10);
+              if (poolData.groups[gi] && poolData.groups[gi].instances[ii])
+                poolData.groups[gi].instances[ii].id = input.value.trim();
+            });
+          });
+          container.querySelectorAll('.inst-host').forEach(function (input) {
+            input.addEventListener('change', function () {
+              var gi = parseInt(input.getAttribute('data-group-index'), 10);
+              var ii = parseInt(input.getAttribute('data-inst-index'), 10);
+              if (poolData.groups[gi] && poolData.groups[gi].instances[ii])
+                poolData.groups[gi].instances[ii].host = input.value.trim();
+            });
+          });
+          container.querySelectorAll('.inst-port').forEach(function (input) {
+            input.addEventListener('change', function () {
+              var gi = parseInt(input.getAttribute('data-group-index'), 10);
+              var ii = parseInt(input.getAttribute('data-inst-index'), 10);
+              if (poolData.groups[gi] && poolData.groups[gi].instances[ii])
+                poolData.groups[gi].instances[ii].port = parseInt(input.value, 10) || 0;
+            });
+          });
+
+          // 删除组
+          container.querySelectorAll('[data-action="delete-group"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var gi = parseInt(btn.getAttribute('data-group-index'), 10);
+              var g = poolData.groups[gi];
+              if (!g) return;
+              Prototype.confirm({
+                content: '确认删除实例组「' + g.name + '」及其所有实例？',
+                onOk: function () {
+                  poolData.groups.splice(gi, 1);
+                  delete expandedGroups[gi];
+                  renderPool();
+                }
+              });
+            });
+          });
+
+          // 删除实例
+          container.querySelectorAll('[data-action="remove-inst"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var gi = parseInt(btn.getAttribute('data-group-index'), 10);
+              var ii = parseInt(btn.getAttribute('data-inst-index'), 10);
+              if (poolData.groups[gi] && poolData.groups[gi].instances[ii]) {
+                poolData.groups[gi].instances.splice(ii, 1);
+                renderPool();
+              }
+            });
+          });
+
+          // 添加实例
+          container.querySelectorAll('[data-action="add-inst"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var gi = parseInt(btn.getAttribute('data-group-index'), 10);
+              if (poolData.groups[gi]) {
+                poolData.groups[gi].instances.push({ id: '', host: '', port: 9002 });
+                renderPool();
+              }
+            });
+          });
+        }
+
+        // ===== Tab 2: EPP 调度分配 =====
+        function renderAssignments() {
+          var contentNode = document.getElementById('epp-tab-content');
+          var clusters = assignmentData.clusters || [];
+          var unassigned = assignmentData.unassigned_clusters || [];
+          var idle = assignmentData.idle_groups || [];
+
+          var statsHtml =
+            '<div class="proto-epp-summary" style="margin-bottom:16px;">' +
+            '<span style="margin-right:24px;">已分配集群：<strong>' + clusters.length + '</strong></span>' +
+            '<span style="margin-right:24px;' + (unassigned.length > 0 ? 'color:#ed4014;' : '') + '">未分配集群：<strong>' + unassigned.length + '</strong></span>' +
+            '<span style="margin-right:24px;">空闲实例组：<strong>' + idle.length + '</strong></span>' +
+            '</div>';
+
+          var columns = [
+            { title: '集群名称', key: 'cluster', sortable: true, render: function (row) {
+              return IvuUI.escapeHtml(row.cluster);
+            }},
+            { title: '实例组', key: 'group', sortable: true, render: function (row) {
+              return IvuUI.escapeHtml(row.group || '-');
+            }},
+            { title: '主实例', key: 'primary', sortable: true, render: function (row) {
+              return row.primary ? IvuUI.escapeHtml(row.primary.id) : '-';
+            }},
+            { title: '备实例', key: 'standby', sortable: true, render: function (row) {
+              return row.standby ? IvuUI.escapeHtml(row.standby.id) : '<span style="color:#c5c8ce;">无</span>';
+            }},
+            { title: '状态', key: 'degraded', sortable: true, render: function (row) {
+              return row.degraded ? IvuUI.tag('降级', 'warning') : IvuUI.tag('正常', 'success');
+            }},
+            { title: '操作', key: 'action', render: function (row) {
+              return IvuUI.btn('编辑', 'primary', 'small', '', 'data-action="override" data-cluster="' + IvuUI.escapeHtml(row.cluster) + '"');
+            }}
+          ];
+
+          updateFilteredRows();
+          var totalPages = Math.max(1, Math.ceil(state.filteredRows.length / state.pageSize));
+          if (state.currentPage > totalPages) state.currentPage = totalPages;
+          var start = (state.currentPage - 1) * state.pageSize;
+          var pageRows = state.filteredRows.slice(start, start + state.pageSize);
+
+          var tableHtml = IvuUI.pageTable({
+            columns: columns,
+            rows: pageRows,
+            total: state.filteredRows.length,
+            pageSize: state.pageSize,
+            currentPage: state.currentPage,
+            searchValues: state.search,
+            tableId: 'epp-assignment-table'
+          });
+
+          var extraHtml = '';
+
+          if (unassigned.length) {
+            extraHtml += '<div style="margin-top:16px;">' + IvuUI.card('未分配集群',
+              '<p style="color:#ed4014;font-size:12px;margin:0 0 8px;">以下 EPP 模式的集群暂无有效分配，服务降级为 WRR。</p>' +
+              '<ul style="margin:0;padding-left:16px;">' +
+              unassigned.map(function (n) { return '<li>' + IvuUI.escapeHtml(n) + '</li>'; }).join('') +
+              '</ul>'
+            ) + '</div>';
+          }
+
+          if (idle.length) {
+            extraHtml += '<div style="margin-top:16px;">' + IvuUI.card('空闲实例组',
+              '<p style="color:#808695;font-size:12px;margin:0 0 8px;">以下实例组未分配给任何集群。</p>' +
+              '<ul style="margin:0;padding-left:16px;">' +
+              idle.map(function (g) { return '<li>' + IvuUI.escapeHtml(g) + '</li>'; }).join('') +
+              '</ul>'
+            ) + '</div>';
+          }
+
+          var container = document.createElement('div');
+          container.innerHTML = statsHtml + tableHtml + extraHtml;
+          contentNode.innerHTML = '';
+          contentNode.appendChild(container);
+          bindTableEvents(container);
+        }
+
+        function updateFilteredRows() {
+          state.allRows = cloneRows(assignmentData.clusters || []);
+          state.filteredRows = state.allRows.filter(function (row) {
+            var kw = (state.search.cluster || '').trim().toUpperCase();
+            if (kw && String(row.cluster || '').toUpperCase().indexOf(kw) === -1) return false;
+            return true;
+          });
+          state.filteredRows = Prototype.sortRows(state.filteredRows, state.sortKey, state.sortOrder);
+        }
+
+        function bindTableEvents(container) {
+          Prototype.bindPageTableSearch(container, function (key, value) {
+            state.search[key] = value;
+            state.currentPage = 1;
+            renderAssignments();
+          });
+          Prototype.bindPageTableSort(container, state, function () {
+            renderAssignments();
+          });
+
+          var sizeSelect = container.querySelector('.proto-page-size');
+          if (sizeSelect) {
+            sizeSelect.addEventListener('change', function () {
+              state.pageSize = parseInt(sizeSelect.value, 10) || 20;
+              state.currentPage = 1;
+              renderAssignments();
+            });
+          }
+
+          container.querySelectorAll('[data-action="override"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var clusterName = btn.getAttribute('data-cluster');
+              openOverrideDrawer(clusterName);
+            });
+          });
+        }
+
+        function openOverrideDrawer(clusterName) {
+          var cluster = (assignmentData.clusters || []).find(function (c) { return c.cluster === clusterName; });
+          if (!cluster) return;
+
+          var groups = eppPoolRef.groups || [];
+          var groupOptions = groups.map(function (g) {
+            return '<option value="' + IvuUI.escapeHtml(g.name) + '"' + (g.name === cluster.group ? ' selected' : '') + '>' + IvuUI.escapeHtml(g.name) + '</option>';
+          }).join('');
+
+          var selectedGroup = groups.find(function (g) { return g.name === cluster.group; });
+          var primaryOptions = selectedGroup ? selectedGroup.instances.map(function (inst) {
+            return '<option value="' + IvuUI.escapeHtml(inst.id) + '"' + (inst.id === (cluster.primary && cluster.primary.id) ? ' selected' : '') + '>' + IvuUI.escapeHtml(inst.id) + '</option>';
+          }).join('') : '';
+
+          var body =
+            '<div class="ivu-row" style="margin-bottom:16px;">' +
+            '<div class="ivu-col ivu-col-span-12" style="padding:0 8px;">' +
+            '<label style="display:block;margin-bottom:4px;font-size:12px;color:#808695;">实例组</label>' +
+            '<select id="override-group-select" class="ivu-input" style="height:32px;">' + groupOptions + '</select></div>' +
+            '</div>' +
+            '<div class="ivu-row" style="margin-bottom:16px;">' +
+            '<div class="ivu-col ivu-col-span-12" style="padding:0 8px;">' +
+            '<label style="display:block;margin-bottom:4px;font-size:12px;color:#808695;">主实例 ID</label>' +
+            '<select id="override-primary-select" class="ivu-input" style="height:32px;">' + primaryOptions + '</select></div>' +
+            '</div>' +
+            '<p style="color:#808695;font-size:12px;margin:0;">留空 = 自动分配 / 跟随组默认主实例</p>';
+
+          var footer =
+            IvuUI.btn('取消', 'default', 'small', '', 'id="btn-override-cancel" style="margin-right:8px;"') +
+            IvuUI.btn('确认', 'primary', 'small', '', 'id="btn-override-confirm"');
+
+          var drawerId = 'drawer-epp-override';
+          var existing = document.getElementById(drawerId);
+          if (existing) existing.parentNode.removeChild(existing);
+
+          var drawerHtml = IvuUI.drawer(drawerId, '手动覆写 - ' + IvuUI.escapeHtml(clusterName), body, footer, '50%');
+          var temp = document.createElement('div');
+          temp.innerHTML = drawerHtml;
+          document.body.appendChild(temp.firstElementChild);
+
+          document.getElementById('override-group-select').addEventListener('change', function () {
+            var gName = this.value;
+            var g = groups.find(function (gr) { return gr.name === gName; });
+            var ps = document.getElementById('override-primary-select');
+            if (g) {
+              ps.innerHTML = g.instances.map(function (inst) {
+                return '<option value="' + IvuUI.escapeHtml(inst.id) + '">' + IvuUI.escapeHtml(inst.id) + '</option>';
+              }).join('');
+            }
+          });
+
+          document.getElementById('btn-override-cancel').addEventListener('click', function () {
+            Prototype.closeDrawer(drawerId);
+          });
+
+          document.getElementById('btn-override-confirm').addEventListener('click', function () {
+            var groupName = document.getElementById('override-group-select').value;
+            var primaryId = document.getElementById('override-primary-select').value;
+            cluster.group = groupName;
+            var g = groups.find(function (gr) { return gr.name === groupName; });
+            if (g) {
+              if (primaryId) {
+                var inst = g.instances.find(function (i) { return i.id === primaryId; });
+                if (inst) cluster.primary = { id: inst.id, host: inst.host, port: inst.port };
+              } else {
+                cluster.primary = g.instances.length > 0 ? { id: g.instances[0].id, host: g.instances[0].host, port: g.instances[0].port } : null;
+              }
+              cluster.standby = g.instances.length > 1 ? { id: g.instances[1].id, host: g.instances[1].host, port: g.instances[1].port } : null;
+              cluster.degraded = false;
+            }
+            Prototype.toast('分配覆写成功！');
+            Prototype.closeDrawer(drawerId);
+            renderAssignments();
+          });
+
+          Prototype.openDrawer(drawerId);
+        }
+
+        function drawerOverride() {
+          // Drawer is created dynamically in openOverrideDrawer
+          return '';
+        }
+
+        renderAll();
+        bindTabEvents();
+        Prototype.bindDrawerClose();
+      });
+    </script>
+  </body>
+</html>

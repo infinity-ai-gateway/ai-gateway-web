@@ -38,6 +38,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [v0.0.9] - 2026-09-10
+
+### Added
+
+- Certificate management: list, create drawer (PEM upload + expiry preview), default selector, and delete guard
+- Operation logs module: time-range filter, pagination, column search, and detail drawer with before/after JSON diff
+- EPP scheduling module: instance pool management (group CRUD, full-replace) and assignment view (statistics, allocation table, manual override)
+- Cluster wizard step 4: balance mode config (WRR / EPP) with instance-pool group binding and flow-control settings
+- Gemini protocol support: `x-goog-api-key` auth header, default model-list URI `/v1beta/models`
+- Model pricing: 10 new price keys (1h cache, 256k/272k/512k long-context tiers, image/audio token costs)
+- User manual (zh-cn): new chapter 06 (EPP scheduling) with screenshots; chapters renumbered (05A→06, 06–14→07–15); chapters 04/05/07 updated
+
+### Changed
+
+- Certificate create form aligned with OpenAPI; default switch uses `PATCH`; validation aligned with API rules
+- Model price inputs accept scientific notation; merge preserves previously-saved keys
+- Cluster review/detail display balance mode and EPP settings
+- Manual reading guide, navigation tree, and `develop.md` synced to renumbered chapters
+- Expanded i18n for `cert`, `operationLogs`, `eppSchedule`, balance mode, gemini, and price keys (en/zh)
+
 ## [v0.0.8] - 2026-08-30
 
 ### Added
@@ -226,6 +246,7 @@ AI Gateway Web v0.0.2 — Instance pool & build refresh. Focuses on EPP instance
 - Consumer management: API Key lifecycle with model allowlist, token quota, expiry, IP whitelist
 - User & access: system/tenant views, user management, token management
 
+[v0.0.9]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.9
 [v0.0.8]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.8
 [v0.0.7]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.7
 [v0.0.6]: https://github.com/rainway-ai-gateway/ai-gateway-web/releases/tag/v0.0.6

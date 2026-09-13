@@ -2,6 +2,8 @@
 var NAV_ICONS = {
   'AIGatewayInstancePool.list': 'iconfont icon-instancePool',
   'AICluster.list': 'iconfont icon-jiqun',
+  'EppPool.list': 'iconfont icon-instancePool',
+  'EppAssignment.list': 'iconfont icon-jiqun',
   'Provider.list': 'ivu-icon ivu-icon-ios-cloud',
   'AdvanceRouteRule.list': 'iconfont icon-zhuanfa',
   'user.list': 'iconfont icon-user',
@@ -11,6 +13,7 @@ var NAV_ICONS = {
   'route.admin.list': 'ivu-icon ivu-icon-ios-cube',
   'resource.admin.list': 'ivu-icon ivu-icon-md-appstore',
   'ModelPrice.list': 'ivu-icon ivu-icon-logo-yen',
+  'OperationLog.list': 'ivu-icon ivu-icon-md-list-box',
 };
 
 function navIcon(id, fallback) {
@@ -44,6 +47,13 @@ window.PrototypeNav = [
         page: 'cluster-list.html',
         text: 'AI业务集群',
         icon: navIcon('AICluster.list'),
+      },
+      {
+        id: 'EppPool.list',
+        i18n: 'EppPoolManage',
+        page: 'epp.html',
+        text: 'EPP调度',
+        icon: navIcon('EppPool.list'),
       },
       {
         id: 'ModelPrice.list',
@@ -97,6 +107,13 @@ window.PrototypeNav = [
     page: 'user.html',
     text: '用户管理',
     icon: navIcon('user.list'),
+  },
+  {
+    id: 'OperationLog.list',
+    i18n: 'OperationLogManage',
+    page: 'operation-logs.html',
+    text: '操作日志',
+    icon: navIcon('OperationLog.list'),
   },
 ];
 

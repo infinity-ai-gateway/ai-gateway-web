@@ -35,6 +35,8 @@
 | 路由规则 | [路由规则.md](./各模块实现细节设计/路由规则.md) | 路由表（Global / Entity / API-Key）与规则 fallbacks |
 | APIKey 管理 | [APIKey管理.md](./各模块实现细节设计/APIKey管理.md) | API Key 的创建、编辑、配额（Token/RMB）、限流 |
 | Entity 管理 | [Entity管理.md](./各模块实现细节设计/Entity管理.md) | Entity 与 Entity Type 的组织层级、配额（Token/RMB） |
+| 证书管理 | [证书管理.md](./各模块实现细节设计/证书管理.md) | TLS 证书上传、全局默认证书、过期时间预览 |
+| 操作日志 | [操作日志.md](./各模块实现细节设计/操作日志.md) | 审计日志筛选、服务端分页、详情抽屉与变更摘要 |
 
 ---
 
