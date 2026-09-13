@@ -1,4 +1,4 @@
-# 06 模型定价：管理模型价格与计费
+# 07 模型定价：管理模型价格与计费
 
 模型定价用于维护各提供商 + 模型名的价格信息，供网关进行费用核算。定价数据以「提供商 / 模型名 / 归一化模型名 / 模型模式」为唯一维度。
 
@@ -6,7 +6,7 @@
 
 > **与模型服务商的关系**：`提供商` 字段建议与 [04 章 模型服务商](04-model-provider.md) 中的服务商 `name` 保持一致。服务商列表支持「查询模型价格」跳转到本页并按提供商筛选。若需按时段差异化计价，须先在服务商侧配置「分段计价」（忙时时间段），再在本页为对应 `provider` 维护 **分时段价格**。
 
-## 6.1 列表页
+## 7.1 列表页
 
 展示当前已维护的模型定价记录。
 
@@ -26,7 +26,7 @@
 
 **从服务商跳转**：在模型服务商列表点击「查询模型价格」，会按该服务商名称筛选本列表；若无记录，提示「未找到提供商 {provider} 的模型定价」。
 
-## 6.2 创建 / 编辑定价
+## 7.2 创建 / 编辑定价
 
 点击「+ 新增定价」或在操作列点击「编辑」，右侧弹出创建/编辑抽屉。
 
@@ -90,20 +90,54 @@
 | 何时使用 | 所有请求的 **fallback 价格**；未命中任何分时段 tier 时使用 |
 | 校验 | 至少 1 条；键名不可重复；值须 ≥ 0；科学计数法与十进制均可；`价格 × 1e8` 不得超过 `2^53` |
 
-常用价格字段：
+价格字段从下拉枚举中选择，常用键名按类别如下：
+
+**文本 Token**：
 
 | 键名 | 含义 |
 | --- | --- |
 | input_cost_per_token | 每 Token 输入成本 |
 | output_cost_per_token | 每 Token 输出成本 |
+
+**缓存**：
+
+| 键名 | 含义 |
+| --- | --- |
 | cache_read_input_token_cost | 缓存读入 Token 成本 |
-| cache_creation_input_token_cost | 缓存创建 Token 成本 |
+| cache_creation_input_token_cost | 缓存创建 Token 成本（5m TTL） |
+| cache_creation_input_token_cost_1h | 缓存创建 Token 成本（1h TTL） |
+
+**长上下文分档**（按请求规模阶梯计价）：
+
+| 键名 | 含义 |
+| --- | --- |
 | input_cost_per_token_above_200k_tokens | 超过 200k tokens 的输入成本 |
 | output_cost_per_token_above_200k_tokens | 超过 200k tokens 的输出成本 |
+| input_cost_per_token_above_256k_tokens | 超过 256k tokens 的输入成本 |
+| output_cost_per_token_above_256k_tokens | 超过 256k tokens 的输出成本 |
+| input_cost_per_token_above_272k_tokens | 超过 272k tokens 的输入成本 |
+| output_cost_per_token_above_272k_tokens | 超过 272k tokens 的输出成本 |
+| input_cost_per_token_above_512k_tokens | 超过 512k tokens 的输入成本 |
+| output_cost_per_token_above_512k_tokens | 超过 512k tokens 的输出成本 |
+
+**图像 / 音频**：
+
+| 键名 | 含义 |
+| --- | --- |
 | output_cost_per_image | 每张输出图像成本 |
+| input_cost_per_image_token | 每图像输入 Token 成本 |
+| input_cost_per_audio_token | 每音频输入 Token 成本 |
+| output_cost_per_audio_token | 每音频输出 Token 成本 |
+
+**其他**：
+
+| 键名 | 含义 |
+| --- | --- |
 | output_cost_per_second | 每秒输出成本 |
 | input_cost_per_query | 每次查询输入成本 |
 | ocr_cost_per_page | 每页 OCR 成本 |
+
+> 下拉枚举还包含像素 / 图像质量 / 音视频时长 / 搜索上下文等键名（如 `output_cost_per_pixel`、`input_cost_per_audio_per_second`、`search_context_cost_per_query`），按所选模型计费模型选用。
 
 #### 分时段价格
 
@@ -124,7 +158,7 @@
 - **价格来源**：来源 URL，需符合 URL 格式。
 - **备注**：备注文本。
 
-## 6.3 查看详情
+## 7.3 查看详情
 
 点击行或操作列「详情」，右侧弹出只读抽屉，展示全部字段：
 
@@ -137,7 +171,7 @@
 
 ![模型定价详情](images/11-model-price-view.png)
 
-## 6.4 YAML 导入
+## 7.4 YAML 导入
 
 点击列表上方「YAML 导入」，弹出导入弹窗：
 
@@ -151,7 +185,7 @@
 - YAML 中可同时包含 `prices`（默认价格）与 `tier_prices.peak`（分时段价格）。
 - 导入完成后展示成功数、跳过数、错误列表。
 
-## 6.5 注意事项
+## 7.5 注意事项
 
 - 创建/编辑时前端会校验（提供商、模型名、模型模式）组合唯一性。
 - **默认价格**至少一条；**分时段价格**可选，未配置时全时段使用默认价格。

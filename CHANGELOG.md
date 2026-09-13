@@ -38,22 +38,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [v0.0.9] - 2026-09-01
+## [v0.0.9] - 2026-09-10
 
 ### Added
 
-- Certificate management re-enabled: route `certs.list` at `/cert` with list (name, default tag, expiry), global default certificate selector, create drawer (PEM upload + client-side expiry preview), and delete guard for the default certificate
-- Operation logs module: new `OperationLogs` at `/operation-logs` with time-range filter, server-side pagination, column search, and 720px detail drawer with change summary (`vue-json-viewer` for before/after JSON)
-- `utils/cert.js`: `parseCertExpiredDate` parses `notAfter` from the first PEM certificate block for create-form preview
-- User manual (zh-cn): chapters 11 (certificates) and 12 (operation logs) with screenshots; chapter order places both immediately after route management
-- sys-design: new per-module docs for certificate management and operation logs; updated routing, module overview, OpenAPI mapping, overall design, i18n design, `summary.md`, and `design-docs/README.md`
+- Certificate management: list, create drawer (PEM upload + expiry preview), default selector, and delete guard
+- Operation logs module: time-range filter, pagination, column search, and detail drawer with before/after JSON diff
+- EPP scheduling module: instance pool management (group CRUD, full-replace) and assignment view (statistics, allocation table, manual override)
+- Cluster wizard step 4: balance mode config (WRR / EPP) with instance-pool group binding and flow-control settings
+- Gemini protocol support: `x-goog-api-key` auth header, default model-list URI `/v1beta/models`
+- Model pricing: 10 new price keys (1h cache, 256k/272k/512k long-context tiers, image/audio token costs)
+- User manual (zh-cn): new chapter 06 (EPP scheduling) with screenshots; chapters renumbered (05A→06, 06–14→07–15); chapters 04/05/07 updated
 
 ### Changed
 
-- Certificate create form aligned with OpenAPI: removed manual `expired_date` input; submit body includes `cert_name`, `description`, `is_default`, `cert_file_content`, and `key_file_content` only
-- Certificate default switch uses `PATCH /certificates/{cert_name}/default` (replacing legacy PUT usage in docs)
-- Certificate name/description validation aligned with API rules (`CertNameRegCheck`, `CertDescriptionRegCheck`); first certificate auto-set as default when none exists
-- Expanded i18n coverage for `cert`, `operationLogs`, and navigation labels (en/zh)
+- Certificate create form aligned with OpenAPI; default switch uses `PATCH`; validation aligned with API rules
+- Model price inputs accept scientific notation; merge preserves previously-saved keys
+- Cluster review/detail display balance mode and EPP settings
+- Manual reading guide, navigation tree, and `develop.md` synced to renumbered chapters
+- Expanded i18n for `cert`, `operationLogs`, `eppSchedule`, balance mode, gemini, and price keys (en/zh)
 
 ## [v0.0.8] - 2026-08-30
 

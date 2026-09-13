@@ -36,7 +36,7 @@
 
 ### 查询模型价格
 
-点击「查询模型价格」，跳转到模型定价页并按该服务商名称（`provider` 字段）筛选列表。若无定价记录，提示「未找到提供商 {provider} 的模型定价」。服务商名称须与定价表中的 `provider` 一致，详见 [06 章](06-model-prices.md)。
+点击「查询模型价格」，跳转到模型定价页并按该服务商名称（`provider` 字段）筛选列表。若无定价记录，提示「未找到提供商 {provider} 的模型定价」。服务商名称须与定价表中的 `provider` 一致，详见 [07 章](07-model-prices.md)。
 
 ### 删除服务商
 
@@ -89,10 +89,10 @@
 
 | 字段 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| 模型协议 | 是 | 空 | 多选；首期支持 `openai`（OpenAI 兼容）、`anthropic`（Claude Messages API）；至少选一种 |
-| 模型列表接口 | 否 | `https://{实例地址}/v1/models` | 由协议 + 实例地址（只读，来自实例池）+ URI 路径组成；路径须以 `/` 开头，默认 `/v1/models` |
+| 模型协议 | 是 | 空 | 多选；支持 `openai`（OpenAI 兼容）、`anthropic`（Claude Messages API）、`gemini`（Google Gemini API）；至少选一种 |
+| 模型列表接口 | 否 | `https://{实例地址}/v1/models`（`gemini` 协议默认 `/v1beta/models`） | 由协议 + 实例地址（只读，来自实例池）+ URI 路径组成；路径须以 `/` 开头，默认 `/v1/models`（`gemini` 为 `/v1beta/models`） |
 
-> 系统根据所选「模型协议」自动决定调用模型发现接口时的认证头风格（如 `openai` 使用 `Authorization: Bearer`，`anthropic` 使用 `x-api-key`）。**不再支持**在模型列表接口中自定义 `Authorization` Header。
+> 系统根据所选「模型协议」自动决定调用模型发现接口时的认证头风格（如 `openai` 使用 `Authorization: Bearer`，`anthropic` 使用 `x-api-key`，`gemini` 使用 `x-goog-api-key`）。**不再支持**在模型列表接口中自定义 `Authorization` Header。
 
 ## 4.6 服务鉴权 Keys
 
