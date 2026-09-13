@@ -495,6 +495,7 @@ export default {
     keyId: 'Key标识',
     keyValue: 'Key值',
     quotaType: '配额类型',
+    unlimited: '无限',
     limited: '有限',
     quota: '配额',
     rateLimitStatus: '限流状态',

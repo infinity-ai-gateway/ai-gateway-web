@@ -523,8 +523,16 @@ export default {
             handler(data) {
                 if (data && data.id) {
                     this.formData = cloneDeep(data);
-                    this.limitsList = this.objectToList(this.formData.limits || {});
-                    this.pricesList = this.objectToPriceList(this.formData.prices || {});
+                    this.formData.capabilities = this.formData.capabilities || [];
+                    this.formData.supported_parameters = this.formData.supported_parameters || [];
+                    this.formData.limits = this.formData.limits || {};
+                    this.formData.prices = this.formData.prices || {};
+                    this.formData.metadata = {
+                        source: (this.formData.metadata && this.formData.metadata.source) || '',
+                        notes: (this.formData.metadata && this.formData.metadata.notes) || ''
+                    };
+                    this.limitsList = this.objectToList(this.formData.limits);
+                    this.pricesList = this.objectToPriceList(this.formData.prices);
                     this.tierPricesPeakList = this.objectToPriceList(
                         (this.formData.tier_prices && this.formData.tier_prices.peak) || {}
                     );

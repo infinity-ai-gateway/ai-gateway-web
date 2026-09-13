@@ -105,11 +105,13 @@ export default {
                     render(h, params) {
                         return h('Tooltip', {
                             props: {
-                                content: params.row.description === '' ? '-' : params.row.description,
-                                placement: 'right'
+                                content: params.row.description || '-',
+                                placement: 'top',
+                                transfer: true,
+                                maxWidth: 420
                             },
                             style: {
-                                cursor: 'pointor'
+                                cursor: 'pointer'
                             }
                         },
                         params.row.cert_name
