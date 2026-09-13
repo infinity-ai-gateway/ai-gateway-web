@@ -1,11 +1,18 @@
-/** * Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors. * *
-Licensed under the Apache License, Version 2.0 (the "License"); * you may not
-use this file except in compliance with the License. * You may obtain a copy of
-the License at * * http: //www.apache.org/licenses/LICENSE-2.0 * * Unless
-required by applicable law or agreed to in writing, software * distributed under
-the License is distributed on an "AS IS" BASIS, * WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied. * See the License for the
-specific language governing permissions and * limitations under the License. */
+/**
+* Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http: //www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 <template>
   <div>
     <Form
@@ -125,8 +132,7 @@ specific language governing permissions and * limitations under the License. */
               >
                 <td>
                   <Input
-                    :value="model.source_model"
-                    @on-change="e => changeMappingSource(index, e.target.value)"
+                    v-model="model.source_model"
                     :placeholder="$t('gatewayConfig.enterOriginalModelName')"
                   />
                 </td>
@@ -200,7 +206,7 @@ specific language governing permissions and * limitations under the License. */
                       @on-change="validateKeysState"
                     >
                       <Option
-                        v-for="item in providerKeys"
+                        v-for="item in availableProviderKeys(index)"
                         :key="item.name"
                         :value="item.name"
                         >{{ item.name }}</Option
@@ -240,7 +246,7 @@ specific language governing permissions and * limitations under the License. */
 
       <Card :title="$t('gatewayConfig.keyPolicy')" class="llm-section-card">
         <Row :gutter="24">
-          <Col span="12">
+          <Col span="24">
             <FormItem
               :label="$t('gatewayConfig.keyPolicyStrategy')"
               prop="key_policy.strategy"
@@ -371,6 +377,218 @@ specific language governing permissions and * limitations under the License. */
           </Row>
         </template>
       </Card>
+
+      <Card
+        :title="$t('gatewayConfig.balanceModeConfig')"
+        class="llm-section-card"
+      >
+        <Row :gutter="24">
+          <Col span="12">
+            <FormItem
+              :label="$t('gatewayConfig.balanceMode')"
+              prop="balance_mode"
+            >
+              <Select v-model="formData.balance_mode">
+                <Option value="WRR">{{ $t('gatewayConfig.wrr') }}</Option>
+                <Option value="EPP">{{ $t('gatewayConfig.epp') }}</Option>
+              </Select>
+            </FormItem>
+          </Col>
+        </Row>
+        <template v-if="formData.balance_mode === 'EPP'">
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.schedulingProfile')"
+                prop="epp_config.scheduling_profile"
+              >
+                <Select v-model="formData.epp_config.scheduling_profile">
+                  <Option
+                    value="latency-first"
+                    >{{ $t('gatewayConfig.schedulingProfileLatencyFirst') }}</Option
+                  >
+                  <Option
+                    value="balanced"
+                    >{{ $t('gatewayConfig.schedulingProfileBalanced') }}</Option
+                  >
+                  <Option
+                    value="throughput-first"
+                    >{{ $t('gatewayConfig.schedulingProfileThroughputFirst') }}</Option
+                  >
+                </Select>
+              </FormItem>
+            </Col>
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.cacheAffinity')"
+                prop="epp_config.cache_affinity"
+              >
+                <Select v-model="formData.epp_config.cache_affinity">
+                  <Option
+                    value="low"
+                    >{{ $t('gatewayConfig.cacheAffinityLow') }}</Option
+                  >
+                  <Option
+                    value="medium"
+                    >{{ $t('gatewayConfig.cacheAffinityMedium') }}</Option
+                  >
+                  <Option
+                    value="high"
+                    >{{ $t('gatewayConfig.cacheAffinityHigh') }}</Option
+                  >
+                </Select>
+              </FormItem>
+            </Col>
+          </Row>
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem prop="epp_config.prefix_cache_affinity">
+                <span slot="label" class="provider-label">
+                  {{ $t('gatewayConfig.prefixCacheAffinity') }}
+                  <Tooltip placement="top" transfer max-width="320">
+                    <div slot="content" class="provider-tip-content">
+                      {{ $t('gatewayConfig.prefixCacheAffinityTip') }}
+                    </div>
+                    <Icon
+                      type="ios-help-circle-outline"
+                      class="provider-help-icon"
+                    />
+                  </Tooltip>
+                </span>
+                <i-switch v-model="formData.epp_config.prefix_cache_affinity" />
+              </FormItem>
+            </Col>
+            <Col span="12">
+              <FormItem prop="epp_config.session_affinity_enabled">
+                <span slot="label" class="provider-label">
+                  {{ $t('gatewayConfig.sessionAffinity') }}
+                  <Tooltip placement="top" transfer max-width="320">
+                    <div slot="content" class="provider-tip-content">
+                      {{ $t('gatewayConfig.sessionAffinityTip') }}
+                    </div>
+                    <Icon
+                      type="ios-help-circle-outline"
+                      class="provider-help-icon"
+                    />
+                  </Tooltip>
+                </span>
+                <i-switch
+                  v-model="formData.epp_config.session_affinity_enabled"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+          <Row :gutter="24" v-if="formData.epp_config.session_affinity_enabled">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.sessionAffinityHeader')"
+                prop="epp_config.session_affinity_header"
+              >
+                <Input
+                  v-model="formData.epp_config.session_affinity_header"
+                  :placeholder="$t('gatewayConfig.sessionAffinityHeaderPlaceholder')"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+          <Row :gutter="24">
+            <Col span="12">
+              <FormItem
+                :label="$t('gatewayConfig.kvCacheUtilizationMax')"
+                prop="epp_config.kv_cache_utilization_max"
+              >
+                <InputNumber
+                  v-model="formData.epp_config.kv_cache_utilization_max"
+                  :min="0.01"
+                  :max="1"
+                  :step="0.05"
+                  style="width: 100%;"
+                />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <Card
+            :title="$t('gatewayConfig.flowControl')"
+            class="llm-section-card"
+            style="margin-top:12px;"
+          >
+            <Row :gutter="24">
+              <Col span="12">
+                <FormItem
+                  :label="$t('gatewayConfig.maxRequests')"
+                  prop="epp_config.flow_control.max_requests"
+                >
+                  <Select v-model="maxRequestsMode">
+                    <Option
+                      value="unlimited"
+                      >{{ $t('gatewayConfig.maxRequestsUnlimited') }}</Option
+                    >
+                    <Option
+                      value="limited"
+                      >{{ $t('gatewayConfig.maxRequestsLimited') }}</Option
+                    >
+                  </Select>
+                  <InputNumber
+                    v-if="maxRequestsMode === 'limited'"
+                    v-model="formData.epp_config.flow_control.max_requests"
+                    :min="1"
+                    :precision="0"
+                    style="width: 100%; margin-top: 8px;"
+                  />
+                </FormItem>
+              </Col>
+              <Col span="12">
+                <FormItem
+                  :label="$t('gatewayConfig.queueTtl')"
+                  prop="epp_config.flow_control.queue_ttl"
+                >
+                  <InputNumber
+                    v-model="formData.epp_config.flow_control.queue_ttl"
+                    :min="0"
+                    :precision="0"
+                    style="width: 100%;"
+                  />
+                </FormItem>
+              </Col>
+            </Row>
+            <Row :gutter="24">
+              <Col span="12">
+                <FormItem
+                  :label="$t('gatewayConfig.noEndpointQueueTtl')"
+                  prop="epp_config.flow_control.no_endpoint_queue_ttl"
+                >
+                  <InputNumber
+                    v-model="formData.epp_config.flow_control.no_endpoint_queue_ttl"
+                    :min="0"
+                    :precision="0"
+                    style="width: 100%;"
+                  />
+                </FormItem>
+              </Col>
+              <Col span="12">
+                <FormItem prop="epp_config.flow_control.enable_eviction">
+                  <span slot="label" class="provider-label">
+                    {{ $t('gatewayConfig.enableEviction') }}
+                    <Tooltip placement="top" transfer max-width="320">
+                      <div slot="content" class="provider-tip-content">
+                        {{ $t('gatewayConfig.enableEvictionTip') }}
+                      </div>
+                      <Icon
+                        type="ios-help-circle-outline"
+                        class="provider-help-icon"
+                      />
+                    </Tooltip>
+                  </span>
+                  <i-switch
+                    v-model="formData.epp_config.flow_control.enable_eviction"
+                  />
+                </FormItem>
+              </Col>
+            </Row>
+          </Card>
+        </template>
+      </Card>
     </Form>
   </div>
 </template>
@@ -398,6 +616,23 @@ function defaultKeyAffinity() {
     };
 }
 
+function defaultEppConfig() {
+    return {
+        scheduling_profile: 'balanced',
+        cache_affinity: 'medium',
+        prefix_cache_affinity: true,
+        session_affinity_enabled: false,
+        session_affinity_header: '',
+        kv_cache_utilization_max: 0.9,
+        flow_control: {
+            max_requests: -1,
+            queue_ttl: 60,
+            no_endpoint_queue_ttl: 60,
+            enable_eviction: false
+        }
+    };
+}
+
 function toBoolean(value, defaultValue) {
     if (value === true || value === 'true' || value === 1 || value === '1') {
         return true;
@@ -417,6 +652,12 @@ export default {
             default: false
         },
         llmConfigData: {
+            type: Object,
+            default() {
+                return {};
+            }
+        },
+        balanceModeData: {
             type: Object,
             default() {
                 return {};
@@ -567,6 +808,73 @@ export default {
             }
             callback();
         };
+        const validateSessionAffinityHeader = (rule, value, callback) => {
+            if (!that.formData.epp_config.session_affinity_enabled) {
+                callback();
+                return;
+            }
+            if (!value || !String(value).trim()) {
+                callback(new Error(that.$t('gatewayConfig.sessionAffinityHeaderRequired')));
+                return;
+            }
+            callback();
+        };
+
+        const validateKvCacheUtilizationMax = (rule, value, callback) => {
+            if (value === undefined || value === null || value === '') {
+                callback();
+                return;
+            }
+            const n = Number(value);
+            if (!Number.isFinite(n) || n <= 0 || n > 1) {
+                callback(new Error(that.$t('gatewayConfig.kvCacheUtilizationMaxInvalid')));
+                return;
+            }
+            callback();
+        };
+
+        const validateQueueTtl = (rule, value, callback) => {
+            if (value === undefined || value === null || value === '') {
+                callback();
+                return;
+            }
+            const n = Number(value);
+            if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+                callback(new Error(that.$t('gatewayConfig.queueTtlInvalid')));
+                return;
+            }
+            callback();
+        };
+
+        const validateMaxRequests = (rule, value, callback) => {
+            if (that.maxRequestsMode === 'unlimited') {
+                callback();
+                return;
+            }
+            if (value == null || value === '') {
+                callback(new Error(that.$t('gatewayConfig.maxRequestsRequired')));
+                return;
+            }
+            const n = Number(value);
+            if (!Number.isInteger(n) || n <= 0) {
+                callback(new Error(that.$t('gatewayConfig.maxRequestsRequired')));
+                return;
+            }
+            callback();
+        };
+
+        const validateNoEndpointQueueTtl = (rule, value, callback) => {
+            if (value === undefined || value === null || value === '') {
+                callback();
+                return;
+            }
+            const n = Number(value);
+            if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+                callback(new Error(that.$t('gatewayConfig.noEndpointQueueTtlInvalid')));
+                return;
+            }
+            callback();
+        };
 
         return {
             selectAllModelsMarker: SELECT_ALL_MODELS_VALUE,
@@ -574,6 +882,8 @@ export default {
             providerNamesLoading: false,
             providerDetailLoading: false,
             selectedProvider: null,
+            maxRequestsModeValue: 'unlimited',
+            maxRequestsLimitedValue: null,
             formData: {
                 provider: '',
                 match_prefix: '',
@@ -582,7 +892,9 @@ export default {
                 model_mappings: [{ source_model: '', target_model: '' }],
                 keys: [{ name: '', weight: 0 }],
                 key_policy: defaultKeyPolicy(),
-                key_affinity: defaultKeyAffinity()
+                key_affinity: defaultKeyAffinity(),
+                balance_mode: 'WRR',
+                epp_config: defaultEppConfig()
             },
             ruleValidate: {
                 provider: [{ validator: validateProvider, trigger: 'change', required: true }],
@@ -593,7 +905,20 @@ export default {
                 'key_policy.max_retries': [{ validator: validateKeyPolicyMaxRetries, trigger: 'change' }],
                 'key_policy.retry_backoff_max': [{ validator: validateBackoffMax, trigger: 'change' }],
                 'key_affinity.ttl': [{ validator: validateKeyAffinityTtl, trigger: 'change' }],
-                'key_affinity.redis_prefix': [{ validator: validateKeyAffinityRedisPrefix, trigger: 'blur' }]
+                'key_affinity.redis_prefix': [{ validator: validateKeyAffinityRedisPrefix, trigger: 'blur' }],
+                'epp_config.session_affinity_header': [{ validator: validateSessionAffinityHeader, trigger: 'blur' }],
+                'epp_config.kv_cache_utilization_max': [
+                    { validator: validateKvCacheUtilizationMax, trigger: 'change' }
+                ],
+                'epp_config.flow_control.max_requests': [
+                    { validator: validateMaxRequests, trigger: 'change' }
+                ],
+                'epp_config.flow_control.queue_ttl': [
+                    { validator: validateQueueTtl, trigger: 'change' }
+                ],
+                'epp_config.flow_control.no_endpoint_queue_ttl': [
+                    { validator: validateNoEndpointQueueTtl, trigger: 'change' }
+                ]
             }
         };
     },
@@ -612,7 +937,26 @@ export default {
             }
             const selected = this.formData.models || [];
             return all.every(model => selected.includes(model));
-        }
+        },
+        maxRequestsMode: {
+                get() {
+                    return this.maxRequestsModeValue;
+                },
+                set(val) {
+                    this.maxRequestsModeValue = val;
+                    if (this.formData.epp_config && this.formData.epp_config.flow_control) {
+                        if (val === 'unlimited') {
+                            this.maxRequestsLimitedValue = this.formData.epp_config.flow_control.max_requests;
+                            this.formData.epp_config.flow_control.max_requests = -1;
+                        } else {
+                            const restored = this.maxRequestsLimitedValue != null && this.maxRequestsLimitedValue !== -1
+                                ? this.maxRequestsLimitedValue
+                                : null;
+                            this.formData.epp_config.flow_control.max_requests = restored;
+                        }
+                    }
+                }
+            }
     },
 
     watch: {
@@ -622,6 +966,13 @@ export default {
         llmConfigData: {
             handler(val) {
                 this.applyLlmConfig(val);
+            },
+            immediate: true,
+            deep: true
+        },
+        balanceModeData: {
+            handler(val) {
+                this.applyBalanceModeData(val);
             },
             immediate: true,
             deep: true
@@ -735,6 +1086,36 @@ export default {
                 this.selectedProvider = null;
             }
         },
+        applyBalanceModeData(val) {
+            const src = val || {};
+            this.$set(this.formData, 'balance_mode', src.balance_mode || 'WRR');
+            const eppSrc = src.epp_config || {};
+            const maxRequests = (eppSrc.flow_control || {}).max_requests != null
+                ? Number((eppSrc.flow_control || {}).max_requests)
+                : -1;
+            this.maxRequestsModeValue = maxRequests === -1 ? 'unlimited' : 'limited';
+            this.maxRequestsLimitedValue = maxRequests === -1 ? null : maxRequests;
+            this.formData.epp_config = {
+                ...defaultEppConfig(),
+                ...eppSrc,
+                prefix_cache_affinity: toBoolean(eppSrc.prefix_cache_affinity, true),
+                session_affinity_enabled: toBoolean(eppSrc.session_affinity_enabled, false),
+                session_affinity_header: eppSrc.session_affinity_header || '',
+                kv_cache_utilization_max: eppSrc.kv_cache_utilization_max != null ? Number(eppSrc.kv_cache_utilization_max) : 0.9,
+                flow_control: {
+                    ...defaultEppConfig().flow_control,
+                    ...(eppSrc.flow_control || {}),
+                    max_requests: maxRequests,
+                    queue_ttl: (eppSrc.flow_control || {}).queue_ttl != null
+                        ? Number((eppSrc.flow_control || {}).queue_ttl)
+                        : 60,
+                    no_endpoint_queue_ttl: (eppSrc.flow_control || {}).no_endpoint_queue_ttl != null
+                        ? Number((eppSrc.flow_control || {}).no_endpoint_queue_ttl)
+                        : 60,
+                    enable_eviction: toBoolean((eppSrc.flow_control || {}).enable_eviction, false)
+                }
+            };
+        },
         syncFormWithProvider() {
             const allowedModels = this.providerModels;
             this.formData.models = (this.formData.models || []).filter(
@@ -760,11 +1141,21 @@ export default {
             }
             this.loadProviderDetail(name);
         },
-        changeMappingSource(index, value) {
-            this.formData.model_mappings[index].source_model = value;
-        },
         changeMappingTarget(index, value) {
-            this.formData.model_mappings[index].target_model = value;
+            const mapping = this.formData.model_mappings[index];
+            if (!mapping) {
+                return;
+            }
+            mapping.target_model = value;
+            // 左侧为空时自动带出同名，已填写则不覆盖，保持可改
+            if (!String(mapping.source_model || '').trim() && value) {
+                mapping.source_model = value;
+            }
+            this.$nextTick(() => {
+                if (this.$refs.formData) {
+                    this.$refs.formData.validateField('model_mappings');
+                }
+            });
         },
         addModelRedirect() {
             this.formData.model_mappings.push({ source_model: '', target_model: '' });
@@ -779,6 +1170,28 @@ export default {
             this.formData.keys.push({ name: '', weight: 0 });
             this.$nextTick(() => {
                 this.validateKeysState();
+            });
+        },
+        availableProviderKeys(index) {
+            const current = String(
+                (this.formData.keys[index] && this.formData.keys[index].name) || ''
+            ).trim();
+            const taken = {};
+            (this.formData.keys || []).forEach((item, i) => {
+                if (i === index) {
+                    return;
+                }
+                const name = String((item && item.name) || '').trim();
+                if (name) {
+                    taken[name] = true;
+                }
+            });
+            return (this.providerKeys || []).filter(item => {
+                const name = item && item.name;
+                if (!name) {
+                    return false;
+                }
+                return name === current || !taken[name];
             });
         },
         removeKey(index) {
@@ -849,6 +1262,33 @@ export default {
                     redis_prefix: String(affinity.redis_prefix || 'bfe:ai:key_affinity'),
                     penalty_enable: toBoolean(affinity.penalty_enable, true)
                 };
+                tmpData.balance_mode = tmpData.balance_mode || 'WRR';
+                if (tmpData.balance_mode === 'EPP') {
+                    const epp = tmpData.epp_config || {};
+                    const eppConfig = {
+                        scheduling_profile: epp.scheduling_profile || 'balanced',
+                        cache_affinity: epp.cache_affinity || 'medium',
+                        prefix_cache_affinity: !!epp.prefix_cache_affinity,
+                        session_affinity_enabled: !!epp.session_affinity_enabled,
+                        kv_cache_utilization_max: Number(epp.kv_cache_utilization_max) || 0.9,
+                        flow_control: {
+                            max_requests: (() => {
+                                const mr = epp.flow_control && epp.flow_control.max_requests;
+                                if (mr == null || mr === -1) return -1;
+                                return Number(mr);
+                            })(),
+                            queue_ttl: Number(epp.flow_control.queue_ttl),
+                            no_endpoint_queue_ttl: Number(epp.flow_control.no_endpoint_queue_ttl),
+                            enable_eviction: !!((epp.flow_control || {}).enable_eviction)
+                        }
+                    };
+                    if (epp.session_affinity_enabled) {
+                        eppConfig.session_affinity_header = epp.session_affinity_header || '';
+                    }
+                    tmpData.epp_config = eppConfig;
+                } else {
+                    delete tmpData.epp_config;
+                }
                 this.$emit('submitData', {
                     topic: 'llmConfigData',
                     data: tmpData

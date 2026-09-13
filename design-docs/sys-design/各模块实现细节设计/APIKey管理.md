@@ -56,7 +56,7 @@
 | `subnet` | CIDR 格式，`*` 与具体网段互斥，需检测包含/重复 | 访问来源限制。 |
 | `entity` | 可选 | 挂载的 Entity。 |
 | `quota_plan.unit` | `total_token` 或 `RMB` | Token 计数或金额计费。 |
-| `quota_plan.quota` | 有限配额时必填；`total_token` 为非负整数，`RMB` 最多 4 位小数且 ≤ 90,000,000.00 | 配额数值。 |
+| `quota_plan.quota` | 有限配额时必填；`total_token` 为非负整数且 ≤ 9,999,999,999，`RMB` 最多 4 位小数且 ≤ 90,000,000.00 | 配额数值。 |
 | `rate_limit_policy` | 启用时至少配置 TPM/RPM/并发之一 | 限流策略。 |
 | `rate_limit_policy.rules` | 规则名不重复，TPM/RPM 各最多 3 条 | 限流规则。 |
 | `models` | `*` 与具体模型互斥 | 模型白名单。 |
@@ -99,7 +99,7 @@ APIKey/index.vue (Tab 容器)
 | `Upsert.vue` | `GET` | `entities` | 挂载 Entity 下拉。 |
 | `Upsert.vue` | `GET` | `clusters` | 集群模型列表（模型绑定）。 |
 
-配额重置弹窗按当前 `unit` 限制精度与上限（RMB 4 位小数 / 9000 万元）。
+配额重置弹窗按当前 `unit` 限制精度与上限（`total_token` ≤ 9,999,999,999；RMB 4 位小数 / 9000 万元）。
 
 ## 8. 边界情况
 

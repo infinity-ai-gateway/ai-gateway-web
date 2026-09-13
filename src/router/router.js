@@ -124,17 +124,37 @@ export default [
         component: (r) =>
           require.ensure(
             [],
+            () => r(require('../modules/EppPool')),
+            'EppPool.list',
+          ),
+        path: 'epp',
+        name: 'EppPool.list',
+      },
+      {
+        component: (r) =>
+          require.ensure(
+            [],
             () => r(require('../modules/ModelPrices')),
             'ModelPrice.list',
           ),
         path: 'model-prices',
         name: 'ModelPrice.list',
       },
-      // {
-      //   component: r => require.ensure([], () => r(require('../modules/Cert')), 'certs.list'),
-      //   path: 'cert',
-      //   name: 'certs.list'
-      // }
+      {
+        component: (r) =>
+          require.ensure(
+            [],
+            () => r(require('../modules/OperationLogs')),
+            'OperationLog.list',
+          ),
+        path: 'operation-logs',
+        name: 'OperationLog.list',
+      },
+      {
+        component: r => require.ensure([], () => r(require('../modules/Cert')), 'certs.list'),
+        path: 'cert',
+        name: 'certs.list'
+      }
     ],
   },
   {

@@ -60,6 +60,7 @@
         >
             <Create
                 v-if="isHiden"
+                :default-is-default="createDefaultIsDefault"
                 @submit="submitData"
             />
         </Drawer>
@@ -92,6 +93,7 @@ export default {
             getCertIsDefult: '',
             showCertIsDefult: '',
             isHiden: false,
+            createDefaultIsDefault: false,
             tableData: [],
             loading: false,
             columns: [
@@ -103,11 +105,13 @@ export default {
                     render(h, params) {
                         return h('Tooltip', {
                             props: {
-                                content: params.row.description === '' ? '-' : params.row.description,
-                                placement: 'right'
+                                content: params.row.description || '-',
+                                placement: 'top',
+                                transfer: true,
+                                maxWidth: 420
                             },
                             style: {
-                                cursor: 'pointor'
+                                cursor: 'pointer'
                             }
                         },
                         params.row.cert_name
@@ -115,32 +119,19 @@ export default {
                     },
                 },
                 {
-                    key: 'cert_file_name',
-                    title: this.$t('cert.certFile'),
-                    searchable: true,
-                    sortable: 'custom',
+                    key: 'is_default',
+                    title: this.$t('cert.isDefault'),
                     render(h, params) {
-                        return (
-                            <span>{ params.row.cert_file_name ? params.row.cert_file_name : '-' }</span>
-                        );
-                    },
-                },
-                {
-                    key: 'key_file_name',
-                    title: this.$t('cert.privateKeyFile'),
-                    searchable: true,
-                    sortable: 'custom',
-                    render(h, params) {
-                        return (
-                            <span>{ params.row.key_file_name ? params.row.key_file_name : '-' }</span>
-                        );
+                        if (params.row.is_default) {
+                            return h('Tag', { props: { color: 'success' } }, that.$t('cert.globalDefaultCert'));
+                        }
+                        return h('span', '-');
                     },
                 },
                 {
                     key: 'expired_date',
                     title: this.$t('cert.expiredDate'),
                     searchable: true,
-                    width: '200px',
                     sortable: 'custom',
                     render(h, params) {
                         return (
@@ -154,6 +145,22 @@ export default {
                     title: this.$t('com.operation'),
                     width: '200px',
                     render(h, params) {
+                        if (params.row.is_default) {
+                            return h('Tooltip', {
+                                props: {
+                                    content: that.$t('cert.tipCannotDeleteDefault'),
+                                    placement: 'top'
+                                }
+                            }, [
+                                h('Button', {
+                                    props: {
+                                        type: 'error',
+                                        size: 'small',
+                                        disabled: true
+                                    }
+                                }, that.$t('com.del'))
+                            ]);
+                        }
                         return h('span', [
                             h('Button', {
                                 props: {
@@ -283,6 +290,7 @@ export default {
             });
         },
         onAdd() {
+            this.createDefaultIsDefault = !this.tableData.some(item => item.is_default);
             this.isHiden = !this.isHiden;
         },
     },

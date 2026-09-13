@@ -63,7 +63,7 @@
 | `Providers/components/ProviderUpsert.vue` | `PATCH` | `providers/{provider_name}` | 更新服务商；`keys`、`instance_pool` 全量替换。 |
 | `Providers/components/ProviderUpsert.vue` | `POST` | `providers/tools/discover-models` | 无状态模型发现（Body 传连接参数，回填 `models`）。 |
 
-列表「查询模型价格」为前端路由跳转 `ModelPrice.list?provider={name}&autoView=1`，不新增 API。
+列表「查询模型价格」为前端路由跳转 `ModelPrice.list?provider={name}`，不新增 API。
 
 服务商持有实例池、模型协议、模型发现端点与 Key 明文。集群通过 `llm_config.provider` 引用，不再消费 `model-provider-types`、`GET providers?page_size=1000` 全量列表或 `tools/get-models-from-provider`。
 
@@ -111,7 +111,7 @@
 | `APIKey/components/Upsert.vue` | `GET` | `entities` | 获取 Entity 列表用于关联。 |
 | `APIKey/components/Upsert.vue` | `GET` | `clusters` | 获取集群模型列表用于模型绑定。 |
 
-`quota_plan.unit` 支持 `total_token` 与 `RMB`；RMB 上限 90,000,000.00，展示 4 位小数。
+`quota_plan.unit` 支持 `total_token` 与 `RMB`；`total_token` 上限 9,999,999,999，RMB 上限 90,000,000.00，展示 4 位小数。
 
 ## 11. Entity 管理（`modules/Entity`）
 
@@ -130,7 +130,7 @@
 | `Entity/components/EntityUpsert.vue` | `GET` | `entity-types` | 获取 Entity Type 用于选择。 |
 | `Entity/components/EntityUpsert.vue` | `GET` | `clusters` | 获取集群模型列表。 |
 
-配额单位与 API Key 相同：`total_token` / `RMB`。
+配额单位与 API Key 相同：`total_token` / `RMB`。`total_token` 上限 9,999,999,999；RMB 上限 90,000,000.00。
 
 ## 12. 模型定价（`modules/ModelPrices`）
 
@@ -145,16 +145,27 @@
 
 时间字段为 `create_time` / `update_time`（Unix 秒）。
 
-## 13. 证书管理（`modules/Cert`，未启用）
+## 13. 证书管理（`modules/Cert`）
 
 | 前端组件 | 请求方法 | 相对 URL | 说明 |
 |----------|----------|----------|------|
-| `Cert/index.vue` | `GET` | `certificates` | 查询证书列表。 |
-| `Cert/index.vue` | `POST` | `certificates` | 上传证书。 |
-| `Cert/index.vue` | `PUT` | `certificates/{cert_name}` | 更新证书。 |
-| `Cert/index.vue` | `PUT` | `certificates/{cert_name}/default` | 设置默认证书。 |
+| `Cert/index.vue` | `GET` | `certificates` | 查询证书列表（返回 `cert_name`、`description`、`is_default`、`expired_date`）。 |
+| `Cert/index.vue` | `POST` | `certificates` | 上传证书（`Create.vue` 提交 `cert_name`、`description`、`is_default`、`cert_file_content`、`key_file_content`）。 |
+| `Cert/index.vue` | `DELETE` | `certificates/{cert_name}` | 删除证书（默认证书不可删）。 |
+| `Cert/index.vue` | `PATCH` | `certificates/{cert_name}/default` | 切换全局默认证书。 |
 
-## 14. 变更影响分析
+列表响应字段 `expired_date` 由服务端从 PEM 解析；创建表单仅做前端预览（`utils/cert.js` 的 `parseCertExpiredDate`），不提交 `expired_date`。
+
+## 14. 操作日志（`modules/OperationLogs`）
+
+| 前端组件 | 请求方法 | 相对 URL | 说明 |
+|----------|----------|----------|------|
+| `OperationLogs/index.vue` | `GET` | `operation-logs` | 分页列表（`page` / `page_size` + 列搜索 + `start_time` / `end_time`）。 |
+
+- 请求标记 `openapi: true`，走 OpenAPI 标准响应结构（`Data.list` + `Data.pagination.total`）。
+- 当前 UI 仅消费列表接口；详情字段来自列表行数据，在 720px 抽屉中展示，不额外请求详情端点。
+
+## 15. 变更影响分析
 
 当 `ai-gateway-api` 接口发生变更时，按以下顺序评估影响：
 
@@ -164,7 +175,7 @@
 4. 若涉及 i18n 文案变化，同步更新 `en.js` 与 `zh.js`。
 5. 若涉及路由/权限变化，同步更新 `路由与导航设计文档.md` 与 `状态管理设计文档.md`。
 
-## 15. 引用规范
+## 16. 引用规范
 
 - 接口定义位置：`design-docs/api-define/OpenAPI接口定义/`（按模块拆分，见该目录 `README.md`）。
 - 引用方式：在文档中直接写明相对路径或仓库链接，不复制接口定义内容。

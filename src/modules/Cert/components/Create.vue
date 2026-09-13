@@ -49,14 +49,6 @@
                     class="com-create-input"
                 />
             </FormItem>
-            <FormItem :label="$t('cert.expiredDate')" prop="expired_date">
-                <DatePicker
-                    v-model="formData.expired_date"
-                    type="date"
-                    :placeholder="$t('com.tipSelectX', { obj: $t('cert.expiredDate') })"
-                    @on-change="validateExpiredDateField"
-                ></DatePicker>
-            </FormItem>
             <FormItem :label="$t('cert.certFile')" prop="cert_file_content">
                 <Upload
                     :before-upload="handleUploadCer"
@@ -81,8 +73,13 @@
                     </span>
                 </Upload>
             </FormItem>
-            <FormItem label="IsDefault：">
-                <Checkbox v-model="formData.is_default"></Checkbox>
+            <FormItem :label="$t('cert.expiredDate')">
+                <span :class="{ 'cert-expired-placeholder': !expiredDatePreview }">
+                    {{ expiredDatePreview || $t('cert.tipExpiredDatePending') }}
+                </span>
+            </FormItem>
+            <FormItem :label="$t('cert.isDefault')">
+                <Checkbox v-model="formData.is_default" :disabled="defaultIsDefault"></Checkbox>
             </FormItem>
         </Form>
         <div class="drawer-footer">
@@ -98,8 +95,15 @@
 </template>
 
 <script>
-import { CertNameRegCheck } from '@/utils/const';
+import { CertNameRegCheck, CertDescriptionRegCheck } from '@/utils/const';
+import { parseCertExpiredDate } from '@/utils/cert';
 export default {
+    props: {
+        defaultIsDefault: {
+            type: Boolean,
+            default: false
+        }
+    },
     data() {
         const validateCertName = (rule, value, callback) => {
             if (value === '') {
@@ -118,11 +122,15 @@ export default {
             }
             callback();
         };
-        const validateExpiredDate = (rule, value, callback) => {
-            if (value === '' || value === null || value === undefined) {
+        const validateDescription = (rule, value, callback) => {
+            if (value === '') {
                 callback(
-                    new Error(this.$t('com.tipSelectX', { obj: this.$t('cert.expiredDate') }))
+                    new Error(this.$t('com.tipEnterX', { obj: this.$t('com.desc') }))
                 );
+                return;
+            }
+            if (CertDescriptionRegCheck(value)) {
+                callback(new Error(this.$t('cert.tipDescriptionRule')));
                 return;
             }
             callback();
@@ -148,29 +156,25 @@ export default {
         return {
             certFileName: '',
             keyFileName: '',
+            expiredDatePreview: '',
             spinShow: false,
             formData: {
                 is_default: false,
                 cert_name: '',
                 description: '',
-                expired_date: '',
                 key_file_content: '',
                 cert_file_content: ''
             },
             ruleValidate: {
                 cert_name: [{ required: true, validator: validateCertName, trigger: 'blur' }],
-                description: [
-                    {
-                        required: true,
-                        message: this.$t('com.tipEnterX', { obj: this.$t('com.desc') }),
-                        trigger: 'blur'
-                    }
-                ],
-                expired_date: [{ required: true, validator: validateExpiredDate, trigger: 'change' }],
+                description: [{ required: true, validator: validateDescription, trigger: 'blur' }],
                 cert_file_content: [{ required: true, validator: validateCertFile, trigger: 'change' }],
                 key_file_content: [{ required: true, validator: validateKeyFile, trigger: 'change' }]
             }
         };
+    },
+    mounted() {
+        this.formData.is_default = this.defaultIsDefault;
     },
     methods: {
         changeFile(objFile) {
@@ -186,6 +190,10 @@ export default {
         handleUploadCer(file) {
             this.formData.cert_file_content = file;
             this.certFileName = file.name;
+            this.expiredDatePreview = '';
+            this.changeFile(file).then((pemContent) => {
+                this.expiredDatePreview = parseCertExpiredDate(pemContent) || '';
+            });
             this.$nextTick(() => {
                 if (this.$refs.formData) {
                     this.$refs.formData.validateField('cert_file_content');
@@ -203,23 +211,13 @@ export default {
             });
             return false;
         },
-        validateExpiredDateField() {
-            this.$nextTick(() => {
-                if (this.$refs.formData) {
-                    this.$refs.formData.validateField('expired_date');
-                }
-            });
-        },
         handleSubmit(name) {
             this.$refs[name].validate(async valid => {
                 if (valid) {
                     const tmpData = {
-                        expired_date: this.formData.expired_date,
                         cert_name: this.formData.cert_name,
                         description: this.formData.description,
                         is_default: this.formData.is_default,
-                        cert_file_name: this.certFileName,
-                        key_file_name: this.keyFileName,
                         key_file_content: await this.changeFile(this.formData.key_file_content),
                         cert_file_content: await this.changeFile(this.formData.cert_file_content)
                     };
@@ -230,10 +228,17 @@ export default {
         handleReset() {
             this.keyFileName = '';
             this.certFileName = '';
+            this.expiredDatePreview = '';
             if (this.$refs.formData) {
                 this.$refs.formData.resetFields();
             }
+            this.formData.is_default = this.defaultIsDefault;
         }
     }
 };
 </script>
+<style lang="less" scoped>
+.cert-expired-placeholder {
+    color: #c5c8ce;
+}
+</style>
